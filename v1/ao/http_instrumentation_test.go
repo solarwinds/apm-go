@@ -21,8 +21,8 @@ import (
 	"os"
 
 	"context"
-solarwindscloud/swo-golang
-	"github.com/sosolarwindscloud/swo-golang1/ao"
+
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
 	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
@@ -368,15 +368,23 @@ var testHTTPSvrPanic = testServerFn{testServerPanic, assertHTTPRequestPanic, 7, 
 var badURL = "%gh&%ij" // url.Parse() will return error
 var invalidPortURL = "http://0.0.0.0:888888"
 
-func TestTraceHTTP(t *testing.T)              { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr) }
-func TestTraceHTTPHelperA(t *testing.T)       { testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr) }
-func TestTraceHTTPHelperB(t *testing.T)       { testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr) }
-func TestTraceHTTP200(t *testing.T)           { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr200) }
-func TestTraceHTTPHelperA200(t *testing.T)    { testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr200) }
-func TestTraceHTTPHelperB200(t *testing.T)    { testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr200) }
-func TestTraceHTTP403(t *testing.T)           { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr403) }
-func TestTraceHTTPHelperA403(t *testing.T)    { testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr403) }
-func TestTraceHTTPHelperB403(t *testing.T)    { testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr403) }
+func TestTraceHTTP(t *testing.T)        { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr) }
+func TestTraceHTTPHelperA(t *testing.T) { testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr) }
+func TestTraceHTTPHelperB(t *testing.T) { testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr) }
+func TestTraceHTTP200(t *testing.T)     { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr200) }
+func TestTraceHTTPHelperA200(t *testing.T) {
+	testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr200)
+}
+func TestTraceHTTPHelperB200(t *testing.T) {
+	testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr200)
+}
+func TestTraceHTTP403(t *testing.T) { testHTTP(t, "GET", false, testHTTPClient, testHTTPSvr403) }
+func TestTraceHTTPHelperA403(t *testing.T) {
+	testHTTP(t, "GET", false, testHTTPClientA, testHTTPSvr403)
+}
+func TestTraceHTTPHelperB403(t *testing.T) {
+	testHTTP(t, "GET", false, testHTTPClientB, testHTTPSvr403)
+}
 func TestTraceHTTPPost(t *testing.T)          { testHTTP(t, "POST", false, testHTTPClient, testHTTPSvr) }
 func TestTraceHTTPHelperPostA(t *testing.T)   { testHTTP(t, "POST", false, testHTTPClientA, testHTTPSvr) }
 func TestTraceHTTPHelperPostB(t *testing.T)   { testHTTP(t, "POST", false, testHTTPClientB, testHTTPSvr) }

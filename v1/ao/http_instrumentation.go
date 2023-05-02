@@ -16,7 +16,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
-solarwindscloud/swo-golang
+
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
@@ -33,16 +33,17 @@ const (
 	HTTPHeaderXTraceOptionsSignature = reporter.HTTPHeaderXTraceOptionsSignature
 	httpHandlerSpanName              = "http.HandlerFunc"
 )
-solarwindscloud/swo-golang
+
 // key used for HTTP span to indicate a new context
 var httpSpanKey = contextKeyT("github.com/solarwindscloud/swo-golang/v1/ao.HTTPSpan")
 
 // HTTPHandler wraps an http.HandlerFunc with entry / exit events,
 // returning a new handler that can be used in its place.
-//   http.HandleFunc("/path", ao.HTTPHandler(myHandler))
+//
+//	http.HandleFunc("/path", ao.HTTPHandler(myHandler))
 func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanOpt) func(http.ResponseWriter, *http.Request) {
 	// At wrap time (when binding handler to router): get name of wrapped handler func
-	var endArgs []interface{}solarwindscloud/swo-golang
+	var endArgs []interface{}
 	if f := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()); f != nil {
 		// e.g. "main.slowHandler", "github.com/solarwindscloud/swo-golang/v1/ao_test.handler404"
 		fname := f.Name()
@@ -76,11 +77,12 @@ func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanO
 // in the HTTP request headers, the trace's context will be continued. The returned http.ResponseWriter
 // should be used in place of the one passed into this function in order to observe the response's
 // headers and status code.
-//   func myHandler(w http.ResponseWriter, r *http.Request) {
-//       tr, w, r := ao.TraceFromHTTPRequestResponse("myHandler", w, r)
-//       defer tr.End()
-//       // ...
-//   }
+//
+//	func myHandler(w http.ResponseWriter, r *http.Request) {
+//	    tr, w, r := ao.TraceFromHTTPRequestResponse("myHandler", w, r)
+//	    defer tr.End()
+//	    // ...
+//	}
 func TraceFromHTTPRequestResponse(spanName string, w http.ResponseWriter, r *http.Request, opts ...SpanOpt) (Trace, http.ResponseWriter,
 	*http.Request) {
 

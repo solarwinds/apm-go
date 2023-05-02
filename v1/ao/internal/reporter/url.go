@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/coocood/freecache"
-	"github.com/solarwindscloud/swo-golang
+	"github.com/pkg/errors"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 )

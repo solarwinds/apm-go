@@ -10,7 +10,7 @@ import (
 )
 
 type contextKeyT interface{}
-solarwindscloud/swo-golang
+
 var contextKey = contextKeyT("github.com/solasolarwindscloud/swo-golangao.Trace")
 var contextSpanKey = contextKeyT("github.com/solarwindscloud/swo-golang/v1/ao.Span")
 
