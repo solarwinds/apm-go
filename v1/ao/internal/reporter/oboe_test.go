@@ -39,7 +39,7 @@ func assertInitMessage(t *testing.T, bufs [][]byte) {
 			assert.Equal(t, 1, n.Map["__Init"])
 			assert.Equal(t, utils.Version(), n.Map["Go.AppOptics.Version"])
 			assert.NotEmpty(t, n.Map["Go.Version"])
-			assert.True(t, strings.HasSuffix(n.Map["Go.InstallDirectory"].(string), "appoptics-apm-go/v1/ao"))
+			assert.True(t, strings.HasSuffix(n.Map["Go.InstallDirectory"].(string), "swo-golang/v1/ao"))
 			assert.Less(t, baseline.Unix(), n.Map["Go.InstallTimestamp"])
 			assert.Less(t, baseline.UnixNano()/1e3, n.Map["Go.LastRestart"])
 		}},

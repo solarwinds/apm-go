@@ -20,9 +20,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
