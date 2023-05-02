@@ -106,7 +106,7 @@ func TestPrintDelta(t *testing.T) {
 	changed.ReporterProperties.EventFlushInterval = 100
 
 	assert.Equal(t,
-		` - Collector (SWO_COLLECTOR) = test.com:443 (default: collector.appoptics.com:443)
+		` - Collector (SWO_COLLECTOR) = test.com:443 (default: apm.collector.cloud.solarwinds.com:443)
  - PrependDomain (SWO_PREPEND_DOMAIN) = true (default: false)
  - ReporterProperties.EventFlushInterval (SWO_EVENTS_FLUSH_INTERVAL) = 100 (default: 2)`,
 		getDelta(newConfig().reset(), changed, "").sanitize().String())
@@ -341,12 +341,12 @@ func TestYamlConfig(t *testing.T) {
 	out, err := yaml.Marshal(&yamlConfig)
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile("/tmp/appoptics-config.yaml", out, 0644)
+	err = ioutil.WriteFile("/tmp/swo-config.yaml", out, 0644)
 	assert.Nil(t, err)
 
 	// Test with config file
 	ClearEnvs()
-	os.Setenv(envAppOpticsConfigFile, "/tmp/appoptics-config.yaml")
+	os.Setenv(envAppOpticsConfigFile, "/tmp/swo-config.yaml")
 
 	c := NewConfig()
 	assert.Equal(t, &yamlConfig, c)
@@ -375,7 +375,7 @@ func TestYamlConfig(t *testing.T) {
 	}
 	ClearEnvs()
 	SetEnvs(envs)
-	os.Setenv("SWO_CONFIG_FILE", "/tmp/appoptics-config.yaml")
+	os.Setenv("SWO_CONFIG_FILE", "/tmp/swo-config.yaml")
 
 	envConfig := Config{
 		Collector:    "collector.test.com",
@@ -458,8 +458,8 @@ func TestInvalidConfigFile(t *testing.T) {
 
 	ClearEnvs()
 	os.Setenv("SWO_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("SWO_CONFIG_FILE", "/tmp/appoptics-config.json")
-	_ = ioutil.WriteFile("/tmp/appoptics-config.json", []byte("hello"), 0644)
+	os.Setenv("SWO_CONFIG_FILE", "/tmp/swo-config.json")
+	_ = ioutil.WriteFile("/tmp/swo-config.json", []byte("hello"), 0644)
 
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), ErrUnsupportedFormat.Error())
