@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"

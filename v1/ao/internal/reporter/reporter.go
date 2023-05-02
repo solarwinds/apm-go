@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/host"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
 )
 
 // defines what methods a reporter should offer (internal to reporter package)

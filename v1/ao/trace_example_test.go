@@ -3,8 +3,9 @@
 package ao_test
 
 import (
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
 	"context"
+
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
 func ExampleNewTrace() {

@@ -9,9 +9,9 @@ import (
 
 	"context"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
 const (

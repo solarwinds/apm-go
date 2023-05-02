@@ -11,9 +11,9 @@ import (
 
 	"context"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-COVERPKG="github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter,github.com/appoptics/appoptics-apm-go/v1/ao/internal/log,github.com/appoptics/appoptics-apm-go/v1/ao/internal/config,github.com/appoptics/appoptics-apm-go/v1/ao/internal/host,github.com/appoptics/appoptics-apm-go/v1/ao,github.com/appoptics/appoptics-apm-go/v1/ao/opentracing"
+COVERPKG="github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter,github.com/solarwindscloud/swo-golang/v1/ao/internal/log,github.com/solarwindscloud/swo-golang/v1/ao/internal/config,github.com/solarwindscloud/swo-golang/v1/ao/internal/host,github.com/solarwindscloud/swo-golang/v1/ao,github.com/solarwindscloud/swo-golang/v1/ao/opentracing"
 export APPOPTICS_DEBUG_LEVEL=1
 go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg $COVERPKG
 

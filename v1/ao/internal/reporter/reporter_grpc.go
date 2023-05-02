@@ -20,18 +20,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/utils"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
 	"context"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/host"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter/collector"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
 
 	uatomic "go.uber.org/atomic"
 	"google.golang.org/grpc"

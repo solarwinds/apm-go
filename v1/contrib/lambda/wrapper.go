@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/pkg/errors"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
 const (
@@ -246,7 +246,7 @@ func HandlerWithWrapper(handlerFunc interface{}, w Wrapper) interface{} {
 	invocationCount := 1
 	var endArgs []interface{}
 	if f := runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()); f != nil {
-		// e.g. "main.slowHandler", "github.com/appoptics/appoptics-apm-go/v1/ao_test.handler404"
+		// e.g. "main.slowHandler", "github.com/solarwindscloud/swo-golang/v1/ao_test.handler404"
 		fname := f.Name()
 		if s := strings.SplitN(fname[strings.LastIndex(fname, "/")+1:], ".", 2); len(s) == 2 {
 			endArgs = append(endArgs, "Controller", s[0], "Action", s[1])

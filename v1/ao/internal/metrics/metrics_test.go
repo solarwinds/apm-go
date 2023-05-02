@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/bson"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/hdrhist"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/host"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/hdrhist"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 	"github.com/stretchr/testify/assert"
 	mbson "gopkg.in/mgo.v2/bson"
 )
@@ -149,8 +149,8 @@ func TestGetTransactionFromURL(t *testing.T) {
 	}
 	var test = []record{
 		{
-			"/appoptics/appoptics-apm-go/blob/metrics/reporter.go#L867",
-			"/appoptics/appoptics-apm-go",
+			"/solarwindscloud/swo-golang/blob/metrics/reporter.go#L867",
+			"/solarwindscloud/swo-golang",
 		},
 		{
 			"/librato",
@@ -161,15 +161,15 @@ func TestGetTransactionFromURL(t *testing.T) {
 			"/",
 		},
 		{
-			"/appoptics/appoptics-apm-go/blob",
-			"/appoptics/appoptics-apm-go",
+			"/solarwindscloud/swo-golang/blob",
+			"/solarwindscloud/swo-golang",
 		},
 		{
-			"/appoptics/appoptics-apm-go/blob",
-			"/appoptics/appoptics-apm-go",
+			"/solarwindscloud/swo-golang/blob",
+			"/solarwindscloud/swo-golang",
 		},
 		{
-			"http://test.com/appoptics/appoptics-apm-go/blob",
+			"http://test.com/solarwindscloud/swo-golang/blob",
 			"http://test.com",
 		},
 		{

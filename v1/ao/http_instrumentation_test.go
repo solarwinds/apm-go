@@ -1,4 +1,6 @@
+//go:build go1.7
 // +build go1.7
+
 // Copyright (C) 2016 Librato, Inc. All rights reserved.
 
 package ao_test
@@ -19,12 +21,12 @@ import (
 	"os"
 
 	"context"
-
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+solarwindscloud/swo-golang
+	"github.com/sosolarwindscloud/swo-golang1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

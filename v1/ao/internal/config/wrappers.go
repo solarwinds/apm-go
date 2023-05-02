@@ -2,7 +2,7 @@
 
 package config
 
-import "github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
+import "github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 
 var conf = NewConfig()
 

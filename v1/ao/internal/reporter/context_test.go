@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -339,7 +339,7 @@ func TestAllZeroTaskID(t *testing.T) {
 
 type AllZeroThenRandReader struct {
 	allZero int
-	rand io.Reader
+	rand    io.Reader
 }
 
 func (r *AllZeroThenRandReader) Read(p []byte) (n int, err error) {

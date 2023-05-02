@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/utils"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
 	"github.com/stretchr/testify/require"
 	mbson "gopkg.in/mgo.v2/bson"
 
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
 	"github.com/stretchr/testify/assert"
 )
 

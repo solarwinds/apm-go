@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
 const (
@@ -236,10 +236,11 @@ func (s *layerSpan) BeginSpanWithOverrides(spanName string, opts SpanOptions, ov
 
 // BeginProfile begins a profiled block or method and return a context that should be closed with End().
 // You can use defer to profile a function in one line, as below:
-//   func exampleFunc(ctx context.Context) {
-//       defer ao.BeginProfile(ctx, "exampleFunc").End()
-//       // ... do something ...
-//    }
+//
+//	func exampleFunc(ctx context.Context) {
+//	    defer ao.BeginProfile(ctx, "exampleFunc").End()
+//	    // ... do something ...
+//	 }
 //
 // Deprecated: BeginProfile exists for historical compatibility and should not be used, use
 // BeginSpan instead.

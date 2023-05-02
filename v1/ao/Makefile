@@ -2,7 +2,7 @@ SHELL=bash
 
 prev_branch :=$(shell git rev-parse --abbrev-ref HEAD)
 
-coverpkg="github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter,github.com/appoptics/appoptics-apm-go/v1/ao/internal/log,github.com/appoptics/appoptics-apm-go/v1/ao/internal/bson,github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics,github.com/appoptics/appoptics-apm-go/v1/ao,github.com/appoptics/appoptics-apm-go/v1/ao/internal/config,github.com/appoptics/appoptics-apm-go/v1/ao/internal/host,github.com/appoptics/appoptics-apm-go/v1/contrib/multitracer"
+coverpkg="github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter,github.com/solarwindscloud/swo-golang/v1/ao/internal/log,github.com/solarwindscloud/swo-golang/v1/ao/internal/bson,github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics,github.com/solarwindscloud/swo-golang/v1/ao,github.com/solarwindscloud/swo-golang/v1/ao/internal/config,github.com/solarwindscloud/swo-golang/v1/ao/internal/host,github.com/solarwindscloud/swo-golang/v1/contrib/multitracer"
 cov_args=-covermode=atomic -coverpkg=$(coverpkg)
 cov_out=-coverprofile=cov.out
 cov_files=cov.out internal/reporter/cov.out opentracing/cov.out

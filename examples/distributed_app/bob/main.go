@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
 func bobHandler(w http.ResponseWriter, r *http.Request) {

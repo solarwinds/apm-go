@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
 	"github.com/stretchr/testify/assert"
 )
 

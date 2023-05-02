@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
 	"github.com/coocood/freecache"
-	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 )
 
 var urls *urlFilters

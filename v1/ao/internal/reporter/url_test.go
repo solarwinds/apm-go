@@ -3,8 +3,8 @@ package reporter
 import (
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
 	"github.com/coocood/freecache"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

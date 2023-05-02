@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 )
 
 func toBool(s string) (bool, error) {

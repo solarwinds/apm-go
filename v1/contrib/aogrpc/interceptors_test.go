@@ -3,9 +3,9 @@ package aogrpc
 import (
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
-	"github.com/appoptics/appoptics-apm-go/v1/contrib/aogrpc/mocks"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/contrib/aogrpc/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -6,9 +6,9 @@ import (
 	"context"
 	"io"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
 var (

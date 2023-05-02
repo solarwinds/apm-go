@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 // Copyright (C) 2017 Librato, Inc. All rights reserved.
@@ -10,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/bson"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/utils"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
 )
 
 // gets and appends UnameSysName/UnameVersion to a BSON buffer

@@ -1,4 +1,6 @@
+//go:build go1.7
 // +build go1.7
+
 // Copyright (C) 2016 Librato, Inc. All rights reserved.
 // AppOptics HTTP instrumentation for Go
 
@@ -14,9 +16,9 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
-
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+solarwindscloud/swo-golang
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
 const (
@@ -31,18 +33,18 @@ const (
 	HTTPHeaderXTraceOptionsSignature = reporter.HTTPHeaderXTraceOptionsSignature
 	httpHandlerSpanName              = "http.HandlerFunc"
 )
-
+solarwindscloud/swo-golang
 // key used for HTTP span to indicate a new context
-var httpSpanKey = contextKeyT("github.com/appoptics/appoptics-apm-go/v1/ao.HTTPSpan")
+var httpSpanKey = contextKeyT("github.com/solarwindscloud/swo-golang/v1/ao.HTTPSpan")
 
 // HTTPHandler wraps an http.HandlerFunc with entry / exit events,
 // returning a new handler that can be used in its place.
 //   http.HandleFunc("/path", ao.HTTPHandler(myHandler))
 func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanOpt) func(http.ResponseWriter, *http.Request) {
 	// At wrap time (when binding handler to router): get name of wrapped handler func
-	var endArgs []interface{}
+	var endArgs []interface{}solarwindscloud/swo-golang
 	if f := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()); f != nil {
-		// e.g. "main.slowHandler", "github.com/appoptics/appoptics-apm-go/v1/ao_test.handler404"
+		// e.g. "main.slowHandler", "github.com/solarwindscloud/swo-golang/v1/ao_test.handler404"
 		fname := f.Name()
 		if s := strings.SplitN(fname[strings.LastIndex(fname, "/")+1:], ".", 2); len(s) == 2 {
 			endArgs = append(endArgs, "Controller", s[0], "Action", s[1])

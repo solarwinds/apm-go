@@ -6,10 +6,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/host"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter/collector"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter/mocks"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

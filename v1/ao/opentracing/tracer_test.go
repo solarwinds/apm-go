@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	g "github.com/appoptics/appoptics-apm-go/v1/ao/internal/graphtest"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
+	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

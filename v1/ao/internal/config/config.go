@@ -5,11 +5,11 @@
 // It also accepts dynamic settings from the collector server.
 //
 // In order to add a new configuration item, you need to:
-// - add a field to the Config struct and assign the corresponding env variable
-//   name and the default value via struct tags.
-// - add validation code to method `Config.validate()` (optional).
-// - add a method to retrieve the config value and a wrapper for the default
-//   global variable `conf` (see wrappers.go).
+//   - add a field to the Config struct and assign the corresponding env variable
+//     name and the default value via struct tags.
+//   - add validation code to method `Config.validate()` (optional).
+//   - add a method to retrieve the config value and a wrapper for the default
+//     global variable `conf` (see wrappers.go).
 package config
 
 import (
@@ -22,8 +22,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -35,9 +35,9 @@ const (
 	// max config file size = 1MB
 	maxConfigFileSize = 1024 * 1024
 	// the default collector url
-	defaultSSLCollector = "collector.appoptics.com:443"
+	defaultSSLCollector    = "collector.appoptics.com:443"
 	maxTokenBucketCapacity = 8
-	maxTokenBucketRate =4
+	maxTokenBucketRate     = 4
 )
 
 // The environment variables
@@ -397,7 +397,7 @@ func (c *Config) validate() error {
 	if valid := IsValidTokenBucketCap(c.TokenBucketCap); !valid {
 		log.Warning(InvalidEnv("TokenBucketCap", fmt.Sprintf("%f", c.TokenBucketCap)))
 		if c.TokenBucketCap < 0 {
-			c.TokenBucketCap = 0;
+			c.TokenBucketCap = 0
 		} else {
 			c.TokenBucketCap = maxTokenBucketCapacity
 		}

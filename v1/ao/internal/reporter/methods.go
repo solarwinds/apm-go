@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter/collector"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
 )
 
 // Method defines the interface of an RPC call

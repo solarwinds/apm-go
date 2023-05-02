@@ -1,6 +1,6 @@
-module github.com/appoptics/appoptics-apm-go
+module github.com/solarwindscloud/swo-golang
 
-go 1.15
+go 1.20
 
 require (
 	github.com/coocood/freecache v1.2.0
@@ -15,6 +15,16 @@ require (
 	google.golang.org/grpc v1.43.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/go-logr/logr v1.2.1 // indirect
+	github.com/go-logr/stdr v1.2.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/text v0.3.7 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 )
 
 require (

@@ -5,9 +5,9 @@ package opentracing
 import (
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/reporter"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/harness"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
 // apiCheckProbe exposes methods for testing data recorded by a Tracer.

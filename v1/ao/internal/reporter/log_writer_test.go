@@ -3,7 +3,7 @@ package reporter
 import (
 	"testing"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/utils"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

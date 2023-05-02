@@ -1,9 +1,9 @@
 # AppOptics APM instrumentation for Go
 
-[![GoDoc](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao?status.svg)](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao)
-[![Build Status](https://travis-ci.org/appoptics/appoptics-apm-go.svg?branch=master)](https://travis-ci.org/appoptics/appoptics-apm-go)
-[![codecov](https://codecov.io/gh/appoptics/appoptics-apm-go/branch/master/graph/badge.svg)](https://codecov.io/gh/appoptics/appoptics-apm-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/appoptics/appoptics-apm-go)](https://goreportcard.com/report/github.com/appoptics/appoptics-apm-go)
+[![GoDoc](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao?status.svg)](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao)
+[![Build Status](https://travis-ci.org/solarwindscloud/swo-golang.svg?branch=master)](https://travis-ci.org/solarwindscloud/swo-golang)
+[![codecov](https://codecov.io/gh/solarwindscloud/swo-golang/branch/master/graph/badge.svg)](https://codecov.io/gh/solarwindscloud/swo-golang)
+[![Go Report Card](https://goreportcard.com/badge/github.com/solarwindscloud/swo-golang)](https://goreportcard.com/report/github.com/solarwindscloud/swo-golang)
 
 * [Introduction](#introduction)
 * [Getting started](#getting-started)
@@ -54,7 +54,7 @@ check out the [demo](#demo) app below to get a quick start!
 
 Install the following to get started:
 
-* This package: go get github.com/appoptics/appoptics-apm-go/v1/ao
+* This package: go get github.com/solarwindscloud/swo-golang/v1/ao
 
 Note that the service key needs to be configured for a successful setup. See [Configuration](#configuration) 
 for more info.
@@ -75,11 +75,11 @@ calls to the APIs are no-ops, and [empty structs](https://dave.cheney.net/2014/0
 ### Usage examples
 
 The simplest integration option is this package's
-[ao.HTTPHandler](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#HTTPHandler) wrapper.  This
+[ao.HTTPHandler](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#HTTPHandler) wrapper.  This
 will monitor the performance of the provided
 [http.HandlerFunc](https://golang.org/pkg/net/http/#HandlerFunc), visualized with latency
 distribution heatmaps filterable by dimensions such as URL host & path, HTTP status & method, server
-hostname, etc. [ao.HTTPHandler](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#HTTPHandler)
+hostname, etc. [ao.HTTPHandler](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#HTTPHandler)
 will also continue a distributed trace described in the incoming HTTP request headers (from either another instrumented Golang application or 
 AppOptics's automatic instrumentation of [our other supported application runtimes](https://docs.appoptics.com/kb/apm_tracing/supported_platforms/)).
 
@@ -92,7 +92,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
 var startTime = time.Now()
@@ -120,8 +120,8 @@ func main() {
 	http.ListenAndServe(":8899", nil)
 }
 ```
-![sample_app screenshot](https://github.com/appoptics/appoptics-apm-go/raw/master/img/readme-ao-screenshot1.png)
-![sample_app screenshot2](https://github.com/appoptics/appoptics-apm-go/raw/master/img/readme-ao-screenshot2.png)
+![sample_app screenshot](https://github.com/solarwindscloud/swo-golang/raw/master/img/readme-ao-screenshot1.png)
+![sample_app screenshot2](https://github.com/solarwindscloud/swo-golang/raw/master/img/readme-ao-screenshot2.png)
 
 To monitor more than just the overall latency of each request to your Go service, you will need to
 break a request's processing time down by placing small benchmarks into your code. To do so, first
@@ -135,14 +135,14 @@ controller method, or the time used by a middleware method between calls to chil
 AppOptics identifies a reported Span's type from its key-value pairs; if keys named "Query" and
 "RemoteHost" are used, a Span is assumed to measure the extent of a DB query. KV pairs can be
 appended to Spans as optional extra variadic arguments to methods such as
-[BeginSpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginSpan) or
-[Info()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Span), and
-[End()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Span). We also provide helper methods
-such as [BeginQuerySpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginQuerySpan),
-[BeginCacheSpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginCacheSpan),
-[BeginRemoteURLSpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginRemoteURLSpan),
-[BeginRPCSpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginRPCSpan), and
-[BeginHTTPClientSpan()](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginHTTPClientSpan)
+[BeginSpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginSpan) or
+[Info()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Span), and
+[End()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Span). We also provide helper methods
+such as [BeginQuerySpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginQuerySpan),
+[BeginCacheSpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginCacheSpan),
+[BeginRemoteURLSpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginRemoteURLSpan),
+[BeginRPCSpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginRPCSpan), and
+[BeginHTTPClientSpan()](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginHTTPClientSpan)
 that match the spec in our
 [custom instrumentation docs](https://docs.appoptics.com/kb/apm_tracing/custom_instrumentation/)
 to report attributes associated with different types of service calls, used for indexing AppOptics's
@@ -260,15 +260,15 @@ argument to every function on the call path between incoming and outgoing reques
 [Gizmo](https://godoc.org/github.com/NYTimes/gizmo/server#ContextHandler) use Context
 implementations, for example. We provide helper methods that allow a Trace to be associated with a
 [context.Context](https://godoc.org/context) interface; for example,
-[ao.BeginSpan](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#BeginSpan) returns both a
+[ao.BeginSpan](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#BeginSpan) returns both a
 new Span and an associated context, and
-[ao.Info(ctx)](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Info) and
-[ao.End(ctx)](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Span) both use the Span
+[ao.Info(ctx)](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Info) and
+[ao.End(ctx)](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Span) both use the Span
 defined in the provided context.
 
 It is not required to work with context.Context to trace your app, however. You can also use just
-the [Trace](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Trace) and
-[Span](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao#Span) interfaces directly, if it
+the [Trace](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Trace) and
+[Span](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao#Span) interfaces directly, if it
 better suits your instrumentation use case.
 
 ```go
@@ -312,7 +312,7 @@ and under active development. We welcome your feedback, issues and feature reque
 
 If you have installed AppOptics and this package, you can run the sample “web app” included with appoptics-apm-go:
 
-    $ cd $GOPATH/src/github.com/appoptics/appoptics-apm-go/examples/sample_app
+    $ cd $GOPATH/src/github.com/solarwindscloud/swo-golang/examples/sample_app
     $ go run main.go
 
 A web server will run on port 8899. It doesn’t do much, except wait a bit and echo back your URL path:
@@ -328,7 +328,7 @@ There is also a demonstration of distributed tracing in examples/distributed_app
 comprised of three Go services and two Python services. It can be built and run from
 source in each service's subdirectory, or by using docker-compose:
 
-    $ cd $GOPATH/src/github.com/appoptics/appoptics-apm-go/examples/distributed_app
+    $ cd $GOPATH/src/github.com/solarwindscloud/swo-golang/examples/distributed_app
     $ docker-compose build
     # ... (building)
     $ APPOPTICS_API_TOKEN=xxx docker-compose up -d
@@ -356,11 +356,11 @@ and `concurrentAliceHandler`, which makes requests to all three in parallel.
 You should see traces for these appear on your AppOptics dashboard. Here is an example trace of the
 concurrent handler:
 
-<img width=729 src="https://github.com/appoptics/appoptics-apm-go/raw/master/img/readme-ao-screenshot3.png">
+<img width=729 src="https://github.com/solarwindscloud/swo-golang/raw/master/img/readme-ao-screenshot3.png">
 
 ### OpenTracing
 
-Support for the OpenTracing 1.0 API is available in the [opentracing](https://godoc.org/github.com/appoptics/appoptics-apm-go/v1/ao/opentracing) package as a technology preview. The
+Support for the OpenTracing 1.0 API is available in the [opentracing](https://godoc.org/github.com/solarwindscloud/swo-golang/v1/ao/opentracing) package as a technology preview. The
 OpenTracing tracer in that package provides support for OpenTracing span reporting and context
 propagation by using AppOptics's span reporting and HTTP header formats, permitting the OT tracer
 to continue distributed traces started by AppOptics's instrumentation and vice versa. Some of the
@@ -371,7 +371,7 @@ To set AppOptics's tracer to be your global tracer, use something like the follo
 ```go
 import(
   stdopentracing "github.com/opentracing/opentracing-go"
-  aotracing "github.com/appoptics/appoptics-apm-go/v1/ao/opentracing"
+  aotracing "github.com/solarwindscloud/swo-golang/v1/ao/opentracing"
 )
 
 // tracer returns the global tracing construct for OpenTracing.

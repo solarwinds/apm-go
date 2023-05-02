@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/metrics"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/utils"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
 	"github.com/pkg/errors"
 )
 

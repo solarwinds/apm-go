@@ -11,9 +11,9 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/bson"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/config"
-	"github.com/appoptics/appoptics-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 )
 
 type event struct {

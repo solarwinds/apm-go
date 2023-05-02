@@ -13,7 +13,7 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
 var startTime = time.Now()
