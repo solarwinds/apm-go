@@ -1,3 +1,0 @@
-appoptics
-flask
-uwsgi
