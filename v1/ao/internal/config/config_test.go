@@ -20,7 +20,7 @@ import (
 const TestServiceKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go"
 
 func init() {
-	os.Setenv("APPOPTICS_SERVICE_KEY", TestServiceKey)
+	os.Setenv("SWO_SERVICE_KEY", TestServiceKey)
 	Load()
 }
 
@@ -106,9 +106,9 @@ func TestPrintDelta(t *testing.T) {
 	changed.ReporterProperties.EventFlushInterval = 100
 
 	assert.Equal(t,
-		` - Collector (APPOPTICS_COLLECTOR) = test.com:443 (default: collector.appoptics.com:443)
- - PrependDomain (APPOPTICS_PREPEND_DOMAIN) = true (default: false)
- - ReporterProperties.EventFlushInterval (APPOPTICS_EVENTS_FLUSH_INTERVAL) = 100 (default: 2)`,
+		` - Collector (SWO_COLLECTOR) = test.com:443 (default: collector.appoptics.com:443)
+ - PrependDomain (SWO_PREPEND_DOMAIN) = true (default: false)
+ - ReporterProperties.EventFlushInterval (SWO_EVENTS_FLUSH_INTERVAL) = 100 (default: 2)`,
 		getDelta(newConfig().reset(), changed, "").sanitize().String())
 }
 
@@ -184,9 +184,9 @@ func TestTokenBucketConfigOverRange(t *testing.T) {
 	ClearEnvs()
 
 	envs := []string{
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TOKEN_BUCKET_CAPACITY=10",
-		"APPOPTICS_TOKEN_BUCKET_RATE=10",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TOKEN_BUCKET_CAPACITY=10",
+		"SWO_TOKEN_BUCKET_RATE=10",
 	}
 	SetEnvs(envs)
 
@@ -200,9 +200,9 @@ func TestTokenBucketConfigInvalidValue(t *testing.T) {
 	ClearEnvs()
 
 	envs := []string{
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TOKEN_BUCKET_CAPACITY=hello",
-		"APPOPTICS_TOKEN_BUCKET_RATE=hi",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TOKEN_BUCKET_CAPACITY=hello",
+		"SWO_TOKEN_BUCKET_RATE=hi",
 	}
 	SetEnvs(envs)
 
@@ -216,31 +216,31 @@ func TestEnvsLoading(t *testing.T) {
 	ClearEnvs()
 
 	envs := []string{
-		"APPOPTICS_COLLECTOR=collector.test.com",
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TRUSTEDPATH=/collector.crt",
-		"APPOPTICS_COLLECTOR_UDP=udp.test.com",
-		"APPOPTICS_REPORTER=udp",
-		"APPOPTICS_TRACING_MODE=never",
-		"APPOPTICS_SAMPLE_RATE=1000",
-		"APPOPTICS_PREPEND_DOMAIN=true",
-		"APPOPTICS_HOSTNAME_ALIAS=alias",
+		"SWO_COLLECTOR=collector.test.com",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TRUSTEDPATH=/collector.crt",
+		"SWO_COLLECTOR_UDP=udp.test.com",
+		"SWO_REPORTER=udp",
+		"SWO_TRACING_MODE=never",
+		"SWO_SAMPLE_RATE=1000",
+		"SWO_PREPEND_DOMAIN=true",
+		"SWO_HOSTNAME_ALIAS=alias",
 
-		"APPOPTICS_HISTOGRAM_PRECISION=4",
-		"APPOPTICS_EVENTS_FLUSH_INTERVAL=4",
-		"APPOPTICS_MAX_REQUEST_BYTES=4096000",
-		"APPOPTICS_DISABLED=false",
-		"APPOPTICS_SQL_SANITIZE=0",
-		"APPOPTICS_EC2_METADATA_TIMEOUT=2000",
-		"APPOPTICS_TRIGGER_TRACE=false",
-		"APPOPTICS_PROXY=http://usr/pwd@internal.proxy:3306",
-		"APPOPTICS_PROXY_CERT_PATH=./proxy.pem",
-		"APPOPTICS_RUNTIME_METRICS=true",
-		"APPOPTICS_SERVICE_NAME=LambdaTest",
-		"APPOPTICS_TOKEN_BUCKET_CAPACITY=8",
-		"APPOPTICS_TOKEN_BUCKET_RATE=4",
-		"APPOPTICS_TRANSACTION_NAME=my-transaction-name",
-		"APPOPTICS_REPORT_QUERY_STRING=false",
+		"SWO_HISTOGRAM_PRECISION=4",
+		"SWO_EVENTS_FLUSH_INTERVAL=4",
+		"SWO_MAX_REQUEST_BYTES=4096000",
+		"SWO_DISABLED=false",
+		"SWO_SQL_SANITIZE=0",
+		"SWO_EC2_METADATA_TIMEOUT=2000",
+		"SWO_TRIGGER_TRACE=false",
+		"SWO_PROXY=http://usr/pwd@internal.proxy:3306",
+		"SWO_PROXY_CERT_PATH=./proxy.pem",
+		"SWO_RUNTIME_METRICS=true",
+		"SWO_SERVICE_NAME=LambdaTest",
+		"SWO_TOKEN_BUCKET_CAPACITY=8",
+		"SWO_TOKEN_BUCKET_RATE=4",
+		"SWO_TRANSACTION_NAME=my-transaction-name",
+		"SWO_REPORT_QUERY_STRING=false",
 	}
 	SetEnvs(envs)
 
@@ -353,29 +353,29 @@ func TestYamlConfig(t *testing.T) {
 
 	// Test with both config file and env variables
 	envs := []string{
-		"APPOPTICS_COLLECTOR=collector.test.com",
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TRUSTEDPATH=/collector.crt",
-		"APPOPTICS_COLLECTOR_UDP=udp.test.com",
-		"APPOPTICS_REPORTER=udp",
-		"APPOPTICS_TRACING_MODE=never",
-		"APPOPTICS_SAMPLE_RATE=1000",
-		"APPOPTICS_PREPEND_DOMAIN=true",
-		"APPOPTICS_HOSTNAME_ALIAS=alias",
-		"APPOPTICS_HISTOGRAM_PRECISION=4",
-		"APPOPTICS_EVENTS_FLUSH_INTERVAL=4",
-		"APPOPTICS_MAX_REQUEST_BYTES=4096000",
-		"APPOPTICS_DISABLED=false",
-		"APPOPTICS_SQL_SANITIZE=3",
-		"APPOPTICS_SERVICE_NAME=LambdaEnv",
-		"APPOPTICS_TOKEN_BUCKET_CAPACITY=8",
-		"APPOPTICS_TOKEN_BUCKET_RATE=4",
-		"APPOPTICS_TRANSACTION_NAME=transaction-name-from-env",
-		"APPOPTICS_REPORT_QUERY_STRING=false",
+		"SWO_COLLECTOR=collector.test.com",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TRUSTEDPATH=/collector.crt",
+		"SWO_COLLECTOR_UDP=udp.test.com",
+		"SWO_REPORTER=udp",
+		"SWO_TRACING_MODE=never",
+		"SWO_SAMPLE_RATE=1000",
+		"SWO_PREPEND_DOMAIN=true",
+		"SWO_HOSTNAME_ALIAS=alias",
+		"SWO_HISTOGRAM_PRECISION=4",
+		"SWO_EVENTS_FLUSH_INTERVAL=4",
+		"SWO_MAX_REQUEST_BYTES=4096000",
+		"SWO_DISABLED=false",
+		"SWO_SQL_SANITIZE=3",
+		"SWO_SERVICE_NAME=LambdaEnv",
+		"SWO_TOKEN_BUCKET_CAPACITY=8",
+		"SWO_TOKEN_BUCKET_RATE=4",
+		"SWO_TRANSACTION_NAME=transaction-name-from-env",
+		"SWO_REPORT_QUERY_STRING=false",
 	}
 	ClearEnvs()
 	SetEnvs(envs)
-	os.Setenv("APPOPTICS_CONFIG_FILE", "/tmp/appoptics-config.yaml")
+	os.Setenv("SWO_CONFIG_FILE", "/tmp/appoptics-config.yaml")
 
 	envConfig := Config{
 		Collector:    "collector.test.com",
@@ -426,7 +426,7 @@ func TestYamlConfig(t *testing.T) {
 	c = NewConfig()
 	assert.Equal(t, &envConfig, c)
 
-	os.Unsetenv("APPOPTICS_CONFIG_FILE")
+	os.Unsetenv("SWO_CONFIG_FILE")
 }
 
 func TestSamplingConfigValidate(t *testing.T) {
@@ -457,8 +457,8 @@ func TestInvalidConfigFile(t *testing.T) {
 	}()
 
 	ClearEnvs()
-	os.Setenv("APPOPTICS_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("APPOPTICS_CONFIG_FILE", "/tmp/appoptics-config.json")
+	os.Setenv("SWO_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	os.Setenv("SWO_CONFIG_FILE", "/tmp/appoptics-config.json")
 	_ = ioutil.WriteFile("/tmp/appoptics-config.json", []byte("hello"), 0644)
 
 	_ = NewConfig()
@@ -467,8 +467,8 @@ func TestInvalidConfigFile(t *testing.T) {
 
 	buf.Reset()
 	ClearEnvs()
-	os.Setenv("APPOPTICS_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("APPOPTICS_CONFIG_FILE", "/tmp/file-not-exist.yaml")
+	os.Setenv("SWO_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	os.Setenv("SWO_CONFIG_FILE", "/tmp/file-not-exist.yaml")
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), "no such file or directory")
 }
@@ -583,8 +583,8 @@ func TestTransactionName(t *testing.T) {
 	ClearEnvs()
 
 	envs := []string{
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TRANSACTION_NAME=test_name",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TRANSACTION_NAME=test_name",
 	}
 	SetEnvs(envs)
 	c := NewConfig()
@@ -593,9 +593,9 @@ func TestTransactionName(t *testing.T) {
 	ClearEnvs()
 
 	envs = []string{
-		"APPOPTICS_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		"APPOPTICS_TRANSACTION_NAME=test_name",
-		"APPOPTICS_REPORTER=serverless",
+		"SWO_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		"SWO_TRANSACTION_NAME=test_name",
+		"SWO_REPORTER=serverless",
 	}
 	SetEnvs(envs)
 	c = NewConfig()

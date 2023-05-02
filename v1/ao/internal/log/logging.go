@@ -37,7 +37,7 @@ const (
 )
 
 const (
-	envAppOpticsLogLevel = "APPOPTICS_DEBUG_LEVEL"
+	envAppOpticsLogLevel = "SWO_DEBUG_LEVEL"
 )
 
 // LevelStr represents the log levels in strings

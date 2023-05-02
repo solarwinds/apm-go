@@ -15,7 +15,7 @@ jobs:
     name: Go ${{ matrix.goversion }} tests
     env:
       GO15VENDOREXPERIMENT: 1
-      APPOPTICS_DEBUG_LEVEL: 1
+      SWO_DEBUG_LEVEL: 1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2

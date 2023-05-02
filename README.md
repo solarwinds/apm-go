@@ -62,12 +62,12 @@ for more info.
 
 ### Running your app with or without tracing
 
-No tracing occurs when the environment variable `APPOPTICS_DISABLED` is explicitly set to `true`. With this environment variable,
+No tracing occurs when the environment variable `SWO_DISABLED` is explicitly set to `true`. With this environment variable,
 calls to the APIs are no-ops, and [empty structs](https://dave.cheney.net/2014/03/25/the-empty-struct) keep span and instrumentation types from making memory allocations. This allows for precise control over which deployments are traced.
 
 ```
  # Set to disable tracing and APM instrumentation
- $ export APPOPTICS_DISABLED=true
+ $ export SWO_DISABLED=true
 ```
 
 ## Instrumenting your application
@@ -238,7 +238,7 @@ to set the custom transaction name.
     ...
 ```
 
-You can also set the environment variable `APPOPTICS_PREPEND_DOMAIN` to `true` if you need to
+You can also set the environment variable `SWO_PREPEND_DOMAIN` to `true` if you need to
 prepend the hostname to the transaction name. This works for both default transaction names and
 the custom transaction names provided by you.
 
@@ -297,7 +297,7 @@ The only environment variable you need to set before kicking off is the service 
 
 | Variable Name        | Required           | Default  | Description |
 | -------------------- | ------------------ | -------- | ----------- |
-|APPOPTICS_SERVICE_KEY|Yes|N.A|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
+|SWO_SERVICE_KEY|Yes|N.A|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
 
 For the full list of the configuration items and descriptions, including YAML config file options, please refer to our knowledge base website: https://docs.appoptics.com/kb/apm_tracing/go/configure/
 
@@ -331,7 +331,7 @@ source in each service's subdirectory, or by using docker-compose:
     $ cd $GOPATH/src/github.com/solarwindscloud/swo-golang/examples/distributed_app
     $ docker-compose build
     # ... (building)
-    $ APPOPTICS_API_TOKEN=xxx docker-compose up -d
+    $ SWO_API_TOKEN=xxx docker-compose up -d
     Starting distributedapp_alice_1
     Starting distributedapp_bob_1
     Starting distributedapp_caroljs_1

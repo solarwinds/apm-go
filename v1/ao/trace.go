@@ -365,7 +365,7 @@ func (t *aoTrace) recordHTTPSpan() {
 }
 
 // finalizeTxnName finalizes the transaction name based on the following factors:
-// custom transaction name, action/controller, Path and the value of APPOPTICS_PREPEND_DOMAIN
+// custom transaction name, action/controller, Path and the value of SWO_PREPEND_DOMAIN
 func (t *aoTrace) finalizeTxnName(controller string, action string) {
 	// The precedence:
 	// custom transaction name > framework specific transaction naming > controller.action > 1st and 2nd segment of Path
@@ -390,7 +390,7 @@ func (t *aoTrace) finalizeTxnName(controller string, action string) {
 	t.prependDomainToTxnName()
 }
 
-// prependDomainToTxnName prepends the domain to the transaction name if APPOPTICS_PREPEND_DOMAIN = true
+// prependDomainToTxnName prepends the domain to the transaction name if SWO_PREPEND_DOMAIN = true
 func (t *aoTrace) prependDomainToTxnName() {
 	if !config.GetPrependDomain() || t.httpSpan.span.Host == "" {
 		return

@@ -15,7 +15,7 @@ import (
 const TestServiceKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go"
 
 func init() {
-	os.Setenv("APPOPTICS_SERVICE_KEY", TestServiceKey)
+	os.Setenv("SWO_SERVICE_KEY", TestServiceKey)
 }
 
 func TestErrorSpec(t *testing.T) {
@@ -259,7 +259,7 @@ func TestWithTransactionFiltering(t *testing.T) {
 
 	// service level trace mode is disabled
 	reporter.ReloadURLsConfig([]config.TransactionFilter{})
-	os.Setenv("APPOPTICS_TRACING_MODE", "disabled")
+	os.Setenv("SWO_TRACING_MODE", "disabled")
 	config.Load()
 
 	// 8.no transaction settings
@@ -325,7 +325,7 @@ func TestWithTransactionFiltering(t *testing.T) {
 	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// reset configurations
-	os.Unsetenv("APPOPTICS_TRACING_MODE")
+	os.Unsetenv("SWO_TRACING_MODE")
 	config.Load()
 	reporter.ReloadURLsConfig([]config.TransactionFilter{})
 }

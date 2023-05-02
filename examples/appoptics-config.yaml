@@ -2,12 +2,12 @@
 # **This is an example configuration file. Uncomment the lines that need to be enabled.**
 #
 #
-ServiceKey: your_service_key:your_service_name  # - env var: APPOPTICS_SERVICE_KEY
+ServiceKey: your_service_key:your_service_name  # - env var: SWO_SERVICE_KEY
 # Sampling:
-#   TracingMode: enabled  # - env var: APPOPTICS_TRACING_MODE
-# PrependDomain: true  # - env var: APPOPTICS_PREPEND_DOMAIN
-# HostAlias: my-alias  # - env var: APPOPTICS_HOSTNAME_ALIAS
-# SQLSanitize: 2  # - env var: APPOPTICS_SQL_SANITIZE
+#   TracingMode: enabled  # - env var: SWO_TRACING_MODE
+# PrependDomain: true  # - env var: SWO_PREPEND_DOMAIN
+# HostAlias: my-alias  # - env var: SWO_HOSTNAME_ALIAS
+# SQLSanitize: 2  # - env var: SWO_SQL_SANITIZE
 # TransactionSettings:
 # - Type: url
 #   RegEx: \s+\d+\s+
@@ -16,9 +16,9 @@ ServiceKey: your_service_key:your_service_name  # - env var: APPOPTICS_SERVICE_K
 #   Extensions:
 #   - .jpg
 #   Tracing: disabled
-# Disabled: false  # - env var: APPOPTICS_DISABLED
-# Ec2MetadataTimeout: 1000 # - env var: APPOPTICS_EC2_METADATA_TIMEOUT
-# DebugLevel: warn  # - env var: APPOPTICS_DEBUG_LEVEL
-# TriggerTrace: true # - env var: APPOPTICS_TRIGGER_TRACE
-# Proxy: https://proxy_user:pwd@proxy_host:3307 # - env var: APPOPTICS_PROXY
-# ProxyCertPath: /proxy.crt # - env var: APPOPTICS_PROXY_CERT_PATH
+# Disabled: false  # - env var: SWO_DISABLED
+# Ec2MetadataTimeout: 1000 # - env var: SWO_EC2_METADATA_TIMEOUT
+# DebugLevel: warn  # - env var: SWO_DEBUG_LEVEL
+# TriggerTrace: true # - env var: SWO_TRIGGER_TRACE
+# Proxy: https://proxy_user:pwd@proxy_host:3307 # - env var: SWO_PROXY
+# ProxyCertPath: /proxy.crt # - env var: SWO_PROXY_CERT_PATH

@@ -24,18 +24,18 @@ func TestDebugLevel(t *testing.T) {
 		val      string
 		expected LogLevel
 	}{
-		{"APPOPTICS_DEBUG_LEVEL", "DEBUG", DEBUG},
-		{"APPOPTICS_DEBUG_LEVEL", "Info", INFO},
-		{"APPOPTICS_DEBUG_LEVEL", "warn", WARNING},
-		{"APPOPTICS_DEBUG_LEVEL", "erroR", ERROR},
-		{"APPOPTICS_DEBUG_LEVEL", "erroR  ", ERROR},
-		{"APPOPTICS_DEBUG_LEVEL", "HelloWorld", DefaultLevel},
-		{"APPOPTICS_DEBUG_LEVEL", "0", DEBUG},
-		{"APPOPTICS_DEBUG_LEVEL", "1", INFO},
-		{"APPOPTICS_DEBUG_LEVEL", "2", WARNING},
-		{"APPOPTICS_DEBUG_LEVEL", "3", ERROR},
-		{"APPOPTICS_DEBUG_LEVEL", "4", DefaultLevel},
-		{"APPOPTICS_DEBUG_LEVEL", "1000", DefaultLevel},
+		{"SWO_DEBUG_LEVEL", "DEBUG", DEBUG},
+		{"SWO_DEBUG_LEVEL", "Info", INFO},
+		{"SWO_DEBUG_LEVEL", "warn", WARNING},
+		{"SWO_DEBUG_LEVEL", "erroR", ERROR},
+		{"SWO_DEBUG_LEVEL", "erroR  ", ERROR},
+		{"SWO_DEBUG_LEVEL", "HelloWorld", DefaultLevel},
+		{"SWO_DEBUG_LEVEL", "0", DEBUG},
+		{"SWO_DEBUG_LEVEL", "1", INFO},
+		{"SWO_DEBUG_LEVEL", "2", WARNING},
+		{"SWO_DEBUG_LEVEL", "3", ERROR},
+		{"SWO_DEBUG_LEVEL", "4", DefaultLevel},
+		{"SWO_DEBUG_LEVEL", "1000", DefaultLevel},
 	}
 
 	for _, test := range tests {
@@ -44,7 +44,7 @@ func TestDebugLevel(t *testing.T) {
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
 
-	os.Unsetenv("APPOPTICS_DEBUG_LEVEL")
+	os.Unsetenv("SWO_DEBUG_LEVEL")
 	SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
 	assert.EqualValues(t, Level(), DefaultLevel)
 }
@@ -53,7 +53,7 @@ func TestLog(t *testing.T) {
 	var buffer bytes.Buffer
 	SetOutput(&buffer)
 
-	os.Setenv("APPOPTICS_DEBUG_LEVEL", "debug")
+	os.Setenv("SWO_DEBUG_LEVEL", "debug")
 	SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
 
 	tests := map[string]string{
@@ -97,7 +97,7 @@ func TestLog(t *testing.T) {
 	assert.True(t, strings.HasSuffix(buffer.String(), "show me the code\n"))
 
 	SetOutput(os.Stderr)
-	os.Unsetenv("APPOPTICS_DEBUG_LEVEL")
+	os.Unsetenv("SWO_DEBUG_LEVEL")
 
 }
 

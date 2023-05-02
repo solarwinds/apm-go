@@ -42,24 +42,24 @@ const (
 
 // The environment variables
 const (
-	envAppOpticsCollector             = "APPOPTICS_COLLECTOR"
-	envAppOpticsServiceKey            = "APPOPTICS_SERVICE_KEY"
-	envAppOpticsTrustedPath           = "APPOPTICS_TRUSTEDPATH"
-	envAppOpticsCollectorUDP          = "APPOPTICS_COLLECTOR_UDP"
-	envAppOpticsReporter              = "APPOPTICS_REPORTER"
-	envAppOpticsTracingMode           = "APPOPTICS_TRACING_MODE"
-	envAppOpticsSampleRate            = "APPOPTICS_SAMPLE_RATE"
-	envAppOpticsPrependDomain         = "APPOPTICS_PREPEND_DOMAIN"
-	envAppOpticsHostnameAlias         = "APPOPTICS_HOSTNAME_ALIAS"
-	envAppOpticsHistogramPrecision    = "APPOPTICS_HISTOGRAM_PRECISION"
-	envAppOpticsEventsFlushInterval   = "APPOPTICS_EVENTS_FLUSH_INTERVAL"
-	envAppOpticsMaxReqBytes           = "APPOPTICS_MAX_REQUEST_BYTES"
-	envAppOpticsDisabled              = "APPOPTICS_DISABLED"
-	envAppOpticsConfigFile            = "APPOPTICS_CONFIG_FILE"
-	envAppOpticsServerlessServiceName = "APPOPTICS_SERVICE_NAME"
-	envAppOpticsTokenBucketCap        = "APPOPTICS_TOKEN_BUCKET_CAPACITY"
-	envAppOpticsTokenBucketRate       = "APPOPTICS_TOKEN_BUCKET_RATE"
-	envAppOpticsTransactionName       = "APPOPTICS_TRANSACTION_NAME"
+	envAppOpticsCollector             = "SWO_COLLECTOR"
+	envAppOpticsServiceKey            = "SWO_SERVICE_KEY"
+	envAppOpticsTrustedPath           = "SWO_TRUSTEDPATH"
+	envAppOpticsCollectorUDP          = "SWO_COLLECTOR_UDP"
+	envAppOpticsReporter              = "SWO_REPORTER"
+	envAppOpticsTracingMode           = "SWO_TRACING_MODE"
+	envAppOpticsSampleRate            = "SWO_SAMPLE_RATE"
+	envAppOpticsPrependDomain         = "SWO_PREPEND_DOMAIN"
+	envAppOpticsHostnameAlias         = "SWO_HOSTNAME_ALIAS"
+	envAppOpticsHistogramPrecision    = "SWO_HISTOGRAM_PRECISION"
+	envAppOpticsEventsFlushInterval   = "SWO_EVENTS_FLUSH_INTERVAL"
+	envAppOpticsMaxReqBytes           = "SWO_MAX_REQUEST_BYTES"
+	envAppOpticsDisabled              = "SWO_DISABLED"
+	envAppOpticsConfigFile            = "SWO_CONFIG_FILE"
+	envAppOpticsServerlessServiceName = "SWO_SERVICE_NAME"
+	envAppOpticsTokenBucketCap        = "SWO_TOKEN_BUCKET_CAPACITY"
+	envAppOpticsTokenBucketRate       = "SWO_TOKEN_BUCKET_RATE"
+	envAppOpticsTransactionName       = "SWO_TRANSACTION_NAME"
 )
 
 // Errors
@@ -76,33 +76,33 @@ type Config struct {
 	sync.RWMutex `yaml:"-"`
 
 	// Collector defines the host and port of the AppOptics collector
-	Collector string `yaml:"Collector,omitempty" env:"APPOPTICS_COLLECTOR" default:"collector.appoptics.com:443"`
+	Collector string `yaml:"Collector,omitempty" env:"SWO_COLLECTOR" default:"collector.appoptics.com:443"`
 
 	// ServiceKey defines the service key and service name
-	ServiceKey string `yaml:"ServiceKey,omitempty" env:"APPOPTICS_SERVICE_KEY"`
+	ServiceKey string `yaml:"ServiceKey,omitempty" env:"SWO_SERVICE_KEY"`
 
 	// The file path of the cert file for gRPC connection
-	TrustedPath string `yaml:"TrustedPath,omitempty" env:"APPOPTICS_TRUSTEDPATH"`
+	TrustedPath string `yaml:"TrustedPath,omitempty" env:"SWO_TRUSTEDPATH"`
 
 	// The host and port of the UDP collector
-	CollectorUDP string `yaml:"CollectorUDP,omitempty" env:"APPOPTICS_COLLECTOR_UDP"`
+	CollectorUDP string `yaml:"CollectorUDP,omitempty" env:"SWO_COLLECTOR_UDP"`
 
 	// The reporter type, ssl or udp
-	ReporterType string `yaml:"ReporterType,omitempty" env:"APPOPTICS_REPORTER" default:"ssl"`
+	ReporterType string `yaml:"ReporterType,omitempty" env:"SWO_REPORTER" default:"ssl"`
 
 	Sampling *SamplingConfig `yaml:"Sampling,omitempty"`
 
 	// Whether the domain should be prepended to the transaction name.
-	PrependDomain bool `yaml:"PrependDomain,omitempty" env:"APPOPTICS_PREPEND_DOMAIN"`
+	PrependDomain bool `yaml:"PrependDomain,omitempty" env:"SWO_PREPEND_DOMAIN"`
 
 	// The alias of the hostname
-	HostAlias string `yaml:"HostAlias,omitempty" env:"APPOPTICS_HOSTNAME_ALIAS"`
+	HostAlias string `yaml:"HostAlias,omitempty" env:"SWO_HOSTNAME_ALIAS"`
 
 	// The precision of the histogram
-	Precision int `yaml:"Precision,omitempty" env:"APPOPTICS_HISTOGRAM_PRECISION" default:"2"`
+	Precision int `yaml:"Precision,omitempty" env:"SWO_HISTOGRAM_PRECISION" default:"2"`
 
 	// The SQL sanitization level
-	SQLSanitize int `yaml:"SQLSanitize,omitempty" env:"APPOPTICS_SQL_SANITIZE" default:"0"`
+	SQLSanitize int `yaml:"SQLSanitize,omitempty" env:"SWO_SQL_SANITIZE" default:"0"`
 
 	// The reporter options
 	ReporterProperties *ReporterOptions `yaml:"ReporterProperties,omitempty"`
@@ -110,40 +110,40 @@ type Config struct {
 	// The transaction filtering config
 	TransactionSettings []TransactionFilter `yaml:"TransactionSettings,omitempty"`
 
-	Disabled bool `yaml:"Disabled,omitempty" env:"APPOPTICS_DISABLED"`
+	Disabled bool `yaml:"Disabled,omitempty" env:"SWO_DISABLED"`
 
 	// EC2 metadata retrieval timeout in milliseconds
-	Ec2MetadataTimeout int `yaml:"Ec2MetadataTimeout,omitempty" env:"APPOPTICS_EC2_METADATA_TIMEOUT" default:"1000"`
+	Ec2MetadataTimeout int `yaml:"Ec2MetadataTimeout,omitempty" env:"SWO_EC2_METADATA_TIMEOUT" default:"1000"`
 
 	// The default log level. It should follow the level defined in log.DefaultLevel
-	DebugLevel string `yaml:"DebugLevel,omitempty" env:"APPOPTICS_DEBUG_LEVEL" default:"warn"`
+	DebugLevel string `yaml:"DebugLevel,omitempty" env:"SWO_DEBUG_LEVEL" default:"warn"`
 
 	// The flag for trigger trace. It's enabled by default.
-	TriggerTrace bool `yaml:"TriggerTrace" env:"APPOPTICS_TRIGGER_TRACE" default:"true"`
+	TriggerTrace bool `yaml:"TriggerTrace" env:"SWO_TRIGGER_TRACE" default:"true"`
 
 	// Url of the HTTP/HTTPS proxy in the format of "scheme://<username>:<password>@<host>:<port>"
-	Proxy string `yaml:"Proxy,omitempty" env:"APPOPTICS_PROXY"`
+	Proxy string `yaml:"Proxy,omitempty" env:"SWO_PROXY"`
 	// Cert path for the HTTP/HTTPS proxy
-	ProxyCertPath string `yaml:"ProxyCertPath" env:"APPOPTICS_PROXY_CERT_PATH"`
+	ProxyCertPath string `yaml:"ProxyCertPath" env:"SWO_PROXY_CERT_PATH"`
 	// Report runtime metrics or not
-	RuntimeMetrics bool `yaml:"RuntimeMetrics" env:"APPOPTICS_RUNTIME_METRICS" default:"true"`
+	RuntimeMetrics bool `yaml:"RuntimeMetrics" env:"SWO_RUNTIME_METRICS" default:"true"`
 	// ReportQueryString indicates if the query string should be reported as part of the URL
-	ReportQueryString bool    `yaml:"ReportQueryString" env:"APPOPTICS_REPORT_QUERY_STRING" default:"true"`
-	TokenBucketCap    float64 `yaml:"TokenBucketCap" env:"APPOPTICS_TOKEN_BUCKET_CAPACITY" default:"8"`
-	TokenBucketRate   float64 `yaml:"TokenBucketRate" env:"APPOPTICS_TOKEN_BUCKET_RATE" default:"0.17"`
+	ReportQueryString bool    `yaml:"ReportQueryString" env:"SWO_REPORT_QUERY_STRING" default:"true"`
+	TokenBucketCap    float64 `yaml:"TokenBucketCap" env:"SWO_TOKEN_BUCKET_CAPACITY" default:"8"`
+	TokenBucketRate   float64 `yaml:"TokenBucketRate" env:"SWO_TOKEN_BUCKET_RATE" default:"0.17"`
 	// The user-defined transaction name. It's only available in the AWS Lambda environment.
-	TransactionName string `yaml:"TransactionName" env:"APPOPTICS_TRANSACTION_NAME"`
+	TransactionName string `yaml:"TransactionName" env:"SWO_TRANSACTION_NAME"`
 }
 
 // SamplingConfig defines the configuration options for the sampling decision
 type SamplingConfig struct {
 	// The tracing mode
-	TracingMode TracingMode `yaml:"TracingMode,omitempty" env:"APPOPTICS_TRACING_MODE" default:"enabled"`
+	TracingMode TracingMode `yaml:"TracingMode,omitempty" env:"SWO_TRACING_MODE" default:"enabled"`
 	// If the tracing mode is configured explicitly
 	tracingModeConfigured bool `yaml:"-"`
 
 	// The sample rate
-	SampleRate int `yaml:"SampleRate,omitempty" env:"APPOPTICS_SAMPLE_RATE" default:"1000000"`
+	SampleRate int `yaml:"SampleRate,omitempty" env:"SWO_SAMPLE_RATE" default:"1000000"`
 	// If the sample rate is configured explicitly
 	sampleRateConfigured bool `yaml:"-"`
 }

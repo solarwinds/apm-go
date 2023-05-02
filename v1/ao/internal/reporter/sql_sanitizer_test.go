@@ -424,7 +424,7 @@ func TestSQLSanitize(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_ = os.Setenv("APPOPTICS_SQL_SANITIZE", strconv.Itoa(c.mode))
+		_ = os.Setenv("SWO_SQL_SANITIZE", strconv.Itoa(c.mode))
 		config.Load()
 		ss := initSanitizersMap()
 
@@ -439,7 +439,7 @@ func BenchmarkSQLSanitizeShort(b *testing.B) {
 			 LEFT JOIN tickets 
 			 WHERE eid = id AND last_update BETWEEN '01/01/2019' AND '05/30/2019'`
 
-	_ = os.Setenv("APPOPTICS_SQL_SANITIZE", "1")
+	_ = os.Setenv("SWO_SQL_SANITIZE", "1")
 	if err := config.Load(); err != nil {
 		b.FailNow()
 	}
@@ -448,13 +448,13 @@ func BenchmarkSQLSanitizeShort(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		sqlSanitize(ss, DefaultDB, sql)
 	}
-	_ = os.Unsetenv("APPOPTICS_SQL_SANITIZE")
+	_ = os.Unsetenv("SWO_SQL_SANITIZE")
 }
 
 func BenchmarkSQLSanitizeLong(b *testing.B) {
 	sql := "SELECT name FROM employees WHERE age = 37 AND firstName = 'Eric'"
 
-	_ = os.Setenv("APPOPTICS_SQL_SANITIZE", "1")
+	_ = os.Setenv("SWO_SQL_SANITIZE", "1")
 	if err := config.Load(); err != nil {
 		b.FailNow()
 	}
@@ -463,5 +463,5 @@ func BenchmarkSQLSanitizeLong(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		sqlSanitize(ss, DefaultDB, sql)
 	}
-	_ = os.Unsetenv("APPOPTICS_SQL_SANITIZE")
+	_ = os.Unsetenv("SWO_SQL_SANITIZE")
 }
