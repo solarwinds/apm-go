@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	AOHTTPHeader = "x-trace"
+	SWOHTTPHeader = "x-trace"
 )
 
 // Wrapper offers the ability to be called before and after a handler is executed.
@@ -72,7 +72,7 @@ func (w *traceWrapper) getRequestContext(ctx context.Context, msg json.RawMessag
 		for k, v := range headers {
 			k = strings.ToLower(k)
 			switch k {
-			case AOHTTPHeader:
+			case SWOHTTPHeader:
 				mdStr = v
 			case "host":
 				host = v
@@ -192,12 +192,12 @@ func (w *traceWrapper) injectTraceContext(result interface{}, mdStr string) (res
 
 	if gwRsp, ok := result.(events.APIGatewayProxyResponse); ok {
 		if gwRsp.Headers != nil {
-			gwRsp.Headers[AOHTTPHeader] = mdStr
+			gwRsp.Headers[SWOHTTPHeader] = mdStr
 			return result
 		}
 	} else if gwRsp, ok := result.(events.APIGatewayV2HTTPResponse); ok {
 		if gwRsp.Headers != nil {
-			gwRsp.Headers[AOHTTPHeader] = mdStr
+			gwRsp.Headers[SWOHTTPHeader] = mdStr
 			return result
 		}
 	} else {
@@ -222,7 +222,7 @@ func (w *traceWrapper) injectTraceContext(result interface{}, mdStr string) (res
 			fieldType.Type.Elem().Kind() == reflect.String &&
 			fieldType.Type.Key().Kind() == reflect.String &&
 			fieldVal.CanSet() {
-			traceContextMap := map[string]string{AOHTTPHeader: mdStr}
+			traceContextMap := map[string]string{SWOHTTPHeader: mdStr}
 			fieldVal.Set(reflect.Indirect(reflect.ValueOf(traceContextMap)))
 		}
 	}

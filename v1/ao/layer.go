@@ -503,7 +503,7 @@ type spanLabeler struct{ name string }
 // Deprecated: profileLabeler is deprecated, use spanLabeler instead.
 type profileLabeler struct{ name string }
 
-// AO's Span and Profile spans report their layer and label names slightly differently
+// SWO's Span and Profile spans report their layer and label names slightly differently
 func (l spanLabeler) entryLabel() reporter.Label { return reporter.LabelEntry }
 func (l spanLabeler) exitLabel() reporter.Label  { return reporter.LabelExit }
 func (l spanLabeler) layerName() string          { return l.name }

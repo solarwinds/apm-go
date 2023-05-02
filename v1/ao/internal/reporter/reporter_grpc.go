@@ -53,7 +53,7 @@ MTUyMjAxMzlaFw0yNzA5MTMyMjAxMzlaMIGOMQswCQYDVQQGEwJVUzETMBEGA1UE
 CAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzEVMBMGA1UECgwM
 TGlicmF0byBJbmMuMRUwEwYDVQQDDAxBcHBPcHRpY3MgQ0ExJDAiBgkqhkiG9w0B
 CQEWFXN1cHBvcnRAYXBwb3B0aWNzLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEP
-ADCCAQoCggEBAOxO0wsGba3iI4r3L5BMST0rAO/gGaUhpQre6nRwVTmPCnLw1bmn
+ADCCAQoCggEBSWOxO0wsGba3iI4r3L5BMST0rSWO/gGaUhpQre6nRwVTmPCnLw1bmn
 GdiFgYv/oRRwU+VieumHSQqoOmyFrg+ajGmvUDp2WqQ0It+XhcbaHFiAp2H7+mLf
 cUH6S43/em0WUxZHeRzRupRDyO1bX6Hh2jgxykivlFrn5HCIQD5Hx1/SaZoW9v2n
 oATCbgFOiPW6kU/AVs4R0VBujon13HCehVelNKkazrAEBT1i6RvdOB6aQQ32seW+
@@ -279,7 +279,7 @@ func newGRPCReporter() reporter {
 	}
 
 	// create connection object for events client and metrics client
-	grpcConn, err1 := newGrpcConnection("AO gRPC channel", addr, opts...)
+	grpcConn, err1 := newGrpcConnection("SWO gRPC channel", addr, opts...)
 	if err1 != nil {
 		log.Errorf("Failed to initialize gRPC reporter %v: %v", addr, err1)
 		return &nullReporter{}

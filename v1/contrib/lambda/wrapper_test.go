@@ -91,7 +91,7 @@ func TestInjectTraceContext(t *testing.T) {
 
 	expected := events.APIGatewayProxyResponse{
 		StatusCode:        200,
-		Headers:           map[string]string{AOHTTPHeader: "my-x-trace-id"},
+		Headers:           map[string]string{SWOHTTPHeader: "my-x-trace-id"},
 		MultiValueHeaders: map[string][]string{"key": {"value1", "value2"}},
 		Body:              "response body",
 		IsBase64Encoded:   true,
@@ -114,7 +114,7 @@ func TestInjectTraceContextWithExistingHeaders(t *testing.T) {
 
 	expected := events.APIGatewayProxyResponse{
 		StatusCode:        200,
-		Headers:           map[string]string{AOHTTPHeader: "my-x-trace-id", "header": "value"},
+		Headers:           map[string]string{SWOHTTPHeader: "my-x-trace-id", "header": "value"},
 		MultiValueHeaders: map[string][]string{"key": {"value1", "value2"}},
 		Body:              "response body",
 		IsBase64Encoded:   true,

@@ -3,13 +3,13 @@ package opentracing
 import (
 	"testing"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
-	mt "github.com/solarwindscloud/swo-golang/v1/contrib/multitracer"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/harness"
+	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	mt "github.com/solarwindscloud/swo-golang/v1/contrib/multitracer"
 )
 
-// This test sets up the AO Tracer wrapped in a MultiTracer
+// This test sets up the SWO Tracer wrapped in a MultiTracer
 func TestMultiTracerAPICheck(t *testing.T) {
 	_ = reporter.SetTestReporter(reporter.TestReporterDisableDefaultSetting(true)) // set up test reporter
 	multiTracer := &mt.MultiTracer{Tracers: []opentracing.Tracer{NewTracer()}}

@@ -160,7 +160,7 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 		traceContext := FromXTraceIDContext(ctx, parentXTraceID)
 		aoSpan, _ := BeginSpanWithOverrides(traceContext, s.Name(), SpanOptions{}, startOverrides)
 
-		// report otel Span Events as AO Info KVs
+		// report otel Span Events as SWO Info KVs
 		for _, infoEventKvs := range infoEvents {
 			aoSpan.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
 		}
@@ -170,7 +170,7 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 		trace := NewTraceWithOverrides(s.Name(), startOverrides, nil)
 		trace.SetStartTime(s.StartTime()) //this is for histogram only
 
-		// report otel Span Events as AO Info KVs
+		// report otel Span Events as SWO Info KVs
 		for _, infoEventKvs := range infoEvents {
 			trace.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
 		}

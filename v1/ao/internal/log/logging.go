@@ -171,12 +171,12 @@ func logIt(level LogLevel, msg string, args []interface{}) {
 		// the information of real callers of the logging functions.
 		_, file, line, ok := runtime.Caller(numberOfLayersToSkip)
 		if ok {
-			pre = fmt.Sprintf("%-5s [AO] %s:%d ", LevelStr[level], filepath.Base(file), line)
+			pre = fmt.Sprintf("%-5s [SWO] %s:%d ", LevelStr[level], filepath.Base(file), line)
 		} else {
-			pre = fmt.Sprintf("%-5s [AO] %s:%s ", LevelStr[level], "na", "na")
+			pre = fmt.Sprintf("%-5s [SWO] %s:%s ", LevelStr[level], "na", "na")
 		}
 	} else { // avoid expensive reflections in production
-		pre = fmt.Sprintf("%-5s [AO] ", LevelStr[level])
+		pre = fmt.Sprintf("%-5s [SWO] ", LevelStr[level])
 	}
 
 	buffer.WriteString(pre)

@@ -5,7 +5,7 @@ package opentracing
 import "github.com/opentracing/opentracing-go/ext"
 
 // Map selected OpenTracing tag constants to AppOptics analogs
-var otAOMap = map[string]string{
+var otSWOMap = map[string]string{
 	string(ext.Component): "OTComponent",
 
 	string(ext.PeerService):  "RemoteController",
@@ -24,7 +24,7 @@ var otAOMap = map[string]string{
 }
 
 func translateTagName(key string) string {
-	if k := otAOMap[key]; k != "" {
+	if k := otSWOMap[key]; k != "" {
 		return k
 	}
 	return key

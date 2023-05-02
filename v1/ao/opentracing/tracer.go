@@ -252,7 +252,7 @@ func (s *spanImpl) SetTag(key string, value interface{}) ot.Span {
 	return s
 }
 
-// setErrorTag passes an OT error to the AO span.Error method.
+// setErrorTag passes an OT error to the SWO span.Error method.
 func (s *spanImpl) setErrorTag(value interface{}) {
 	switch v := value.(type) {
 	case bool:
