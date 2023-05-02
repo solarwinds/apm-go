@@ -100,14 +100,14 @@ func ToLogLevel(level string) (LogLevel, bool) {
 	return lvl, true
 }
 
-// SetLevel sets the log level of AppOptics agent
+// SetLevel sets the log level of library
 func (l *logLevel) SetLevel(level LogLevel) {
 	l.Lock()
 	defer l.Unlock()
 	l.LogLevel = level
 }
 
-// Level returns the current log level of AppOptics agent
+// Level returns the current log level of library
 func (l *logLevel) Level() LogLevel {
 	l.RLock()
 	defer l.RUnlock()

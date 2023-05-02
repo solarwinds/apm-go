@@ -906,7 +906,7 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 
 	OboeCheckSettingsTimeout()
 	if r.isReady() && !hasDefaultSetting() {
-		log.Warningf("Sampling setting expired. AppOptics agent (%v) is not working.", r.done)
+		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
 		r.setReady(false)
 	}
 }

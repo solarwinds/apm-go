@@ -48,7 +48,7 @@ func Closed() bool {
 	return reporter.Closed()
 }
 
-// SetLogLevel changes the logging level of the AppOptics agent
+// SetLogLevel changes the logging level of the library
 // Valid logging levels: DEBUG, INFO, WARN, ERROR
 func SetLogLevel(level string) error {
 	l, ok := log.ToLogLevel(level)
@@ -59,7 +59,7 @@ func SetLogLevel(level string) error {
 	return nil
 }
 
-// GetLogLevel returns the current logging level of the AppOptics agent
+// GetLogLevel returns the current logging level of the library
 func GetLogLevel() string {
 	return log.LevelStr[log.Level()]
 }
