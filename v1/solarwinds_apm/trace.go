@@ -105,7 +105,7 @@ type apmTrace struct {
 	overrides      Overrides
 }
 
-func (t *apmTrace) aoContext() reporter.Context { return t.aoCtx }
+func (t *apmTrace) aoContext() reporter.Context { return t.apmCtx }
 
 // NewTrace creates a new Trace for reporting to SolarWinds Observability and immediately records
 // the beginning of a root span named spanName. If this trace is sampled, it may report
@@ -138,7 +138,7 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 		return NewNullTrace()
 	}
 	t := &apmTrace{
-		layerSpan:      layerSpan{span: span{aoCtx: ctx, labeler: spanLabeler{spanName}}},
+		layerSpan:      layerSpan{span: span{apmCtx: ctx, labeler: spanLabeler{spanName}}},
 		httpRspHeaders: make(map[string]string),
 	}
 
@@ -281,7 +281,7 @@ func (t *apmTrace) reportExit() {
 		}
 
 		// record a new span
-		if !t.httpSpan.start.IsZero() && t.aoCtx.GetEnabled() {
+		if !t.httpSpan.start.IsZero() && t.apmCtx.GetEnabled() {
 			var end time.Time
 			if t.httpSpan.end.IsZero() {
 				end = time.Now()
@@ -296,9 +296,9 @@ func (t *apmTrace) reportExit() {
 			t.endArgs = append(t.endArgs, keyEdge, edge)
 		}
 		if t.exitEvent != nil { // use exit event, if one was provided
-			t.exitEvent.ReportContext(t.aoCtx, true, t.endArgs...)
+			t.exitEvent.ReportContext(t.apmCtx, true, t.endArgs...)
 		} else {
-			t.aoCtx.ReportEventWithOverrides(reporter.LabelExit, t.layerName(), reporter.Overrides{
+			t.apmCtx.ReportEventWithOverrides(reporter.LabelExit, t.layerName(), reporter.Overrides{
 				ExplicitTS:    t.overrides.ExplicitTS,
 				ExplicitMdStr: t.overrides.ExplicitMdStr,
 			}, t.endArgs...)
@@ -311,13 +311,13 @@ func (t *apmTrace) reportExit() {
 }
 
 // IsSampled indicates if the trace is sampled.
-func (t *apmTrace) IsSampled() bool { return t != nil && t.aoCtx.IsSampled() }
+func (t *apmTrace) IsSampled() bool { return t != nil && t.apmCtx.IsSampled() }
 
 // ExitMetadata reports the X-Trace metadata string that will be used by the exit event.
 // This is useful for setting response headers before reporting the end of the span.
 func (t *apmTrace) ExitMetadata() (mdHex string) {
 	if t.exitEvent == nil {
-		t.exitEvent = t.aoCtx.NewEvent(reporter.LabelExit, t.layerName(), false)
+		t.exitEvent = t.apmCtx.NewEvent(reporter.LabelExit, t.layerName(), false)
 	}
 	if t.exitEvent != nil {
 		mdHex = t.exitEvent.MetadataString()
@@ -369,7 +369,7 @@ func (t *apmTrace) recordHTTPSpan() {
 func (t *apmTrace) finalizeTxnName(controller string, action string) {
 	// The precedence:
 	// custom transaction name > framework specific transaction naming > controller.action > 1st and 2nd segment of Path
-	customTxnName := t.aoCtx.GetTransactionName()
+	customTxnName := t.apmCtx.GetTransactionName()
 	if config.GetTransactionName() != "" {
 		customTxnName = config.GetTransactionName()
 	}

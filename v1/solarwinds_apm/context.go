@@ -25,11 +25,11 @@ func newSpanContext(ctx context.Context, l Span) context.Context {
 }
 
 func FromXTraceIDContext(ctx context.Context, xTraceID string) context.Context {
-	aoCtx, err := reporter.NewContextFromMetadataString(xTraceID)
+	apmCtx, err := reporter.NewContextFromMetadataString(xTraceID)
 	if err != nil {
 		log.Warningf("xTrace ID %v is invalid \n", xTraceID)
 	}
-	return context.WithValue(ctx, contextSpanKey, contextSpan{aoCtx: aoCtx})
+	return context.WithValue(ctx, contextSpanKey, contextSpan{apmCtx: apmCtx})
 }
 
 // FromContext returns the Span bound to the context, if any.

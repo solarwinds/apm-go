@@ -229,7 +229,7 @@ func (s *layerSpan) BeginSpanWithOptions(spanName string, opts SpanOptions, args
 func (s *layerSpan) BeginSpanWithOverrides(spanName string, opts SpanOptions, overrides Overrides, args ...interface{}) Span {
 	if s.ok() { // copy parent context and report entry from child
 		kvs := addKVsFromOpts(opts, args...)
-		return newSpan(s.aoCtx.Copy(), spanName, s, overrides, kvs...)
+		return newSpan(s.apmCtx.Copy(), spanName, s, overrides, kvs...)
 	}
 	return nullSpan{}
 }
@@ -269,13 +269,13 @@ func (s *span) End(args ...interface{}) {
 		for _, edge := range s.childEdges { // add Edge KV for each joined child
 			args = append(args, keyEdge, edge)
 		}
-		_ = s.aoCtx.ReportEvent(s.exitLabel(), s.layerName(), args...)
+		_ = s.apmCtx.ReportEvent(s.exitLabel(), s.layerName(), args...)
 		s.childEdges = nil // clear child edge list
 		s.endArgs = nil
 		s.ended = true
 		// add this span's context to list to be used as Edge by parent exit
 		if s.parent != nil && s.parent.ok() {
-			s.parent.addChildEdge(s.aoCtx)
+			s.parent.addChildEdge(s.apmCtx)
 		}
 	}
 }
@@ -292,7 +292,7 @@ func (s *span) EndWithOverrides(overrides Overrides, args ...interface{}) {
 		for _, edge := range s.childEdges { // add Edge KV for each joined child
 			args = append(args, keyEdge, edge)
 		}
-		_ = s.aoCtx.ReportEventWithOverrides(s.exitLabel(), s.layerName(), reporter.Overrides{
+		_ = s.apmCtx.ReportEventWithOverrides(s.exitLabel(), s.layerName(), reporter.Overrides{
 			ExplicitTS:    overrides.ExplicitTS,
 			ExplicitMdStr: overrides.ExplicitMdStr,
 		}, args...)
@@ -301,7 +301,7 @@ func (s *span) EndWithOverrides(overrides Overrides, args ...interface{}) {
 		s.ended = true
 		// add this span's context to list to be used as Edge by parent exit
 		if s.parent != nil && s.parent.ok() {
-			s.parent.addChildEdge(s.aoCtx)
+			s.parent.addChildEdge(s.apmCtx)
 		}
 	}
 }
@@ -329,7 +329,7 @@ func (s *layerSpan) Info(args ...interface{}) {
 func (s *layerSpan) InfoWithOptions(opts SpanOptions, args ...interface{}) {
 	if s.ok() {
 		kvs := addKVsFromOpts(opts, args...)
-		s.aoCtx.ReportEvent(reporter.LabelInfo, s.layerName(), kvs...)
+		s.apmCtx.ReportEvent(reporter.LabelInfo, s.layerName(), kvs...)
 	}
 }
 
@@ -337,7 +337,7 @@ func (s *layerSpan) InfoWithOptions(opts SpanOptions, args ...interface{}) {
 func (s *layerSpan) InfoWithOverrides(overrides Overrides, opts SpanOptions, args ...interface{}) {
 	if s.ok() {
 		kvs := addKVsFromOpts(opts, args...)
-		s.aoCtx.ReportEventWithOverrides(reporter.LabelInfo, s.layerName(), reporter.Overrides{
+		s.apmCtx.ReportEventWithOverrides(reporter.LabelInfo, s.layerName(), reporter.Overrides{
 			ExplicitTS:    overrides.ExplicitTS,
 			ExplicitMdStr: overrides.ExplicitMdStr,
 		}, kvs...)
@@ -348,7 +348,7 @@ func (s *layerSpan) InfoWithOverrides(overrides Overrides, opts SpanOptions, arg
 // tracing (to create a remote child span). If the Span has ended, an empty string is returned.
 func (s *layerSpan) MetadataString() string {
 	if s.ok() {
-		return s.aoCtx.MetadataString()
+		return s.apmCtx.MetadataString()
 	}
 	return ""
 }
@@ -356,7 +356,7 @@ func (s *layerSpan) MetadataString() string {
 // IsSampled indicates if the layer is sampled.
 func (s *layerSpan) IsSampled() bool {
 	if s.ok() {
-		return s.aoCtx.IsSampled()
+		return s.apmCtx.IsSampled()
 	}
 	return false
 }
@@ -381,7 +381,7 @@ func (s *span) SetTransactionName(name string) error {
 	if name == "" || len(name) > MaxCustomTransactionNameLength {
 		return errTransactionNameLength
 	}
-	s.aoCtx.SetTransactionName(name)
+	s.apmCtx.SetTransactionName(name)
 	return nil
 }
 
@@ -392,13 +392,13 @@ var (
 
 // GetTransactionName returns the current value of the transaction name
 func (s *span) GetTransactionName() string {
-	return s.aoCtx.GetTransactionName()
+	return s.apmCtx.GetTransactionName()
 }
 
 // Error reports an error, distinguished by its class and message
 func (s *span) Error(class, msg string) {
 	if s.ok() {
-		s.aoCtx.ReportEvent(reporter.LabelError, s.layerName(),
+		s.apmCtx.ReportEvent(reporter.LabelError, s.layerName(),
 			keySpec, "error",
 			keyErrorType, "exception",
 			keyErrorClass, class,
@@ -419,7 +419,7 @@ func (s *span) Err(err error) {
 // both Span and Profile interfaces.
 type span struct {
 	labeler
-	aoCtx         reporter.Context
+	apmCtx        reporter.Context
 	parent        Span
 	childEdges    []string // for reporting in exit event
 	childProfiles []Profile
@@ -432,7 +432,7 @@ type profileSpan struct{ span } // satisfies Profile
 type nullSpan struct{}          // a span that is not tracing; satisfies Span & Profile
 type contextSpan struct {
 	nullSpan
-	aoCtx reporter.Context
+	apmCtx reporter.Context
 }
 
 func (s nullSpan) BeginSpan(spanName string, args ...interface{}) Span { return nullSpan{} }
@@ -464,7 +464,7 @@ func (s nullSpan) SetOperationName(string)                                      
 func (s nullSpan) SetTransactionName(string) error                                              { return nil }
 func (s nullSpan) GetTransactionName() string                                                   { return "" }
 
-func (s contextSpan) aoContext() reporter.Context { return s.aoCtx }
+func (s contextSpan) aoContext() reporter.Context { return s.apmCtx }
 func (s contextSpan) ok() bool                    { return true }
 
 // is this span still valid (has it timed out, expired, not sampled)
@@ -477,7 +477,7 @@ func (s *span) ok() bool {
 	return !s.ended
 }
 func (s *span) IsReporting() bool           { return s.ok() }
-func (s *span) aoContext() reporter.Context { return s.aoCtx }
+func (s *span) aoContext() reporter.Context { return s.apmCtx }
 
 // addChildEdge keeps track of edges to closed child spans
 func (s *span) addChildEdge(ctx reporter.Context) {
@@ -509,20 +509,20 @@ func (l spanLabeler) exitLabel() reporter.Label  { return reporter.LabelExit }
 func (l spanLabeler) layerName() string          { return l.name }
 func (l spanLabeler) setName(name string)        { l.name = name }
 
-func newSpan(aoCtx reporter.Context, spanName string, parent Span, overrides Overrides, args ...interface{}) Span {
+func newSpan(apmCtx reporter.Context, spanName string, parent Span, overrides Overrides, args ...interface{}) Span {
 	if spanName == "" {
 		return nullSpan{}
 	}
 
 	ll := spanLabeler{spanName}
 
-	//fmt.Printf("Starting new span with context %+v\n", aoCtx)
-	if err := aoCtx.ReportEventWithOverrides(ll.entryLabel(), ll.layerName(), reporter.Overrides{
+	//fmt.Printf("Starting new span with context %+v\n", apmCtx)
+	if err := apmCtx.ReportEventWithOverrides(ll.entryLabel(), ll.layerName(), reporter.Overrides{
 		ExplicitTS:    overrides.ExplicitTS,
 		ExplicitMdStr: overrides.ExplicitMdStr,
 	}, args...); err != nil {
 		return nullSpan{}
 	}
-	return &layerSpan{span: span{aoCtx: aoCtx.Copy(), labeler: ll, parent: parent}}
+	return &layerSpan{span: span{apmCtx: apmCtx.Copy(), labeler: ll, parent: parent}}
 
 }

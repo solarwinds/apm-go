@@ -22,23 +22,23 @@ func TestContext(t *testing.T) {
 	assert.Empty(t, MetadataString(ctx))
 	tr := NewTrace("test").(*apmTrace)
 
-	xt := tr.aoCtx.MetadataString()
-	//	assert.True(t, IsSampled(ctx), "%T", tr.aoCtx)
+	xt := tr.apmCtx.MetadataString()
+	//	assert.True(t, IsSampled(ctx), "%T", tr.apmCtx)
 
 	var traceKey = struct{}{}
 
 	ctx2 := context.WithValue(ctx, traceKey, tr)
 	assert.Equal(t, ctx2.Value(traceKey), tr)
-	assert.Equal(t, ctx2.Value(traceKey).(*apmTrace).aoCtx.MetadataString(), xt)
+	assert.Equal(t, ctx2.Value(traceKey).(*apmTrace).apmCtx.MetadataString(), xt)
 
-	ctxx := tr.aoCtx.Copy()
+	ctxx := tr.apmCtx.Copy()
 	lbl := spanLabeler{"L1"}
-	tr2 := &apmTrace{layerSpan: layerSpan{span: span{aoCtx: ctxx, labeler: lbl}}}
+	tr2 := &apmTrace{layerSpan: layerSpan{span: span{apmCtx: ctxx, labeler: lbl}}}
 	ctx3 := context.WithValue(ctx2, traceKey, tr2)
 	assert.Equal(t, ctx3.Value(traceKey), tr2)
 
-	ctxx2 := tr2.aoCtx.Copy()
-	tr3 := &apmTrace{layerSpan: layerSpan{span: span{aoCtx: ctxx2}}}
+	ctxx2 := tr2.apmCtx.Copy()
+	tr3 := &apmTrace{layerSpan: layerSpan{span: span{apmCtx: ctxx2}}}
 	ctx4 := context.WithValue(ctx3, traceKey, tr3)
 	assert.Equal(t, ctx4.Value(traceKey), tr3)
 
