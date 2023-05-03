@@ -40,12 +40,12 @@ func TestDebugLevel(t *testing.T) {
 
 	for _, test := range tests {
 		os.Setenv(test.key, test.val)
-		SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
+		SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
 
 	os.Unsetenv("SWO_DEBUG_LEVEL")
-	SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
+	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 	assert.EqualValues(t, Level(), DefaultLevel)
 }
 
@@ -54,7 +54,7 @@ func TestLog(t *testing.T) {
 	SetOutput(&buffer)
 
 	os.Setenv("SWO_DEBUG_LEVEL", "debug")
-	SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
+	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 
 	tests := map[string]string{
 		"hello world": "hello world\n",

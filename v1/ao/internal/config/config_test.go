@@ -28,11 +28,11 @@ func TestLoadConfig(t *testing.T) {
 	key1 := "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:Go"
 	key2 := "bbbb315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:Go"
 
-	os.Setenv(envAppOpticsCollector, "example.com:12345")
-	os.Setenv(envAppOpticsPrependDomain, "true")
-	os.Setenv(envAppOpticsHistogramPrecision, "2")
-	os.Setenv(envAppOpticsServiceKey, key1)
-	os.Setenv(envAppOpticsDisabled, "false")
+	os.Setenv(envSolarWindsAPMCollector, "example.com:12345")
+	os.Setenv(envSolarWindsAPMPrependDomain, "true")
+	os.Setenv(envSolarWindsAPMHistogramPrecision, "2")
+	os.Setenv(envSolarWindsAPMServiceKey, key1)
+	os.Setenv(envSolarWindsAPMDisabled, "false")
 
 	c := NewConfig()
 	assert.Equal(t, "example.com:12345", c.GetCollector())
@@ -40,9 +40,9 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, 2, c.Precision)
 	assert.Equal(t, false, c.Disabled)
 
-	os.Setenv(envAppOpticsCollector, "test.abc:8080")
-	os.Setenv(envAppOpticsDisabled, "false")
-	os.Setenv(envAppOpticsTracingMode, "always")
+	os.Setenv(envSolarWindsAPMCollector, "test.abc:8080")
+	os.Setenv(envSolarWindsAPMDisabled, "false")
+	os.Setenv(envSolarWindsAPMTracingMode, "always")
 
 	c.Load()
 	assert.Equal(t, "test.abc:8080", c.GetCollector())
@@ -55,15 +55,15 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "hello.world", c.GetCollector())
 	assert.Equal(t, ToServiceKey(key2), c.GetServiceKey())
 
-	os.Setenv(envAppOpticsServiceKey, key1)
-	os.Setenv(envAppOpticsHostnameAlias, "test")
-	os.Setenv(envAppOpticsTrustedPath, "test.crt")
-	os.Setenv(envAppOpticsCollectorUDP, "hello.udp")
-	os.Setenv(envAppOpticsDisabled, "invalidValue")
-	os.Setenv(envAppOpticsServerlessServiceName, "AWSLambda")
-	os.Setenv(envAppOpticsTokenBucketCap, "2.0")
-	os.Setenv(envAppOpticsTokenBucketRate, "1.0")
-	os.Setenv(envAppOpticsTransactionName, "my-transaction-name")
+	os.Setenv(envSolarWindsAPMServiceKey, key1)
+	os.Setenv(envSolarWindsAPMHostnameAlias, "test")
+	os.Setenv(envSolarWindsAPMTrustedPath, "test.crt")
+	os.Setenv(envSolarWindsAPMCollectorUDP, "hello.udp")
+	os.Setenv(envSolarWindsAPMDisabled, "invalidValue")
+	os.Setenv(envSolarWindsAPMServerlessServiceName, "AWSLambda")
+	os.Setenv(envSolarWindsAPMTokenBucketCap, "2.0")
+	os.Setenv(envSolarWindsAPMTokenBucketRate, "1.0")
+	os.Setenv(envSolarWindsAPMTransactionName, "my-transaction-name")
 
 	c.Load()
 	assert.Equal(t, 2.0, c.GetTokenBucketCap())
@@ -78,21 +78,21 @@ func TestLoadConfig(t *testing.T) {
 
 func TestConfig_HasLocalSamplingConfig(t *testing.T) {
 	// Set tracing mode
-	_ = os.Setenv(envAppOpticsTracingMode, "disabled")
+	_ = os.Setenv(envSolarWindsAPMTracingMode, "disabled")
 	Load()
 	assert.True(t, SamplingConfigured())
 	assert.Equal(t, "disabled", string(GetTracingMode()))
 	assert.Equal(t, ToInteger(getFieldDefaultValue(&SamplingConfig{}, "SampleRate")), GetSampleRate())
 
 	// No local sampling config
-	_ = os.Unsetenv(envAppOpticsTracingMode)
+	_ = os.Unsetenv(envSolarWindsAPMTracingMode)
 	Load()
 	assert.False(t, SamplingConfigured())
 	assert.Equal(t, getFieldDefaultValue(&SamplingConfig{}, "TracingMode"), string(GetTracingMode()))
 	assert.Equal(t, ToInteger(getFieldDefaultValue(&SamplingConfig{}, "SampleRate")), GetSampleRate())
 
 	// Set sample rate to 10000
-	_ = os.Setenv(envAppOpticsSampleRate, "10000")
+	_ = os.Setenv(envSolarWindsAPMSampleRate, "10000")
 	Load()
 	assert.True(t, SamplingConfigured())
 	assert.Equal(t, getFieldDefaultValue(&SamplingConfig{}, "TracingMode"), string(GetTracingMode()))
@@ -346,7 +346,7 @@ func TestYamlConfig(t *testing.T) {
 
 	// Test with config file
 	ClearEnvs()
-	os.Setenv(envAppOpticsConfigFile, "/tmp/swo-config.yaml")
+	os.Setenv(envSolarWindsAPMConfigFile, "/tmp/swo-config.yaml")
 
 	c := NewConfig()
 	assert.Equal(t, &yamlConfig, c)

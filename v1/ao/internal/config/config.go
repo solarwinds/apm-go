@@ -42,24 +42,24 @@ const (
 
 // The environment variables
 const (
-	envAppOpticsCollector             = "SWO_COLLECTOR"
-	envAppOpticsServiceKey            = "SWO_SERVICE_KEY"
-	envAppOpticsTrustedPath           = "SWO_TRUSTEDPATH"
-	envAppOpticsCollectorUDP          = "SWO_COLLECTOR_UDP"
-	envAppOpticsReporter              = "SWO_REPORTER"
-	envAppOpticsTracingMode           = "SWO_TRACING_MODE"
-	envAppOpticsSampleRate            = "SWO_SAMPLE_RATE"
-	envAppOpticsPrependDomain         = "SWO_PREPEND_DOMAIN"
-	envAppOpticsHostnameAlias         = "SWO_HOSTNAME_ALIAS"
-	envAppOpticsHistogramPrecision    = "SWO_HISTOGRAM_PRECISION"
-	envAppOpticsEventsFlushInterval   = "SWO_EVENTS_FLUSH_INTERVAL"
-	envAppOpticsMaxReqBytes           = "SWO_MAX_REQUEST_BYTES"
-	envAppOpticsDisabled              = "SWO_DISABLED"
-	envAppOpticsConfigFile            = "SWO_CONFIG_FILE"
-	envAppOpticsServerlessServiceName = "SWO_SERVICE_NAME"
-	envAppOpticsTokenBucketCap        = "SWO_TOKEN_BUCKET_CAPACITY"
-	envAppOpticsTokenBucketRate       = "SWO_TOKEN_BUCKET_RATE"
-	envAppOpticsTransactionName       = "SWO_TRANSACTION_NAME"
+	envSolarWindsAPMCollector             = "SWO_COLLECTOR"
+	envSolarWindsAPMServiceKey            = "SWO_SERVICE_KEY"
+	envSolarWindsAPMTrustedPath           = "SWO_TRUSTEDPATH"
+	envSolarWindsAPMCollectorUDP          = "SWO_COLLECTOR_UDP"
+	envSolarWindsAPMReporter              = "SWO_REPORTER"
+	envSolarWindsAPMTracingMode           = "SWO_TRACING_MODE"
+	envSolarWindsAPMSampleRate            = "SWO_SAMPLE_RATE"
+	envSolarWindsAPMPrependDomain         = "SWO_PREPEND_DOMAIN"
+	envSolarWindsAPMHostnameAlias         = "SWO_HOSTNAME_ALIAS"
+	envSolarWindsAPMHistogramPrecision    = "SWO_HISTOGRAM_PRECISION"
+	envSolarWindsAPMEventsFlushInterval   = "SWO_EVENTS_FLUSH_INTERVAL"
+	envSolarWindsAPMMaxReqBytes           = "SWO_MAX_REQUEST_BYTES"
+	envSolarWindsAPMDisabled              = "SWO_DISABLED"
+	envSolarWindsAPMConfigFile            = "SWO_CONFIG_FILE"
+	envSolarWindsAPMServerlessServiceName = "SWO_SERVICE_NAME"
+	envSolarWindsAPMTokenBucketCap        = "SWO_TOKEN_BUCKET_CAPACITY"
+	envSolarWindsAPMTokenBucketRate       = "SWO_TOKEN_BUCKET_RATE"
+	envSolarWindsAPMTransactionName       = "SWO_TRANSACTION_NAME"
 )
 
 // Errors
@@ -663,7 +663,7 @@ func getValPtr(val reflect.Value) reflect.Value {
 
 // getConfigPath returns the absolute path of the config file.
 func (c *Config) getConfigPath() string {
-	path, ok := os.LookupEnv(envAppOpticsConfigFile)
+	path, ok := os.LookupEnv(envSolarWindsAPMConfigFile)
 	if ok {
 		if abs, err := filepath.Abs(path); err == nil {
 			return abs

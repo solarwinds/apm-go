@@ -37,7 +37,7 @@ const (
 )
 
 const (
-	envAppOpticsLogLevel = "SWO_DEBUG_LEVEL"
+	envSolarWindsAPMLogLevel = "SWO_DEBUG_LEVEL"
 )
 
 // LevelStr represents the log levels in strings
@@ -58,7 +58,7 @@ var (
 )
 
 func init() {
-	SetLevelFromStr(os.Getenv(envAppOpticsLogLevel))
+	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 }
 
 // SetOutput sets the output destination for the internal logger.

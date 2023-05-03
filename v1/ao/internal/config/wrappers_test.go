@@ -10,8 +10,8 @@ import (
 )
 
 func TestWrappers(t *testing.T) {
-	os.Unsetenv(envAppOpticsCollector)
-	os.Unsetenv(envAppOpticsHistogramPrecision)
+	os.Unsetenv(envSolarWindsAPMCollector)
+	os.Unsetenv(envSolarWindsAPMHistogramPrecision)
 	Load()
 
 	assert.NotEqual(t, nil, conf)
