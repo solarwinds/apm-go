@@ -673,10 +673,10 @@ func (c *Config) getConfigPath() string {
 	}
 
 	candidates := []string{
-		"./swo-goagent.yaml",
-		"./swo-goagent.yml",
-		"/swo-goagent.yaml",
-		"/swo-goagent.yml",
+		"./solarwinds-apm-goagent.yaml",
+		"./solarwinds-apm-goagent.yml",
+		"/solarwinds-apm-goagent.yaml",
+		"/solarwinds-apm-goagent.yml",
 	}
 
 	for _, file := range candidates {

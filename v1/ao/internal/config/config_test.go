@@ -341,12 +341,12 @@ func TestYamlConfig(t *testing.T) {
 	out, err := yaml.Marshal(&yamlConfig)
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile("/tmp/swo-config.yaml", out, 0644)
+	err = ioutil.WriteFile("/tmp/solarwinds-apm-config.yaml", out, 0644)
 	assert.Nil(t, err)
 
 	// Test with config file
 	ClearEnvs()
-	os.Setenv(envSolarWindsAPMConfigFile, "/tmp/swo-config.yaml")
+	os.Setenv(envSolarWindsAPMConfigFile, "/tmp/solarwinds-apm-config.yaml")
 
 	c := NewConfig()
 	assert.Equal(t, &yamlConfig, c)
@@ -375,7 +375,7 @@ func TestYamlConfig(t *testing.T) {
 	}
 	ClearEnvs()
 	SetEnvs(envs)
-	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/swo-config.yaml")
+	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.yaml")
 
 	envConfig := Config{
 		Collector:    "collector.test.com",
@@ -458,8 +458,8 @@ func TestInvalidConfigFile(t *testing.T) {
 
 	ClearEnvs()
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/swo-config.json")
-	_ = ioutil.WriteFile("/tmp/swo-config.json", []byte("hello"), 0644)
+	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.json")
+	_ = ioutil.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644)
 
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), ErrUnsupportedFormat.Error())
