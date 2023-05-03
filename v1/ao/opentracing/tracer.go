@@ -13,7 +13,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 )
 
 // NewTracer returns a new SolarWinds Observability tracer.
@@ -51,11 +51,11 @@ func (t *Tracer) startSpanWithOptions(operationName string, opts ot.StartSpanOpt
 		case ot.ChildOfRef, ot.FollowsFromRef:
 			refCtx := ref.ReferencedContext.(spanContext)
 			if refCtx.span == nil { // referenced spanContext created by Extract()
-				var aoTrace ao.Trace
+				var aoTrace solarwinds_apm.Trace
 				if refCtx.sampled {
-					aoTrace = ao.NewTraceFromID(operationName, refCtx.remoteMD, nil)
+					aoTrace = solarwinds_apm.NewTraceFromID(operationName, refCtx.remoteMD, nil)
 				} else {
-					aoTrace = ao.NewNullTrace()
+					aoTrace = solarwinds_apm.NewNullTrace()
 				}
 				newSpan = &spanImpl{tracer: t, context: spanContext{
 					trace:   aoTrace,
@@ -76,7 +76,7 @@ func (t *Tracer) startSpanWithOptions(operationName string, opts ot.StartSpanOpt
 
 	// otherwise, no parent span found, so make new trace and return as span
 	if newSpan == nil {
-		aoTrace := ao.NewTrace(operationName)
+		aoTrace := solarwinds_apm.NewTrace(operationName)
 		newSpan = &spanImpl{tracer: t, context: spanContext{trace: aoTrace, span: aoTrace}}
 	}
 
@@ -91,8 +91,8 @@ func (t *Tracer) startSpanWithOptions(operationName string, opts ot.StartSpanOpt
 type spanContext struct {
 	// 1. spanContext created by StartSpanWithOptions
 	// 2. spanContext created by Extract()
-	trace    ao.Trace
-	span     ao.Span
+	trace    solarwinds_apm.Trace
+	span     solarwinds_apm.Span
 	remoteMD string
 	sampled  bool
 

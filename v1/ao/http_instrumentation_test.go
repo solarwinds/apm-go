@@ -3,7 +3,7 @@
 
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
@@ -47,8 +47,8 @@ func handlerDelay503(w http.ResponseWriter, r *http.Request) {
 // checkAPMContext checks if the SolarWinds Observability context is attached
 func checkAPMContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) {
 	xtrace := ""
-	var t ao.Trace
-	if t = ao.TraceFromContext(r.Context()); t == nil {
+	var t solarwinds_apm.Trace
+	if t = solarwinds_apm.TraceFromContext(r.Context()); t == nil {
 		return
 	}
 
@@ -62,28 +62,28 @@ func checkAPMContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) 
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			time.Sleep(time.Duration(rand.Intn(5)) * time.Millisecond)
-			ao.SetTransactionName(r.Context(), "my-custom-transaction-name-"+strconv.Itoa(i))
+			solarwinds_apm.SetTransactionName(r.Context(), "my-custom-transaction-name-"+strconv.Itoa(i))
 			sw.Done()
 		}(i)
 	}
 	sw.Wait()
 
-	ao.SetTransactionName(r.Context(), "final-"+ao.GetTransactionName(r.Context()))
+	solarwinds_apm.SetTransactionName(r.Context(), "final-"+solarwinds_apm.GetTransactionName(r.Context()))
 	xtrace = t.MetadataString()
 }
 
 func handlerDoubleWrapped(w http.ResponseWriter, r *http.Request) {
-	t, _, _ := ao.TraceFromHTTPRequestResponse("myHandler", w, r)
-	ao.NewContext(context.Background(), t)
+	t, _, _ := solarwinds_apm.TraceFromHTTPRequestResponse("myHandler", w, r)
+	solarwinds_apm.NewContext(context.Background(), t)
 	defer t.End()
 }
 
-func httpTestWithEndpoint(f http.HandlerFunc, ep string, opts ...ao.SpanOpt) *httptest.ResponseRecorder {
+func httpTestWithEndpoint(f http.HandlerFunc, ep string, opts ...solarwinds_apm.SpanOpt) *httptest.ResponseRecorder {
 	return httpTestWithEndpointWithHeaders(f, ep, nil, opts...)
 }
 
-func httpTestWithEndpointWithHeaders(f http.HandlerFunc, ep string, hd map[string]string, opts ...ao.SpanOpt) *httptest.ResponseRecorder {
-	h := http.HandlerFunc(ao.HTTPHandler(f, opts...))
+func httpTestWithEndpointWithHeaders(f http.HandlerFunc, ep string, hd map[string]string, opts ...solarwinds_apm.SpanOpt) *httptest.ResponseRecorder {
+	h := http.HandlerFunc(solarwinds_apm.HTTPHandler(f, opts...))
 	// test a single GET request
 	req, _ := http.NewRequest("GET", ep, nil)
 	for k, v := range hd {
@@ -94,14 +94,14 @@ func httpTestWithEndpointWithHeaders(f http.HandlerFunc, ep string, hd map[strin
 	return w
 }
 
-func httpTest(f http.HandlerFunc, opts ...ao.SpanOpt) *httptest.ResponseRecorder {
+func httpTest(f http.HandlerFunc, opts ...solarwinds_apm.SpanOpt) *httptest.ResponseRecorder {
 	return httpTestWithEndpoint(f, "http://test.com/hello?testq", opts...)
 }
 
 func TestHTTPHandler404(t *testing.T) {
 	r := reporter.SetTestReporter() // set up test reporter
 	response := httpTest(handler404)
-	assert.Len(t, response.HeaderMap[ao.HTTPHeaderName], 1)
+	assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
 
 	r.Close(2)
 	g.AssertGraph(t, r.EventBufs, 2, g.AssertNodeMap{
@@ -113,7 +113,7 @@ func TestHTTPHandler404(t *testing.T) {
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Equal(t, response.HeaderMap.Get(ao.HTTPHeaderName), n.Map[ao.HTTPHeaderName])
+			assert.Equal(t, response.HeaderMap.Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 404, n.Map["Status"])
 			assert.Equal(t, "ao_test", n.Map["Controller"])
@@ -138,8 +138,8 @@ func TestHTTPHandler200(t *testing.T) {
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Len(t, response.HeaderMap[ao.HTTPHeaderName], 1)
-			assert.Equal(t, response.HeaderMap[ao.HTTPHeaderName][0], n.Map[ao.HTTPHeaderName])
+			assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
+			assert.Equal(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName][0], n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 200, n.Map["Status"])
 			assert.Equal(t, "ao_test", n.Map["Controller"])
@@ -215,11 +215,11 @@ func TestSingleHTTPSpan(t *testing.T) {
 	assert.Equal(t, 1, len(r.SpanMessages))
 }
 
-// testServer tests creating a span/trace from inside an HTTP handler (using ao.TraceFromHTTPRequest)
+// testServer tests creating a span/trace from inside an HTTP handler (using solarwinds_apm.TraceFromHTTPRequest)
 func testServer(t *testing.T, list net.Listener) {
 	s := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// create span from incoming HTTP Request headers, if trace exists
-		tr, w, req := ao.TraceFromHTTPRequestResponse("myHandler", w, req)
+		tr, w, req := solarwinds_apm.TraceFromHTTPRequestResponse("myHandler", w, req)
 		defer tr.End()
 
 		tr.AddEndArgs("NotReported") // odd-length args, should have no effect
@@ -234,11 +234,11 @@ func testServer(t *testing.T, list net.Listener) {
 	assert.NoError(t, s.Serve(list))
 }
 
-// same as testServer, but with external ao.HTTPHandler() handler wrapping
+// same as testServer, but with external solarwinds_apm.HTTPHandler() handler wrapping
 func testDoubleWrappedServer(t *testing.T, list net.Listener) {
-	s := &http.Server{Handler: http.HandlerFunc(ao.HTTPHandler(func(writer http.ResponseWriter, req *http.Request) {
+	s := &http.Server{Handler: http.HandlerFunc(solarwinds_apm.HTTPHandler(func(writer http.ResponseWriter, req *http.Request) {
 		// create span from incoming HTTP Request headers, if trace exists
-		tr, w, req := ao.TraceFromHTTPRequestResponse("myHandler", writer, req)
+		tr, w, req := solarwinds_apm.TraceFromHTTPRequestResponse("myHandler", writer, req)
 		defer tr.End()
 
 		t.Logf("server: got request %v", req)
@@ -263,7 +263,7 @@ func testServer403(t *testing.T, list net.Listener) {
 	assert.NoError(t, s.Serve(list))
 }
 
-// simulate panic-catching middleware wrapping ao.HTTPHandler(handlerPanic)
+// simulate panic-catching middleware wrapping solarwinds_apm.HTTPHandler(handlerPanic)
 func panicCatchingMiddleware(t *testing.T, f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -280,7 +280,7 @@ func panicCatchingMiddleware(t *testing.T, f http.HandlerFunc) http.HandlerFunc 
 // testServerPanic traces a wrapped http.HandlerFunc that panics
 func testServerPanic(t *testing.T, list net.Listener) {
 	s := &http.Server{Handler: http.HandlerFunc(
-		panicCatchingMiddleware(t, ao.HTTPHandler(handlerPanic)))}
+		panicCatchingMiddleware(t, solarwinds_apm.HTTPHandler(handlerPanic)))}
 	assert.NoError(t, s.Serve(list))
 }
 
@@ -291,9 +291,9 @@ func testHTTPClient(t *testing.T, ctx context.Context, method, url string) (*htt
 	if err != nil {
 		return nil, err
 	}
-	l, _ := ao.BeginSpan(ctx, "http.Client", "IsService", true, "RemoteURL", url)
+	l, _ := solarwinds_apm.BeginSpan(ctx, "http.Client", "IsService", true, "RemoteURL", url)
 	defer l.End()
-	httpReq.Header.Set(ao.HTTPHeaderName, l.MetadataString())
+	httpReq.Header.Set(solarwinds_apm.HTTPHeaderName, l.MetadataString())
 
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -302,7 +302,7 @@ func testHTTPClient(t *testing.T, ctx context.Context, method, url string) (*htt
 	}
 	defer resp.Body.Close()
 
-	l.AddEndArgs("Edge", resp.Header.Get(ao.HTTPHeaderName))
+	l.AddEndArgs("Edge", resp.Header.Get(solarwinds_apm.HTTPHeaderName))
 	return resp, err
 }
 
@@ -310,7 +310,7 @@ func testHTTPClient(t *testing.T, ctx context.Context, method, url string) (*htt
 func testHTTPClientA(t *testing.T, ctx context.Context, method, url string) (*http.Response, error) {
 	httpClient := &http.Client{}
 	httpReq, err := http.NewRequest(method, url, nil)
-	l := ao.BeginHTTPClientSpan(ctx, httpReq)
+	l := solarwinds_apm.BeginHTTPClientSpan(ctx, httpReq)
 	defer l.End()
 	if err != nil {
 		l.Err(err)
@@ -333,7 +333,7 @@ func testHTTPClientA(t *testing.T, ctx context.Context, method, url string) (*ht
 func testHTTPClientB(t *testing.T, ctx context.Context, method, url string) (*http.Response, error) {
 	httpClient := &http.Client{}
 	httpReq, err := http.NewRequest(method, url, nil)
-	l := ao.BeginHTTPClientSpan(ctx, httpReq)
+	l := solarwinds_apm.BeginHTTPClientSpan(ctx, httpReq)
 	if err != nil {
 		l.Err(err)
 		l.End()
@@ -403,14 +403,14 @@ func testHTTP(t *testing.T, method string, badReq bool, clientFn testClientFn, s
 	go server.serverFn(t, ln) // start test server
 
 	r := reporter.SetTestReporter() // set up test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("httpTest"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("httpTest"))
 	// make request to URL of test server
 	url := fmt.Sprintf("http://127.0.0.1:%d/test?qs=1", port)
 	if badReq {
 		url = badURL // causes url.Parse() in http.NewRequest() to fail
 	}
 	resp, err := clientFn(t, ctx, method, url)
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 
 	if badReq { // handle case where http.NewRequest() returned nil
 		assert.Error(t, err)
@@ -431,7 +431,7 @@ func testHTTP(t *testing.T, method string, badReq bool, clientFn testClientFn, s
 
 // assert traces that hit testServer, which uses the HTTP server instrumentation.
 func assertHTTPRequestGraph(t *testing.T, bufs [][]byte, resp *http.Response, url, method string, port, status int) {
-	assert.Len(t, resp.Header[ao.HTTPHeaderName], 1)
+	assert.Len(t, resp.Header[solarwinds_apm.HTTPHeaderName], 1)
 	assert.Equal(t, status, resp.StatusCode)
 
 	g.AssertGraph(t, bufs, 8, g.AssertNodeMap{
@@ -460,7 +460,7 @@ func assertHTTPRequestGraph(t *testing.T, bufs [][]byte, resp *http.Response, ur
 
 // assert traces of an HTTP client to untraced servers testServer200 and testServer403.
 func assertHTTPRequestUntracedGraph(t *testing.T, bufs [][]byte, resp *http.Response, url, method string, port, status int) {
-	assert.NotContains(t, resp.Header[ao.HTTPHeaderName], "Header")
+	assert.NotContains(t, resp.Header[solarwinds_apm.HTTPHeaderName], "Header")
 	assert.Equal(t, status, resp.StatusCode)
 
 	g.AssertGraph(t, bufs, 4, g.AssertNodeMap{
@@ -512,13 +512,13 @@ func TestTraceHTTPErrorBBadRequest(t *testing.T) { testTraceHTTPError(t, "GET", 
 // test making an HTTP request that causes http.Client.Do() to fail
 func testTraceHTTPError(t *testing.T, method string, badReq bool, clientFn testClientFn) {
 	r := reporter.SetTestReporter() // set up test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("httpTest"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("httpTest"))
 	url := invalidPortURL // make HTTP req to invalid port
 	if badReq {
 		url = badURL // causes url.Parse() in http.NewRequest() to fail
 	}
 	resp, err := clientFn(t, ctx, method, url)
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 
 	assert.Error(t, err)
 	assert.Nil(t, resp)
@@ -556,14 +556,14 @@ func TestDoubleWrappedHTTPRequest(t *testing.T) {
 	go testDoubleWrappedServer(t, list) // start test server
 
 	r := reporter.SetTestReporter() // set up test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("httpTest"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("httpTest"))
 	url := fmt.Sprintf("http://127.0.0.1:%d/test?qs=1", port)
 	resp, err := testHTTPClient(t, ctx, "GET", url)
 	t.Logf("response: %v", resp)
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 
 	assert.NoError(t, err)
-	assert.Len(t, resp.Header[ao.HTTPHeaderName], 1)
+	assert.Len(t, resp.Header[solarwinds_apm.HTTPHeaderName], 1)
 	assert.Equal(t, 403, resp.StatusCode)
 
 	r.Close(10)
@@ -604,8 +604,8 @@ func TestDoubleWrappedHTTPRequest(t *testing.T) {
 // based on examples/distributed_app
 func AliceHandler(w http.ResponseWriter, r *http.Request) {
 	// trace this request, overwriting w with wrapped ResponseWriter
-	t, w, _ := ao.TraceFromHTTPRequestResponse("aliceHandler", w, r)
-	ctx := ao.NewContext(context.Background(), t)
+	t, w, _ := solarwinds_apm.TraceFromHTTPRequestResponse("aliceHandler", w, r)
+	ctx := solarwinds_apm.NewContext(context.Background(), t)
 	defer t.End()
 
 	// call an HTTP endpoint and propagate the distributed trace context
@@ -615,7 +615,7 @@ func AliceHandler(w http.ResponseWriter, r *http.Request) {
 	httpClient := &http.Client{}
 	httpReq, _ := http.NewRequest("GET", url, nil)
 	// begin span for the client side of the HTTP service request
-	l := ao.BeginHTTPClientSpan(ctx, httpReq)
+	l := solarwinds_apm.BeginHTTPClientSpan(ctx, httpReq)
 
 	// make HTTP request to external API
 	resp, err := httpClient.Do(httpReq)
@@ -640,7 +640,7 @@ func AliceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func BobHandler(w http.ResponseWriter, r *http.Request) {
-	t, w, _ := ao.TraceFromHTTPRequestResponse("bobHandler", w, r)
+	t, w, _ := solarwinds_apm.TraceFromHTTPRequestResponse("bobHandler", w, r)
 	defer t.End()
 	w.Write([]byte(`{"result":"hello from bob"}`))
 }
@@ -655,11 +655,11 @@ func TestDistributedApp(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, bobLn, "can't open port 8081")
 	go func() {
-		s := &http.Server{Handler: http.HandlerFunc(ao.HTTPHandler(AliceHandler))}
+		s := &http.Server{Handler: http.HandlerFunc(solarwinds_apm.HTTPHandler(AliceHandler))}
 		assert.NoError(t, s.Serve(aliceLn))
 	}()
 	go func() {
-		s := &http.Server{Handler: http.HandlerFunc(ao.HTTPHandler(BobHandler))}
+		s := &http.Server{Handler: http.HandlerFunc(solarwinds_apm.HTTPHandler(BobHandler))}
 		assert.NoError(t, s.Serve(bobLn))
 	}()
 
@@ -687,8 +687,8 @@ func TestDistributedApp(t *testing.T) {
 
 func concurrentAliceHandler(w http.ResponseWriter, r *http.Request) {
 	// trace this request, overwriting w with wrapped ResponseWriter
-	t, w, _ := ao.TraceFromHTTPRequestResponse("aliceHandler", w, r)
-	ctx := ao.NewContext(context.Background(), t)
+	t, w, _ := solarwinds_apm.TraceFromHTTPRequestResponse("aliceHandler", w, r)
+	ctx := solarwinds_apm.NewContext(context.Background(), t)
 	t.SetAsync(true)
 	defer t.End()
 
@@ -716,7 +716,7 @@ func concurrentAliceHandler(w http.ResponseWriter, r *http.Request) {
 			client := &http.Client{}
 			req, _ := http.NewRequest("GET", url, nil)
 			// begin span for the client side of the HTTP service request
-			l := ao.BeginHTTPClientSpan(ctx, req)
+			l := solarwinds_apm.BeginHTTPClientSpan(ctx, req)
 
 			// make HTTP request to external API
 			resp, err := client.Do(req)
@@ -819,8 +819,8 @@ func TestConcurrentAppNoTrace(t *testing.T) {
 
 func TestHTTPHandlerOpts(t *testing.T) {
 	r := reporter.SetTestReporter() // set up test reporter
-	response := httpTest(handler404, ao.WithBackTrace())
-	assert.Len(t, response.HeaderMap[ao.HTTPHeaderName], 1)
+	response := httpTest(handler404, solarwinds_apm.WithBackTrace())
+	assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
 
 	r.Close(2)
 	g.AssertGraph(t, r.EventBufs, 2, g.AssertNodeMap{
@@ -829,11 +829,11 @@ func TestHTTPHandlerOpts(t *testing.T) {
 			assert.Equal(t, "/hello?testq", n.Map["URL"])
 			assert.Equal(t, "test.com", n.Map["HTTP-Host"])
 			assert.Equal(t, "GET", n.Map["HTTPMethod"])
-			assert.NotNil(t, n.Map[ao.KeyBackTrace])
+			assert.NotNil(t, n.Map[solarwinds_apm.KeyBackTrace])
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Equal(t, response.HeaderMap.Get(ao.HTTPHeaderName), n.Map[ao.HTTPHeaderName])
+			assert.Equal(t, response.HeaderMap.Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 404, n.Map["Status"])
 			assert.Equal(t, "ao_test", n.Map["Controller"])

@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"

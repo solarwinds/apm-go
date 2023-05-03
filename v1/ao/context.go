@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 type contextKeyT interface{}
 
-var contextKey = contextKeyT("github.com/solasolarwindscloud/solarwinds-apm-goao.Trace")
-var contextSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/ao.Span")
+var contextKey = contextKeyT("github.com/solasolarwindscloud/solarwinds-apm-go/solarwinds_apm.Trace")
+var contextSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm.Span")
 
 // NewContext returns a copy of the parent context and associates it with a Trace.
 func NewContext(ctx context.Context, t Trace) context.Context {

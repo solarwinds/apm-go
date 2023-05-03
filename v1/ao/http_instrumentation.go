@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"context"
@@ -31,12 +31,12 @@ const (
 )
 
 // key used for HTTP span to indicate a new context
-var httpSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/ao.HTTPSpan")
+var httpSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm.HTTPSpan")
 
 // HTTPHandler wraps an http.HandlerFunc with entry / exit events,
 // returning a new handler that can be used in its place.
 //
-//	http.HandleFunc("/path", ao.HTTPHandler(myHandler))
+//	http.HandleFunc("/path", solarwinds_apm.HTTPHandler(myHandler))
 func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanOpt) func(http.ResponseWriter, *http.Request) {
 	// At wrap time (when binding handler to router): get name of wrapped handler func
 	var endArgs []interface{}
@@ -75,7 +75,7 @@ func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanO
 // headers and status code.
 //
 //	func myHandler(w http.ResponseWriter, r *http.Request) {
-//	    tr, w, r := ao.TraceFromHTTPRequestResponse("myHandler", w, r)
+//	    tr, w, r := solarwinds_apm.TraceFromHTTPRequestResponse("myHandler", w, r)
 //	    defer tr.End()
 //	    // ...
 //	}

@@ -1,10 +1,10 @@
-package aogrpc
+package solarwinds_apmgrpc
 
 import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/aogrpc/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +42,7 @@ func TestGetTopFramePkg(t *testing.T) {
 	}
 
 	// error from another package
-	e = ao.SetLogLevel("invalid_level")
+	e = solarwinds_apm.SetLogLevel("invalid_level")
 	if ste, ok := e.(StackTracer); ok {
 		pkg, err = getTopFramePkg(ste)
 		assert.Equal(t, "ao", pkg)

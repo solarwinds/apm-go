@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"runtime/debug"
@@ -9,7 +9,7 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -17,28 +17,28 @@ import (
 
 func TestSpans(t *testing.T) {
 	r := reporter.SetTestReporter() // enable test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myExample"))
 
 	// make a cache request
-	l := ao.BeginCacheSpan(ctx, "redis", "INCR", "key31", "redis.net", true)
+	l := solarwinds_apm.BeginCacheSpan(ctx, "redis", "INCR", "key31", "redis.net", true)
 	// ... client.Incr(key) ...
 	time.Sleep(20 * time.Millisecond)
 	l.Error("CacheTimeoutError", "Cache request timeout error!")
 	l.End()
 
 	// make an RPC request (no trace propagation in this example)
-	l = ao.BeginRPCSpan(ctx, "myServiceClient", "thrift", "incrKey", "service.net")
+	l = solarwinds_apm.BeginRPCSpan(ctx, "myServiceClient", "thrift", "incrKey", "service.net")
 	// ... service.incrKey(key) ...
 	time.Sleep(time.Millisecond)
 	l.End()
 
 	// make a query span
-	l = ao.BeginQuerySpan(ctx, "querySpan", "SELECT * FROM TEST_TABLE",
-		"MySQL", "remote.host", ao.KeyBackTrace, string(debug.Stack()))
+	l = solarwinds_apm.BeginQuerySpan(ctx, "querySpan", "SELECT * FROM TEST_TABLE",
+		"MySQL", "remote.host", solarwinds_apm.KeyBackTrace, string(debug.Stack()))
 	time.Sleep(time.Millisecond)
 	l.End()
 
-	ao.End(ctx)
+	solarwinds_apm.End(ctx)
 
 	r.Close(9)
 	g.AssertGraph(t, r.EventBufs, 9, g.AssertNodeMap{
@@ -67,7 +67,7 @@ func TestSpans(t *testing.T) {
 			assert.Equal(t, "remote.host", n.Map["RemoteHost"])
 			assert.Equal(t, "SELECT * FROM TEST_TABLE", n.Map["Query"])
 			assert.Equal(t, "MySQL", n.Map["Flavor"])
-			assert.NotNil(t, n.Map[ao.KeyBackTrace])
+			assert.NotNil(t, n.Map[solarwinds_apm.KeyBackTrace])
 		}},
 		{"querySpan", "exit"}: {Edges: g.Edges{{"querySpan", "entry"}}},
 		{"myExample", "exit"}: {Edges: g.Edges{{"redis", "exit"}, {"myServiceClient", "exit"}, {"querySpan", "exit"}, {"myExample", "entry"}}},

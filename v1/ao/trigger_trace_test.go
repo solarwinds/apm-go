@@ -1,4 +1,4 @@
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"fmt"

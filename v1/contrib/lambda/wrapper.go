@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/pkg/errors"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 )
 
 const (
@@ -30,7 +30,7 @@ type Wrapper interface {
 }
 
 type traceWrapper struct {
-	trace ao.Trace
+	trace solarwinds_apm.Trace
 	mdStr string
 }
 
@@ -110,8 +110,8 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 		args = append(args, "LogStreamName", lambdacontext.LogStreamName)
 	}
 
-	cb := func() ao.KVMap {
-		m := ao.KVMap{}
+	cb := func() solarwinds_apm.KVMap {
+		m := solarwinds_apm.KVMap{}
 		for i := 0; i < len(args)-1; i += 2 {
 			if k, ok := args[i].(string); ok {
 				m[k] = args[i+1]
@@ -120,9 +120,9 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 		return m
 	}
 
-	w.trace = ao.NewTraceWithOptions("aws_lambda_go",
-		ao.SpanOptions{
-			ContextOptions: ao.ContextOptions{
+	w.trace = solarwinds_apm.NewTraceWithOptions("aws_lambda_go",
+		solarwinds_apm.SpanOptions{
+			ContextOptions: solarwinds_apm.ContextOptions{
 				MdStr: mdStr,
 				CB:    cb,
 			},
@@ -132,7 +132,7 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 	txnName := strings.TrimLeft(method+"."+lambdacontext.FunctionName, ".")
 	w.trace.SetTransactionName(txnName)
 	w.trace.SetMethod(method)
-	return ao.NewContext(ctx, w.trace)
+	return solarwinds_apm.NewContext(ctx, w.trace)
 }
 
 type typedError struct {

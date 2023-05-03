@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"net/http"
@@ -11,7 +11,7 @@ import (
 // HTTPClientSpan is a Span that aids in reporting HTTP client requests.
 //
 //	req, err := http.NewRequest("GET", "http://example.com", nil)
-//	l := ao.BeginHTTPClientSpan(ctx, httpReq)
+//	l := solarwinds_apm.BeginHTTPClientSpan(ctx, httpReq)
 //	defer l.End()
 //	// ...
 //	resp, err := client.Do(req)

@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ import (
 func TestTraceMetadata(t *testing.T) {
 	r := reporter.SetTestReporter()
 
-	tr := ao.NewTrace("test")
+	tr := solarwinds_apm.NewTrace("test")
 	md := tr.ExitMetadata()
 
 	// verify loggable trace ID
@@ -36,7 +36,7 @@ func TestTraceMetadata(t *testing.T) {
 		{"test", "entry"}: {},
 		{"test", "exit"}: {Edges: g.Edges{{"test", "entry"}}, Callback: func(n g.Node) {
 			// exit event should match ExitMetadata
-			assert.Equal(t, md, n.Map[ao.HTTPHeaderName])
+			assert.Equal(t, md, n.Map[solarwinds_apm.HTTPHeaderName])
 		}},
 	})
 }
@@ -45,14 +45,14 @@ func TestNoTraceMetadata(t *testing.T) {
 	r := reporter.SetTestReporter(reporter.TestReporterDisableTracing())
 
 	// if trace is not sampled, metadata should be empty
-	tr := ao.NewTrace("test")
+	tr := solarwinds_apm.NewTrace("test")
 
 	// verify loggable trace ID
 	assert.True(t, strings.HasSuffix(tr.LoggableTraceID(), "-0"))
 	assert.Equal(t, 42, len(tr.LoggableTraceID()))
 
 	md := tr.ExitMetadata()
-	tr.EndCallback(func() ao.KVMap { return ao.KVMap{"Not": "reported"} })
+	tr.EndCallback(func() solarwinds_apm.KVMap { return solarwinds_apm.KVMap{"Not": "reported"} })
 
 	assert.NotEqual(t, "", md)
 	assert.Len(t, r.EventBufs, 0)
@@ -62,7 +62,7 @@ func TestNoTraceMetadata(t *testing.T) {
 func TestTraceMetadataDiff(t *testing.T) {
 	r := reporter.SetTestReporter()
 
-	t1 := ao.NewTrace("test1")
+	t1 := solarwinds_apm.NewTrace("test1")
 	md1 := t1.ExitMetadata()
 	assert.Len(t, md1, 60)
 	t1.End()
@@ -70,7 +70,7 @@ func TestTraceMetadataDiff(t *testing.T) {
 	assert.Len(t, r.EventBufs, 2)
 
 	r = reporter.SetTestReporter()
-	t2 := ao.NewTrace("test1")
+	t2 := solarwinds_apm.NewTrace("test1")
 	md2 := t2.ExitMetadata()
 	assert.Len(t, md2, 60)
 	md2b := t2.ExitMetadata()
@@ -98,17 +98,17 @@ func traceExample(t *testing.T, ctx context.Context) {
 	// do some work
 	f0(ctx)
 
-	tr := ao.FromContext(ctx)
+	tr := solarwinds_apm.FromContext(ctx)
 	// instrument a DB query
 	q := "SELECT * FROM tbl"
-	// l, _ := ao.BeginSpan(ctx, "DBx", "Query", q, "Flavor", "postgresql", "RemoteHost", "db.com")
-	l := ao.BeginQuerySpan(ctx, "DBx", q, "postgresql", "db.com")
+	// l, _ := solarwinds_apm.BeginSpan(ctx, "DBx", "Query", q, "Flavor", "postgresql", "RemoteHost", "db.com")
+	l := solarwinds_apm.BeginQuerySpan(ctx, "DBx", q, "postgresql", "db.com")
 	// db.Query(q)
 	time.Sleep(20 * time.Millisecond)
 	l.Error("QueryError", "Error running query!")
 	l.End()
 
-	// ao.Info and ao.Error report on the root span
+	// solarwinds_apm.Info and solarwinds_apm.Error report on the root span
 	tr.Info("HTTP-Status", 500)
 	tr.Error("TimeoutError", "response timeout")
 
@@ -123,26 +123,26 @@ func traceExampleCtx(t *testing.T, ctx context.Context) {
 
 	// instrument a DB query
 	q := []byte("SELECT * FROM tbl")
-	_, ctxQ := ao.BeginSpan(ctx, "DBx", "Query", q, "Flavor", "postgresql", "RemoteHost", "db.com")
-	assert.True(t, ao.IsSampled(ctxQ))
+	_, ctxQ := solarwinds_apm.BeginSpan(ctx, "DBx", "Query", q, "Flavor", "postgresql", "RemoteHost", "db.com")
+	assert.True(t, solarwinds_apm.IsSampled(ctxQ))
 	// db.Query(q)
 	time.Sleep(20 * time.Millisecond)
-	ao.Error(ctxQ, "QueryError", "Error running query!")
-	ao.End(ctxQ)
-	assert.False(t, ao.IsSampled(ctxQ)) // Not considered sampled after span ends
+	solarwinds_apm.Error(ctxQ, "QueryError", "Error running query!")
+	solarwinds_apm.End(ctxQ)
+	assert.False(t, solarwinds_apm.IsSampled(ctxQ)) // Not considered sampled after span ends
 
-	// ao.Info and ao.Error report on the root span
-	ao.Info(ctx, "HTTP-Status", 500)
-	ao.Error(ctx, "TimeoutError", "response timeout")
+	// solarwinds_apm.Info and solarwinds_apm.Error report on the root span
+	solarwinds_apm.Info(ctx, "HTTP-Status", 500)
+	solarwinds_apm.Error(ctx, "TimeoutError", "response timeout")
 
 	// end the trace
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 }
 
 // example work function
 func f0(ctx context.Context) {
-	// 	l, _ := ao.BeginSpan(ctx, "http.Get", "RemoteURL", "http://a.b")
-	l := ao.BeginRemoteURLSpan(ctx, "http.Get", "http://a.b")
+	// 	l, _ := solarwinds_apm.BeginSpan(ctx, "http.Get", "RemoteURL", "http://a.b")
+	l := solarwinds_apm.BeginRemoteURLSpan(ctx, "http.Get", "http://a.b")
 	time.Sleep(5 * time.Millisecond)
 	// _, _ = http.Get("http://a.b")
 
@@ -162,28 +162,28 @@ func f0(ctx context.Context) {
 
 // example work function
 func f0Ctx(ctx context.Context) {
-	_, ctx = ao.BeginSpan(ctx, "http.Get", "RemoteURL", "http://a.b")
+	_, ctx = solarwinds_apm.BeginSpan(ctx, "http.Get", "RemoteURL", "http://a.b")
 	time.Sleep(5 * time.Millisecond)
 	// _, _ = http.Get("http://a.b")
 
 	// test reporting a variety of value types
-	ao.Info(ctx, "floatV", 3.5, "boolT", true, "boolF", false, "bigV", 5000000000,
+	solarwinds_apm.Info(ctx, "floatV", 3.5, "boolT", true, "boolF", false, "bigV", 5000000000,
 		"int64V", int64(5000000001), "int32V", int32(100), "float32V", float32(0.1),
 		// test reporting an unsupported type -- currently will be silently ignored
 		"weirdType", func() {},
 	)
 	// test reporting a non-string key: should not work, won't report any events
-	ao.Info(ctx, 3, "3")
+	solarwinds_apm.Info(ctx, 3, "3")
 
 	time.Sleep(5 * time.Millisecond)
-	ao.Err(ctx, errors.New("test error!"))
-	ao.End(ctx)
+	solarwinds_apm.Err(ctx, errors.New("test error!"))
+	solarwinds_apm.End(ctx)
 }
 
 func TestTraceExample(t *testing.T) {
 	r := reporter.SetTestReporter() // enable test reporter
 	// create a new trace, and a context to carry it around
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myExample"))
 	t.Logf("Reporting unrecognized event KV type")
 	traceExample(t, ctx) // generate events
 	r.Close(11)
@@ -193,7 +193,7 @@ func TestTraceExample(t *testing.T) {
 func TestTraceExampleCtx(t *testing.T) {
 	r := reporter.SetTestReporter() // enable test reporter
 	// create a new trace, and a context to carry it around
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myExample"))
 	t.Logf("Reporting unrecognized event KV type")
 	traceExampleCtx(t, ctx) // generate events
 	r.Close(11)
@@ -259,7 +259,7 @@ func TestNoTraceExample(t *testing.T) {
 	r := reporter.SetTestReporter()
 	ctx := context.Background()
 	traceExample(t, ctx)
-	assert.False(t, ao.IsSampled(ctx))
+	assert.False(t, solarwinds_apm.IsSampled(ctx))
 	assert.Len(t, r.EventBufs, 0)
 }
 
@@ -267,7 +267,7 @@ func BenchmarkNewTrace(b *testing.B) {
 	_ = reporter.SetTestReporter(reporter.TestReporterShouldTrace(false))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ao.NewTrace("test")
+		_ = solarwinds_apm.NewTrace("test")
 	}
 }
 
@@ -275,7 +275,7 @@ func BenchmarkNewTraceFromID(b *testing.B) {
 	_ = reporter.SetTestReporter(reporter.TestReporterShouldTrace(false))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ao.NewTraceFromID("test", "", nil)
+		_ = solarwinds_apm.NewTraceFromID("test", "", nil)
 	}
 }
 
@@ -284,29 +284,29 @@ func TestTraceFromMetadata(t *testing.T) {
 
 	// emulate incoming request with X-Trace header
 	incomingID := "2BF4CAA9299299E3D38A58A9821BD34F6268E576CFAB2198D447EA220301"
-	tr := ao.NewTraceFromID("test", incomingID, nil)
+	tr := solarwinds_apm.NewTraceFromID("test", incomingID, nil)
 	// verify loggable trace ID
 	assert.Equal(t, "F4CAA9299299E3D38A58A9821BD34F6268E576CF-1", tr.LoggableTraceID())
-	tr.EndCallback(func() ao.KVMap { return ao.KVMap{"Extra": "Arg"} })
+	tr.EndCallback(func() solarwinds_apm.KVMap { return solarwinds_apm.KVMap{"Extra": "Arg"} })
 
 	r.Close(2)
 	g.AssertGraph(t, r.EventBufs, 2, g.AssertNodeMap{
 		// entry event should have edge to incoming opID
 		{"test", "entry"}: {Edges: g.Edges{{"Edge", incomingID[42:58]}}, Callback: func(n g.Node) {
 			// trace ID should match incoming ID
-			assert.Equal(t, incomingID[2:42], n.Map[ao.HTTPHeaderName].(string)[2:42])
+			assert.Equal(t, incomingID[2:42], n.Map[solarwinds_apm.HTTPHeaderName].(string)[2:42])
 		}},
 		// exit event links to entry
 		{"test", "exit"}: {Edges: g.Edges{{"test", "entry"}}, Callback: func(n g.Node) {
 			// trace ID should match incoming ID
-			assert.Equal(t, incomingID[2:42], n.Map[ao.HTTPHeaderName].(string)[2:42])
+			assert.Equal(t, incomingID[2:42], n.Map[solarwinds_apm.HTTPHeaderName].(string)[2:42])
 			assert.Equal(t, "Arg", n.Map["Extra"])
 		}},
 	})
 }
 func TestNoTraceFromMetadata(t *testing.T) {
 	r := reporter.SetTestReporter(reporter.TestReporterDisableTracing())
-	tr := ao.NewTraceFromID("test", "", nil)
+	tr := solarwinds_apm.NewTraceFromID("test", "", nil)
 	md := tr.ExitMetadata()
 	tr.End()
 
@@ -318,7 +318,7 @@ func TestNoTraceFromBadMetadata(t *testing.T) {
 
 	// emulate incoming request with invalid X-Trace header
 	incomingID := "1BF4CAA9299299E3D38A58A9821BD34F6268E576CFAB2A2203"
-	tr := ao.NewTraceFromID("test", incomingID, nil)
+	tr := solarwinds_apm.NewTraceFromID("test", incomingID, nil)
 	// verify loggable trace ID
 	assert.True(t, strings.HasSuffix(tr.LoggableTraceID(), "-0"))
 	assert.Equal(t, 42, len(tr.LoggableTraceID()))
@@ -332,7 +332,7 @@ func TestNoTraceFromBadMetadata(t *testing.T) {
 func TestTraceJoin(t *testing.T) {
 	r := reporter.SetTestReporter()
 
-	tr := ao.NewTrace("test")
+	tr := solarwinds_apm.NewTrace("test")
 	l := tr.BeginSpan("L1")
 	l.End()
 	tr.End()
@@ -349,7 +349,7 @@ func TestTraceJoin(t *testing.T) {
 
 func TestNullTrace(t *testing.T) {
 	r := reporter.SetTestReporter()
-	tr := ao.NewNullTrace()
+	tr := solarwinds_apm.NewNullTrace()
 	md := tr.ExitMetadata()
 	tr.End()
 	assert.Equal(t, md, "")
@@ -359,10 +359,10 @@ func TestNullTrace(t *testing.T) {
 func TestTraceWithOptions(t *testing.T) {
 	r := reporter.SetTestReporter()
 
-	tr := ao.NewTraceWithOptions("test", ao.SpanOptions{})
+	tr := solarwinds_apm.NewTraceWithOptions("test", solarwinds_apm.SpanOptions{})
 	tr.End()
 
-	tr = ao.NewTraceWithOptions("testWithBacktrace", ao.SpanOptions{WithBackTrace: true})
+	tr = solarwinds_apm.NewTraceWithOptions("testWithBacktrace", solarwinds_apm.SpanOptions{WithBackTrace: true})
 	tr.End()
 
 	r.Close(4)
@@ -370,10 +370,10 @@ func TestTraceWithOptions(t *testing.T) {
 		// entry event should have no edges
 		{"test", "entry"}: {},
 		{"test", "exit"}: {Edges: g.Edges{{"test", "entry"}}, Callback: func(n g.Node) {
-			assert.Nil(t, n.Map[ao.KeyBackTrace])
+			assert.Nil(t, n.Map[solarwinds_apm.KeyBackTrace])
 		}},
 		{"testWithBacktrace", "entry"}: {Callback: func(n g.Node) {
-			assert.NotNil(t, n.Map[ao.KeyBackTrace])
+			assert.NotNil(t, n.Map[solarwinds_apm.KeyBackTrace])
 		}},
 		{"testWithBacktrace", "exit"}: {Edges: g.Edges{{"testWithBacktrace", "entry"}}},
 	})

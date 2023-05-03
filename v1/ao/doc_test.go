@@ -1,7 +1,7 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 // test usage example from doc.go
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -17,9 +17,9 @@ import (
 
 func testDocSpanExample() {
 	// create trace and bind to new context
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myApp"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myApp"))
 	// create new span for this trace
-	l, ctxL := ao.BeginSpan(ctx, "mySpan")
+	l, ctxL := solarwinds_apm.BeginSpan(ctx, "mySpan")
 
 	// Start a new span, given a parent span
 	db1L := l.BeginSpan("myDB1", "Query", "SELECT * FROM tbl1")
@@ -27,34 +27,34 @@ func testDocSpanExample() {
 	db1L.End()
 
 	// Start a new span, given a context.Context
-	db2L, _ := ao.BeginSpan(ctxL, "myDB2", "Query", "SELECT * FROM tbl2")
+	db2L, _ := solarwinds_apm.BeginSpan(ctxL, "myDB2", "Query", "SELECT * FROM tbl2")
 	// perform a query
 	db2L.End()
 
 	l.End()
-	ao.Err(ctx, errors.New("Got bad error!"))
-	ao.EndTrace(ctx)
+	solarwinds_apm.Err(ctx, errors.New("Got bad error!"))
+	solarwinds_apm.EndTrace(ctx)
 }
 
 func testDocSpanExampleCtx() {
 	// create trace and bind to new context
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myApp"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myApp"))
 	// create new span for this trace
-	_, ctxL := ao.BeginSpan(ctx, "mySpan")
+	_, ctxL := solarwinds_apm.BeginSpan(ctx, "mySpan")
 
 	// Start a new span, given a parent span
-	_, ctxQ1 := ao.BeginSpan(ctxL, "myDB1", "Query", "SELECT * FROM tbl1")
+	_, ctxQ1 := solarwinds_apm.BeginSpan(ctxL, "myDB1", "Query", "SELECT * FROM tbl1")
 	// perform a query
-	ao.End(ctxQ1)
+	solarwinds_apm.End(ctxQ1)
 
 	// Start a new span, given a context.Context
-	_, ctxQ2 := ao.BeginSpan(ctxL, "myDB2", "Query", "SELECT * FROM tbl2")
+	_, ctxQ2 := solarwinds_apm.BeginSpan(ctxL, "myDB2", "Query", "SELECT * FROM tbl2")
 	// perform a query
-	ao.End(ctxQ2)
+	solarwinds_apm.End(ctxQ2)
 
-	ao.End(ctxL)
-	ao.Err(ctx, errors.New("Got bad error!"))
-	ao.EndTrace(ctx)
+	solarwinds_apm.End(ctxL)
+	solarwinds_apm.Err(ctx, errors.New("Got bad error!"))
+	solarwinds_apm.EndTrace(ctx)
 }
 
 func TestDocSpanExample(t *testing.T) {

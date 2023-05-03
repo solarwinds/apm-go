@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"context"
@@ -238,7 +238,7 @@ func (s *layerSpan) BeginSpanWithOverrides(spanName string, opts SpanOptions, ov
 // You can use defer to profile a function in one line, as below:
 //
 //	func exampleFunc(ctx context.Context) {
-//	    defer ao.BeginProfile(ctx, "exampleFunc").End()
+//	    defer solarwinds_apm.BeginProfile(ctx, "exampleFunc").End()
 //	    // ... do something ...
 //	 }
 //

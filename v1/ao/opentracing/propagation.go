@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	ot "github.com/opentracing/opentracing-go"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 )
 
@@ -56,7 +56,7 @@ func (p *textMapPropagator) Inject(spanCtx ot.SpanContext, opaqueCarrier interfa
 		return ot.ErrInvalidCarrier
 	}
 	if md := sc.span.MetadataString(); md != "" {
-		carrier.Set(ao.HTTPHeaderName, md)
+		carrier.Set(solarwinds_apm.HTTPHeaderName, md)
 	}
 	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.span.IsReporting()))
 
@@ -155,7 +155,7 @@ func (p *textMapPropagator) Extract(opaqueCarrier interface{}) (ot.SpanContext, 
 	decodedBaggage := make(map[string]string)
 	err = carrier.ForeachKey(func(k, v string) error {
 		switch strings.ToLower(k) {
-		case strings.ToLower(ao.HTTPHeaderName):
+		case strings.ToLower(solarwinds_apm.HTTPHeaderName):
 			if reporter.ValidMetadata(v) {
 				xTraceID = v
 			} else {

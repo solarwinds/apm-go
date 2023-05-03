@@ -1,4 +1,4 @@
-package aogrpc
+package solarwinds_apmgrpc
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -75,7 +75,7 @@ func getFirstValFromMd(md metadata.MD, key string) string {
 	return v
 }
 
-func tracingContext(ctx context.Context, serverName string, methodName string, statusCode *int) (context.Context, ao.Trace) {
+func tracingContext(ctx context.Context, serverName string, methodName string, statusCode *int) (context.Context, solarwinds_apm.Trace) {
 
 	action := actionFromMethod(methodName)
 
@@ -84,19 +84,19 @@ func tracingContext(ctx context.Context, serverName string, methodName string, s
 	signature := ""
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		xtID = getFirstValFromMd(md, ao.HTTPHeaderName)
-		opt = getFirstValFromMd(md, ao.HTTPHeaderXTraceOptions)
-		signature = getFirstValFromMd(md, ao.HTTPHeaderXTraceOptionsSignature)
+		xtID = getFirstValFromMd(md, solarwinds_apm.HTTPHeaderName)
+		opt = getFirstValFromMd(md, solarwinds_apm.HTTPHeaderXTraceOptions)
+		signature = getFirstValFromMd(md, solarwinds_apm.HTTPHeaderXTraceOptionsSignature)
 	}
 
-	t := ao.NewTraceWithOptions(serverName, ao.SpanOptions{
-		ContextOptions: ao.ContextOptions{
+	t := solarwinds_apm.NewTraceWithOptions(serverName, solarwinds_apm.SpanOptions{
+		ContextOptions: solarwinds_apm.ContextOptions{
 			MdStr:                  xtID,
 			URL:                    methodName,
 			XTraceOptions:          opt,
 			XTraceOptionsSignature: signature,
-			CB: func() ao.KVMap {
-				kvs := ao.KVMap{
+			CB: func() solarwinds_apm.KVMap {
+				kvs := solarwinds_apm.KVMap{
 					"Method":     "POST",
 					"Controller": serverName,
 					"Action":     action,
@@ -112,7 +112,7 @@ func tracingContext(ctx context.Context, serverName string, methodName string, s
 	t.SetTransactionName(serverName + "." + action)
 	t.SetStartTime(time.Now())
 
-	return ao.NewContext(ctx, t), t
+	return solarwinds_apm.NewContext(ctx, t), t
 }
 
 // UnaryServerInterceptor returns an interceptor that traces gRPC unary server RPCs using SolarWinds Observability.
@@ -127,16 +127,16 @@ func UnaryServerInterceptor(serverName string) grpc.UnaryServerInterceptor {
 		var err error
 		var resp interface{}
 		var statusCode = 200
-		var t ao.Trace
+		var t solarwinds_apm.Trace
 		ctx, t = tracingContext(ctx, serverName, info.FullMethod, &statusCode)
 		defer func() {
 			t.SetStatus(statusCode)
-			ao.EndTrace(ctx)
+			solarwinds_apm.EndTrace(ctx)
 		}()
 		resp, err = handler(ctx, req)
 		if err != nil {
 			statusCode = 500
-			ao.Error(ctx, getErrClass(err), err.Error())
+			solarwinds_apm.Error(ctx, getErrClass(err), err.Error())
 		}
 		return resp, err
 	}
@@ -168,10 +168,10 @@ func StreamServerInterceptor(serverName string) grpc.StreamServerInterceptor {
 		newCtx, t := tracingContext(stream.Context(), serverName, info.FullMethod, &statusCode)
 		defer func() {
 			t.SetStatus(statusCode)
-			ao.EndTrace(newCtx)
+			solarwinds_apm.EndTrace(newCtx)
 		}()
 		// if lg.IsDebug() {
-		// 	sp := ao.FromContext(newCtx)
+		// 	sp := solarwinds_apm.FromContext(newCtx)
 		// 	lg.Debug("server stream starting", "xtrace", sp.MetadataString())
 		// }
 		wrappedStream := wrapServerStream(stream)
@@ -181,7 +181,7 @@ func StreamServerInterceptor(serverName string) grpc.StreamServerInterceptor {
 			return nil
 		} else if err != nil {
 			statusCode = 500
-			ao.Error(newCtx, getErrClass(err), err.Error())
+			solarwinds_apm.Error(newCtx, getErrClass(err), err.Error())
 		}
 		return err
 	}
@@ -199,11 +199,11 @@ func UnaryClientInterceptor(target string, serviceName string) grpc.UnaryClientI
 		opts ...grpc.CallOption,
 	) error {
 		action := actionFromMethod(method)
-		span := ao.BeginRPCSpan(ctx, action, "grpc", serviceName, target)
+		span := solarwinds_apm.BeginRPCSpan(ctx, action, "grpc", serviceName, target)
 		defer span.End()
 		xtID := span.MetadataString()
 		if len(xtID) > 0 {
-			ctx = metadata.AppendToOutgoingContext(ctx, ao.HTTPHeaderName, xtID)
+			ctx = metadata.AppendToOutgoingContext(ctx, solarwinds_apm.HTTPHeaderName, xtID)
 		}
 		err := invoker(ctx, method, req, resp, cc, opts...)
 		if err != nil {
@@ -220,11 +220,11 @@ func UnaryClientInterceptor(target string, serviceName string) grpc.UnaryClientI
 func StreamClientInterceptor(target string, serviceName string) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		action := actionFromMethod(method)
-		span := ao.BeginRPCSpan(ctx, action, "grpc", serviceName, target)
+		span := solarwinds_apm.BeginRPCSpan(ctx, action, "grpc", serviceName, target)
 		xtID := span.MetadataString()
 		// lg.Debug("stream client interceptor", "x-trace", xtID)
 		if len(xtID) > 0 {
-			ctx = metadata.AppendToOutgoingContext(ctx, ao.HTTPHeaderName, xtID)
+			ctx = metadata.AppendToOutgoingContext(ctx, solarwinds_apm.HTTPHeaderName, xtID)
 		}
 		clientStream, err := streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
@@ -239,7 +239,7 @@ type tracedClientStream struct {
 	grpc.ClientStream
 	mu     sync.Mutex
 	closed bool
-	span   ao.Span
+	span   solarwinds_apm.Span
 }
 
 func (s *tracedClientStream) Header() (metadata.MD, error) {
@@ -283,7 +283,7 @@ func (s *tracedClientStream) closeSpan(err error) {
 	}
 }
 
-func closeSpan(span ao.Span, err error) {
+func closeSpan(span solarwinds_apm.Span, err error) {
 	// lg.Debug("closing span", "err", err.Error())
 	if err != nil && err != io.EOF {
 		span.Error(getErrClass(err), err.Error())

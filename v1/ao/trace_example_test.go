@@ -1,16 +1,16 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 )
 
 func ExampleNewTrace() {
 	f0 := func(ctx context.Context) { // example span
-		l, _ := ao.BeginSpan(ctx, "myDB",
+		l, _ := solarwinds_apm.BeginSpan(ctx, "myDB",
 			"Query", "SELECT * FROM tbl1",
 			"RemoteHost", "db1.com")
 		// ... run a query ...
@@ -18,23 +18,23 @@ func ExampleNewTrace() {
 	}
 
 	// create a new trace, and a context to carry it around
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("myExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("myExample"))
 	// do some work
 	f0(ctx)
 	// end the trace
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 }
 
 func ExampleBeginSpan() {
 	// create trace and bind to context, reporting first event
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("baseSpan"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("baseSpan"))
 	// ... do something ...
 
 	// instrument a DB query
-	l, _ := ao.BeginSpan(ctx, "DBx", "Query", "SELECT * FROM tbl")
+	l, _ := solarwinds_apm.BeginSpan(ctx, "DBx", "Query", "SELECT * FROM tbl")
 	// .. execute query ..
 	l.End()
 
 	// end trace
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 }

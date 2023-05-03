@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"os"

@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao_test
+package solarwinds_apm_test
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ import (
 
 func childExample(ctx context.Context) {
 	// create a new trace, and a context to carry it around
-	l1, _ := ao.BeginSpan(ctx, "L1")
+	l1, _ := solarwinds_apm.BeginSpan(ctx, "L1")
 	l2 := l1.BeginSpan("DBx", "Query", "SELECT * FROM tbl")
 	time.Sleep(20 * time.Millisecond)
 	l2.End()
@@ -33,24 +33,24 @@ func childExample(ctx context.Context) {
 	p1.End()
 
 	// end the trace
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 }
 
 func childExampleCtx(ctx context.Context) {
 	// create a new trace, and a context to carry it around
-	_, ctxL1 := ao.BeginSpan(ctx, "L1")
-	_, ctxL2 := ao.BeginSpan(ctxL1, "DBx", "Query", "SELECT * FROM tbl")
+	_, ctxL1 := solarwinds_apm.BeginSpan(ctx, "L1")
+	_, ctxL2 := solarwinds_apm.BeginSpan(ctxL1, "DBx", "Query", "SELECT * FROM tbl")
 	time.Sleep(20 * time.Millisecond)
-	ao.End(ctxL2)
-	ao.End(ctxL1)
+	solarwinds_apm.End(ctxL2)
+	solarwinds_apm.End(ctxL1)
 
 	// test attempting to start a child from a span that has ended
 	// currently we don't allow this, so nothing should be reported
-	_, ctxL3 := ao.BeginSpan(ctxL1, "invalidSpan", "notReported", true)
-	ao.End(ctxL3)
+	_, ctxL3 := solarwinds_apm.BeginSpan(ctxL1, "invalidSpan", "notReported", true)
+	solarwinds_apm.End(ctxL3)
 
 	// end the trace
-	ao.EndTrace(ctx)
+	solarwinds_apm.EndTrace(ctx)
 }
 
 func assertTraceChild(t *testing.T, bufs [][]byte) {
@@ -67,7 +67,7 @@ func assertTraceChild(t *testing.T, bufs [][]byte) {
 
 func TestTraceChild(t *testing.T) {
 	r := reporter.SetTestReporter() // enable test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("childExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("childExample"))
 	childExample(ctx) // generate events
 	r.Close(6)
 	assertTraceChild(t, r.EventBufs)
@@ -75,7 +75,7 @@ func TestTraceChild(t *testing.T) {
 
 func TestTraceChildCtx(t *testing.T) {
 	r := reporter.SetTestReporter() // enable test reporter
-	ctx := ao.NewContext(context.Background(), ao.NewTrace("childExample"))
+	ctx := solarwinds_apm.NewContext(context.Background(), solarwinds_apm.NewTrace("childExample"))
 	childExampleCtx(ctx) // generate events
 	r.Close(6)
 	assertTraceChild(t, r.EventBufs)

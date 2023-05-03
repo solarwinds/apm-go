@@ -1,6 +1,6 @@
 // Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
-package ao
+package solarwinds_apm
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 
 const (
 	// LoggableTraceID is used as the key for log injection.
-	LoggableTraceID = "ao.traceId"
+	LoggableTraceID = "solarwinds_apm.traceId"
 )
 
 // Trace represents the root span of a distributed trace for this request that reports
