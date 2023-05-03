@@ -1,7 +1,7 @@
 //go:build go1.7
 // +build go1.7
 
-// Copyright (C) 2016 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package ao_test
 

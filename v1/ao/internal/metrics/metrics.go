@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package metrics
 

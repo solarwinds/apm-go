@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 // test usage example from doc.go
 
 package ao_test

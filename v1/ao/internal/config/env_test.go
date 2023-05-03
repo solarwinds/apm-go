@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package config
 
@@ -56,7 +56,7 @@ func TestStringToValue(t *testing.T) {
 	type NewStr string
 	typNewStr := reflect.TypeOf(NewStr("newStr"))
 
-	stringToValueWrapper := func (s string, typ reflect.Type) reflect.Value {
+	stringToValueWrapper := func(s string, typ reflect.Type) reflect.Value {
 		val, _ := stringToValue(s, typ)
 		return val
 	}

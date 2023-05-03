@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 // Package host has all the functions to get host metadata needed by traces and
 // metrics. It also maintains an update-to-date global HostID object, which is

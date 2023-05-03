@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package opentracing
 
@@ -13,14 +13,15 @@ import (
 	"sync"
 	"testing"
 
-	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
+	"context"
+
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
+	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"context"
 )
 
 // client/server test based on basictracer-go/examples/dapperish.go

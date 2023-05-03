@@ -1,4 +1,4 @@
-// Copyright (C) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package opentracing
 
@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
+	ot "github.com/opentracing/opentracing-go"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
-	ot "github.com/opentracing/opentracing-go"
 )
 
 const (

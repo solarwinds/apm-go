@@ -1,6 +1,7 @@
+//go:build !linux
 // +build !linux
 
-// Copyright (c) 2017 Librato, Inc. All rights reserved.
+// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 
 package host
 
