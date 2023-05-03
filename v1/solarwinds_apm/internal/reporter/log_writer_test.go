@@ -13,12 +13,12 @@ func TestLogWriter(t *testing.T) {
 	eventWriter.Write(EventWT, []byte("hello event"))
 	assert.Equal(t, 0, sb.Len())
 	eventWriter.Flush()
-	assert.Equal(t, "{\"ao-data\":{\"events\":[\"aGVsbG8gZXZlbnQ=\"]}}\n", sb.String())
+	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8gZXZlbnQ=\"]}}\n", sb.String())
 
 	sb.Reset()
 	metricWriter := newLogWriter(true, sb, 1e6)
 	metricWriter.Write(MetricWT, []byte("hello metric"))
-	assert.Equal(t, "{\"ao-data\":{\"metrics\":[\"aGVsbG8gbWV0cmlj\"]}}\n", sb.String())
+	assert.Equal(t, "{\"apm-data\":{\"metrics\":[\"aGVsbG8gbWV0cmlj\"]}}\n", sb.String())
 	assert.NotNil(t, metricWriter.Flush())
 
 	sb.Reset()
@@ -30,10 +30,10 @@ func TestLogWriter(t *testing.T) {
 	writer.Write(EventWT, []byte("hello"))
 	assert.Zero(t, sb.Len())
 	writer.Write(EventWT, []byte(" event"))
-	assert.Equal(t, 36, sb.Len())
-	assert.Equal(t, "{\"ao-data\":{\"events\":[\"aGVsbG8=\"]}}\n", sb.String())
+	assert.Equal(t, 37, sb.Len())
+	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8=\"]}}\n", sb.String())
 	writer.Flush()
-	assert.Equal(t, "{\"ao-data\":{\"events\":[\"aGVsbG8=\"]}}\n{\"ao-data\":{\"events\":[\"IGV2ZW50\"]}}\n",
+	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8=\"]}}\n{\"apm-data\":{\"events\":[\"IGV2ZW50\"]}}\n",
 		sb.String())
 
 }

@@ -69,10 +69,10 @@ func extractQueryKvs(span sdktrace.ReadOnlySpan) []interface{} {
 func extractSpecKvs(span sdktrace.ReadOnlySpan, lookup map[string]string, specValue string) []interface{} {
 	attrMap := span.Attributes()
 	result := []interface{}{}
-	for otKey, aoKey := range lookup {
+	for otKey, apmKey := range lookup {
 		for _, attr := range attrMap {
 			if string(attr.Key) == otKey {
-				result = append(result, aoKey)
+				result = append(result, apmKey)
 				result = append(result, fromAttributeValue(attr.Value))
 			}
 		}

@@ -168,9 +168,9 @@ func TestTextMapExtract(t *testing.T) {
 	assert.False(t, childSpan.Context().(spanContext).span.IsReporting())
 
 	// valid trace ID, no sampled flag
-	aoCarrier := opentracing.TextMapCarrier{}
-	aoCarrier.Set(solarwinds_apm.HTTPHeaderName, textCarrier[solarwinds_apm.HTTPHeaderName])
-	ctx, err = tr.Extract(opentracing.TextMap, aoCarrier)
+	apmCarrier := opentracing.TextMapCarrier{}
+	apmCarrier.Set(solarwinds_apm.HTTPHeaderName, textCarrier[solarwinds_apm.HTTPHeaderName])
+	ctx, err = tr.Extract(opentracing.TextMap, apmCarrier)
 	assert.NotNil(t, ctx)
 	assert.NoError(t, err)
 	assert.True(t, ctx.(spanContext).sampled)
