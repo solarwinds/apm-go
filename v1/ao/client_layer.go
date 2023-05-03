@@ -1,5 +1,4 @@
 // Copyright (C) 2016 Librato, Inc. All rights reserved.
-// AppOptics HTTP instrumentation for Go
 
 package ao
 
@@ -9,7 +8,7 @@ import (
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
 )
 
-// BeginQuerySpan returns a Span that reports metadata used by AppOptics to filter
+// BeginQuerySpan returns a Span that reports metadata used by SolarWinds Observability to filter
 // query latency heatmaps and charts by span name, query statement, DB host and table.
 // Parameter "flavor" specifies the flavor of the query statement, such as "mysql", "postgresql", or "mongodb".
 // Call or defer the returned Span's End() to time the query's client-side latency.
@@ -21,7 +20,7 @@ func BeginQuerySpan(ctx context.Context, spanName, query, flavor, remoteHost str
 	return l
 }
 
-// BeginCacheSpan returns a Span that reports metadata used by AppOptics to filter cache/KV server
+// BeginCacheSpan returns a Span that reports metadata used by SolarWinds Observability to filter cache/KV server
 // request latency heatmaps and charts by span name, cache operation and hostname.
 // Required parameter "op" is meant to report a Redis or Memcached command e.g. "HGET" or "set".
 // Filterable hit/miss ratios charts will be available if "hit" is used.
@@ -34,7 +33,7 @@ func BeginCacheSpan(ctx context.Context, spanName, op, key, remoteHost string, h
 	return l
 }
 
-// BeginRemoteURLSpan returns a Span that reports metadata used by AppOptics to filter RPC call
+// BeginRemoteURLSpan returns a Span that reports metadata used by SolarWinds Observability to filter RPC call
 // latency heatmaps and charts by span name and URL endpoint. For requests using the "net/http"
 // package, BeginHTTPClientSpan also reports this metadata, while also propagating trace context
 // metadata headers via http.Request and http.Response.
@@ -46,7 +45,7 @@ func BeginRemoteURLSpan(ctx context.Context, spanName, remoteURL string, args ..
 	return l
 }
 
-// BeginRPCSpan returns a Span that reports metadata used by AppOptics to filter RPC call
+// BeginRPCSpan returns a Span that reports metadata used by SolarWinds Observability to filter RPC call
 // latency heatmaps and charts by span name, protocol, controller, and remote host.
 // Call or defer the returned Span's End() to time the call's client-side latency.
 func BeginRPCSpan(ctx context.Context, spanName, protocol, controller, remoteHost string,

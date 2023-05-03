@@ -82,7 +82,7 @@ type Overrides struct {
 // KVMap is a map of additional key-value pairs to report along with the event data provided
 // to AppOptics. Certain key names (such as "Query" or "RemoteHost") are used by AppOptics to
 // provide details about program activity and distinguish between different types of spans.
-// Please visit https://docs.appoptics.com/kb/apm_tracing/custom_instrumentation/ for
+// Please visit [TODO] for
 // details on the key names that AppOptics looks for.
 type KVMap = reporter.KVMap
 

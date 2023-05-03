@@ -1,8 +1,4 @@
-//go:build go1.7
-// +build go1.7
-
 // Copyright (C) 2016 Librato, Inc. All rights reserved.
-// AppOptics HTTP instrumentation for Go
 
 package ao
 

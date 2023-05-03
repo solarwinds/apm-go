@@ -1,5 +1,4 @@
 // Copyright (C) 2016 Librato, Inc. All rights reserved.
-// AppOptics HTTP instrumentation for Go
 
 package ao
 
@@ -10,13 +9,14 @@ import (
 )
 
 // HTTPClientSpan is a Span that aids in reporting HTTP client requests.
-//   req, err := http.NewRequest("GET", "http://example.com", nil)
-//   l := ao.BeginHTTPClientSpan(ctx, httpReq)
-//   defer l.End()
-//   // ...
-//   resp, err := client.Do(req)
-//   l.AddHTTPResponse(resp, err)
-//   // ...
+//
+//	req, err := http.NewRequest("GET", "http://example.com", nil)
+//	l := ao.BeginHTTPClientSpan(ctx, httpReq)
+//	defer l.End()
+//	// ...
+//	resp, err := client.Do(req)
+//	l.AddHTTPResponse(resp, err)
+//	// ...
 type HTTPClientSpan struct{ Span }
 
 // BeginHTTPClientSpan stores trace metadata in the headers of an HTTP client request, allowing the
