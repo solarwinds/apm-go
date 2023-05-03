@@ -3,8 +3,6 @@
 package reporter
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -38,11 +36,6 @@ func assertInitMessage(t *testing.T, bufs [][]byte) {
 
 	g.AssertGraph(t, bufs, 1, g.AssertNodeMap{
 		{"go", "single"}: {Edges: g.Edges{}, Callback: func(n g.Node) {
-			b, err := json.MarshalIndent(n.Map, "", "  ")
-			if err != nil {
-				fmt.Println("error:", err)
-			}
-			fmt.Print(string(b))
 			assert.Equal(t, 1, n.Map["__Init"])
 			assert.Equal(t, utils.Version(), n.Map["Go.SolarWindsAPM.Version"])
 			assert.NotEmpty(t, n.Map["Go.Version"])

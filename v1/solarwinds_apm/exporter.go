@@ -158,14 +158,14 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 		parentSpanID := s.Parent().SpanID()
 		parentXTraceID := getXTraceID(traceID[:], parentSpanID[:])
 		traceContext := FromXTraceIDContext(ctx, parentXTraceID)
-		aoSpan, _ := BeginSpanWithOverrides(traceContext, s.Name(), SpanOptions{}, startOverrides)
+		apmSpan, _ := BeginSpanWithOverrides(traceContext, s.Name(), SpanOptions{}, startOverrides)
 
 		// report otel Span Events as SolarWinds Observability Info KVs
 		for _, infoEventKvs := range infoEvents {
-			aoSpan.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
+			apmSpan.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
 		}
 
-		aoSpan.EndWithOverrides(endOverrides, kvs...)
+		apmSpan.EndWithOverrides(endOverrides, kvs...)
 	} else { // no parent means this is the beginning of the trace (root span)
 		trace := NewTraceWithOverrides(s.Name(), startOverrides, nil)
 		trace.SetStartTime(s.StartTime()) //this is for histogram only
