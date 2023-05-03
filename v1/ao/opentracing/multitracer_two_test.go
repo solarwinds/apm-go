@@ -17,7 +17,7 @@ import (
 )
 
 // This test sets up SolarWinds Observability Tracer and the OT "BasicTracer" side by side
-func TestMultiTracerSWOBasicTracerAPICheck(t *testing.T) {
+func TestMultiTracerAPMBasicTracerAPICheck(t *testing.T) {
 	_ = reporter.SetTestReporter(reporter.TestReporterDisableDefaultSetting(true)) // set up test reporter
 	multiTracer := &mt.MultiTracer{
 		Tracers: []opentracing.Tracer{

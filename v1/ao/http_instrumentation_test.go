@@ -35,7 +35,7 @@ func handler404(w http.ResponseWriter, r *http.Request) { w.WriteHeader(404) }
 func handler403(w http.ResponseWriter, r *http.Request) { w.WriteHeader(403) }
 func handler200(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }
 func handler200CustomTxnName(w http.ResponseWriter, r *http.Request) {
-	checkSWOContextAndSetCustomTxnName(w, r)
+	checkAPMContextAndSetCustomTxnName(w, r)
 }
 func handlerPanic(w http.ResponseWriter, r *http.Request)    { panic("panicking!") }
 func handlerDelay200(w http.ResponseWriter, r *http.Request) { time.Sleep(httpSpanSleep) }
@@ -44,8 +44,8 @@ func handlerDelay503(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(httpSpanSleep)
 }
 
-// checkSWOContext checks if the SolarWinds Observability context is attached
-func checkSWOContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) {
+// checkAPMContext checks if the SolarWinds Observability context is attached
+func checkAPMContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) {
 	xtrace := ""
 	var t ao.Trace
 	if t = ao.TraceFromContext(r.Context()); t == nil {
@@ -474,7 +474,7 @@ func assertHTTPRequestUntracedGraph(t *testing.T, bufs [][]byte, resp *http.Resp
 	})
 }
 
-// assert traces that hit an SWO-wrapped, panicking http Handler.
+// assert traces that hit an APM-wrapped, panicking http Handler.
 func assertHTTPRequestPanic(t *testing.T, bufs [][]byte, resp *http.Response, url, method string, port, status int) {
 
 	g.AssertGraph(t, bufs, 7, g.AssertNodeMap{

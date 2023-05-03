@@ -5,7 +5,7 @@ package opentracing
 import "github.com/opentracing/opentracing-go/ext"
 
 // Map selected OpenTracing tag constants to SolarWinds Observability analogs
-var otSWOMap = map[string]string{
+var otAPMMap = map[string]string{
 	string(ext.Component): "OTComponent",
 
 	string(ext.PeerService):  "RemoteController",
@@ -24,7 +24,7 @@ var otSWOMap = map[string]string{
 }
 
 func translateTagName(key string) string {
-	if k := otSWOMap[key]; k != "" {
+	if k := otAPMMap[key]; k != "" {
 		return k
 	}
 	return key
