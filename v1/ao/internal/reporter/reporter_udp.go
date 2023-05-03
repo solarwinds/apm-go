@@ -35,7 +35,7 @@ func udpNewReporter() reporter {
 		conn, err = net.DialUDP("udp4", nil, serverAddr)
 	}
 	if err != nil {
-		log.Errorf("AppOptics failed to initialize UDP reporter: %v", err)
+		log.Errorf("SolarWinds Observability failed to initialize UDP reporter: %v", err)
 		return &nullReporter{}
 	}
 
@@ -104,5 +104,5 @@ func (r *udpReporter) CustomIncrementMetric(name string, opts metrics.MetricOpti
 	return nil
 }
 
-func (r *udpReporter) Flush() error { return nil }
+func (r *udpReporter) Flush() error         { return nil }
 func (r *udpReporter) SetServiceKey(string) {}

@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
 	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
-	"github.com/pkg/errors"
 )
 
 // Current settings configuration
@@ -151,7 +151,7 @@ func sendInitMessage() {
 		// we choose to ignore the errors
 		_ = e.AddKV("__Init", 1)
 		_ = e.AddKV("Go.Version", utils.GoVersion())
-		_ = e.AddKV("Go.AppOptics.Version", utils.Version())
+		_ = e.AddKV("Go.SolarWindsAPM.Version", utils.Version())
 		_ = e.AddKV("Go.InstallDirectory", utils.InstallDir())
 		_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
 		_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())

@@ -100,7 +100,7 @@ func init() {
 func initReporter() {
 	var rt string
 	if config.GetDisabled() {
-		log.Warning("AppOptics APM agent is disabled.")
+		log.Warning("SolarWinds Observability APM agent is disabled.")
 		rt = "none"
 	} else {
 		rt = config.GetReporterType()

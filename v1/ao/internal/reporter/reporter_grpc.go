@@ -391,7 +391,7 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 			r.closeConns()
 			r.setReady(false)
 			host.Stop()
-			log.Warning("AppOptics APM agent is stopped.")
+			log.Warning("SolarWinds Observability APM agent is stopped.")
 		})
 	}
 	return err
@@ -892,7 +892,7 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	if !r.isReady() && hasDefaultSetting() {
 		r.cond.L.Lock()
 		r.setReady(true)
-		log.Warningf("Got dynamic settings. The AppOptics APM agent (%v) is ready.", r.done)
+		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
 		r.cond.Broadcast()
 		r.cond.L.Unlock()
 	}

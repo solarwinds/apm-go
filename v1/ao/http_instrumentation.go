@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	// HTTPHeaderName is a constant for the HTTP header used by AppOptics ("X-Trace") to propagate
+	// HTTPHeaderName is a constant for the HTTP header used by SolarWinds APM ("X-Trace") to propagate
 	// the distributed tracing context across HTTP requests.
 	HTTPHeaderName = "X-Trace"
 	// HTTPHeaderXTraceOptions is a constant for the HTTP header to propagate X-Trace-Options

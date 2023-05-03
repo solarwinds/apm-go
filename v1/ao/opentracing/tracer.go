@@ -16,7 +16,7 @@ import (
 	"github.com/solarwindscloud/swo-golang/v1/ao"
 )
 
-// NewTracer returns a new AppOptics tracer.
+// NewTracer returns a new SolarWinds Observability tracer.
 func NewTracer() ot.Tracer {
 	return &Tracer{
 		textMapPropagator: &textMapPropagator{},
@@ -24,7 +24,7 @@ func NewTracer() ot.Tracer {
 	}
 }
 
-// Tracer reports trace data to AppOptics.
+// Tracer reports trace data to SolarWinds Observability.
 type Tracer struct {
 	textMapPropagator  *textMapPropagator
 	binaryPropagator   *binaryPropagator

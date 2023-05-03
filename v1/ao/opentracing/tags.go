@@ -4,7 +4,7 @@ package opentracing
 
 import "github.com/opentracing/opentracing-go/ext"
 
-// Map selected OpenTracing tag constants to AppOptics analogs
+// Map selected OpenTracing tag constants to SolarWinds Observability analogs
 var otSWOMap = map[string]string{
 	string(ext.Component): "OTComponent",
 

@@ -196,7 +196,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// NewExporter creates an instance of the Solarwinds AppOptics exporter for OTEL traces.
+// NewExporter creates an instance of the SolarWinds Observability exporter for OTEL traces.
 func NewExporter(shutdownDelay int) *Exporter {
 	return &Exporter{shutdownDelay: shutdownDelay}
 }

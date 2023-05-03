@@ -382,7 +382,7 @@ func newContext(sampled bool) Context {
 	ctx := &oboeContext{txCtx: &transactionContext{enabled: true}}
 	ctx.metadata.Init()
 	if err := ctx.metadata.SetRandom(); err != nil {
-		log.Infof("AppOptics rand.Read error: %v", err)
+		log.Infof("SolarWinds Observability rand.Read error: %v", err)
 		return &nullContext{}
 	}
 	ctx.SetSampled(sampled)

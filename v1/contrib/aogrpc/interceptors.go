@@ -115,7 +115,7 @@ func tracingContext(ctx context.Context, serverName string, methodName string, s
 	return ao.NewContext(ctx, t), t
 }
 
-// UnaryServerInterceptor returns an interceptor that traces gRPC unary server RPCs using AppOptics.
+// UnaryServerInterceptor returns an interceptor that traces gRPC unary server RPCs using SolarWinds Observability.
 // If the client is using UnaryClientInterceptor, the distributed trace's context will be read from the client.
 func UnaryServerInterceptor(serverName string) grpc.UnaryServerInterceptor {
 	return func(
@@ -159,7 +159,7 @@ func wrapServerStream(stream grpc.ServerStream) *wrappedServerStream {
 	return &wrappedServerStream{ServerStream: stream, WrappedContext: stream.Context()}
 }
 
-// StreamServerInterceptor returns an interceptor that traces gRPC streaming server RPCs using AppOptics.
+// StreamServerInterceptor returns an interceptor that traces gRPC streaming server RPCs using SolarWinds Observability.
 // Each server span starts with the first message and ends when all request and response messages have finished streaming.
 func StreamServerInterceptor(serverName string) grpc.StreamServerInterceptor {
 	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
@@ -188,7 +188,7 @@ func StreamServerInterceptor(serverName string) grpc.StreamServerInterceptor {
 }
 
 // UnaryClientInterceptor returns an interceptor that traces a unary RPC from a gRPC client to a server using
-// AppOptics, by propagating the distributed trace's context from client to server using gRPC metadata.
+// SolarWinds Observability, by propagating the distributed trace's context from client to server using gRPC metadata.
 func UnaryClientInterceptor(target string, serviceName string) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -215,7 +215,7 @@ func UnaryClientInterceptor(target string, serviceName string) grpc.UnaryClientI
 }
 
 // StreamClientInterceptor returns an interceptor that traces a streaming RPC from a gRPC client to a server using
-// AppOptics, by propagating the distributed trace's context from client to server using gRPC metadata.
+// SolarWinds Observability, by propagating the distributed trace's context from client to server using gRPC metadata.
 // The client span starts with the first message and ends when all request and response messages have finished streaming.
 func StreamClientInterceptor(target string, serviceName string) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {

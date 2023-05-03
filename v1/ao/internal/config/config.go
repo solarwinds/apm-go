@@ -75,7 +75,7 @@ var (
 type Config struct {
 	sync.RWMutex `yaml:"-"`
 
-	// Collector defines the host and port of the AppOptics collector
+	// Collector defines the host and port of the SolarWinds Observability collector
 	Collector string `yaml:"Collector,omitempty" env:"SWO_COLLECTOR" default:"apm.collector.cloud.solarwinds.com:443"`
 
 	// ServiceKey defines the service key and service name
@@ -327,7 +327,7 @@ const (
 	fullTextInvalidServiceKey = `
 	    **No valid service key (defined as token:service_name) is found.** 
 	
-	Please check AppOptics dashboard for your token and use a valid service name.
+	Please check SolarWinds Observability dashboard for your token and use a valid service name.
 	A valid service name should be shorter than 256 characters and contain only 
 	valid characters: [a-z0-9.:_-]. 
 

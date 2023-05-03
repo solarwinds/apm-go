@@ -20,9 +20,9 @@ const (
 )
 
 // Trace represents the root span of a distributed trace for this request that reports
-// events to AppOptics. The Trace interface extends the Span interface with additional
+// events to SolarWinds Observability. The Trace interface extends the Span interface with additional
 // methods that can be used to help categorize a service's inbound requests on the
-// AppOptics service dashboard.
+// SolarWinds Observability service dashboard.
 type Trace interface {
 	// Span inherited from the Span interface
 	// BeginSpan(spanName string, args ...interface{}) Span
@@ -48,7 +48,7 @@ type Trace interface {
 	ExitMetadata() string
 
 	// SetMethod sets the request's HTTP method of the trace, if any.
-	// It is used for categorizing service metrics and traces in AppOptics.
+	// It is used for categorizing service metrics and traces in SolarWinds Observability.
 	SetMethod(method string)
 
 	// SetPath extracts the full Path from http.Request
@@ -58,7 +58,7 @@ type Trace interface {
 	SetHost(host string)
 
 	// SetStatus sets the request's HTTP status code of the trace, if any.
-	// It is used for categorizing service metrics and traces in AppOptics.
+	// It is used for categorizing service metrics and traces in SolarWinds Observability.
 	SetStatus(status int)
 
 	// SetStartTime sets the start time of a span.
@@ -80,10 +80,10 @@ type Overrides struct {
 }
 
 // KVMap is a map of additional key-value pairs to report along with the event data provided
-// to AppOptics. Certain key names (such as "Query" or "RemoteHost") are used by AppOptics to
+// to SolarWinds Observability. Certain key names (such as "Query" or "RemoteHost") are used by SolarWinds Observability to
 // provide details about program activity and distinguish between different types of spans.
 // Please visit [TODO] for
-// details on the key names that AppOptics looks for.
+// details on the key names that SolarWinds Observability looks for.
 type KVMap = reporter.KVMap
 
 // ContextOptions is an alias of the reporter's ContextOptions
@@ -107,9 +107,9 @@ type aoTrace struct {
 
 func (t *aoTrace) aoContext() reporter.Context { return t.aoCtx }
 
-// NewTrace creates a new Trace for reporting to AppOptics and immediately records
+// NewTrace creates a new Trace for reporting to SolarWinds Observability and immediately records
 // the beginning of a root span named spanName. If this trace is sampled, it may report
-// event data to AppOptics; otherwise event reporting will be a no-op.
+// event data to SolarWinds Observability; otherwise event reporting will be a no-op.
 func NewTrace(spanName string) Trace {
 	return NewTraceFromID(spanName, "", nil)
 }
@@ -150,7 +150,7 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 	return t
 }
 
-// NewTraceFromID creates a new Trace for reporting to AppOptics, provided an
+// NewTraceFromID creates a new Trace for reporting to SolarWinds Observability, provided an
 // incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
 // If callback is provided & trace is sampled, cb will be called for entry event KVs
 func NewTraceFromID(spanName, mdStr string, cb func() KVMap) Trace {
@@ -161,7 +161,7 @@ func NewTraceWithOverrides(spanName string, overrides Overrides, cb func() KVMap
 	return NewTraceFromIDForURLWithOverrides(spanName, "", "", overrides, cb)
 }
 
-// NewTraceFromIDForURL creates a new Trace for the provided URL to report to AppOptics,
+// NewTraceFromIDForURL creates a new Trace for the provided URL to report to SolarWinds Observability,
 // provided an incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
 // If callback is provided & trace is sampled, cb will be called for entry event KVs
 func NewTraceFromIDForURL(spanName, mdStr string, url string, cb func() KVMap) Trace {
@@ -175,7 +175,7 @@ func NewTraceFromIDForURL(spanName, mdStr string, url string, cb func() KVMap) T
 	})
 }
 
-// NewTraceFromIDForURLWithOverrides creates a new Trace for the provided URL to report to AppOptics,
+// NewTraceFromIDForURLWithOverrides creates a new Trace for the provided URL to report to SolarWinds Observability,
 // provided an incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
 // Adds ability to provide overrides.
 // If callback is provided & trace is sampled, cb will be called for entry event KVs

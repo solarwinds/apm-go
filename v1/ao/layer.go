@@ -113,7 +113,7 @@ type Span interface {
 	SetOperationName(string)
 
 	// SetTransactionName sets this service's transaction name.
-	// It is used for categorizing service metrics and traces in AppOptics.
+	// It is used for categorizing service metrics and traces in SolarWinds APM.
 	SetTransactionName(string) error
 
 	// GetTransactionName returns the current value of the transaction name
@@ -373,7 +373,7 @@ func (s *span) SetOperationName(name string) {
 	s.setName(name)
 }
 
-// SetTransactionName sets the transaction name used to categorize service requests in AppOptics.
+// SetTransactionName sets the transaction name used to categorize service requests in SolarWinds APM.
 func (s *span) SetTransactionName(name string) error {
 	if !s.ok() {
 		return errEndedSpan
