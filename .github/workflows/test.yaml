@@ -31,11 +31,11 @@ jobs:
       - name: Run tests
         working-directory: ./v1
         run: |
-          pushd ao/internal/reporter
+          pushd solarwinds_apm/internal/reporter
           ./certgen.sh
           popd
 
-          pushd ao
+          pushd solarwinds_apm
           go build -v github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host
           go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host
           pushd internal/reporter/
@@ -57,10 +57,10 @@ jobs:
           go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/opentracing,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer
           popd
           popd
-          pushd contrib/aogrpc
+          pushd contrib/apmgrpc
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
-          gocovmerge ao/cov.out ao/internal/reporter/cov.out ao/internal/metrics/cov.out ao/internal/log/cov.out ao/internal/config/cov.out ao/internal/host/cov.out ao/opentracing/cov.out contrib/aogrpc/cov.out> coverage.txt
+          gocovmerge ao/cov.out ao/internal/reporter/cov.out ao/internal/metrics/cov.out ao/internal/log/cov.out ao/internal/config/cov.out ao/internal/host/cov.out ao/opentracing/cov.out contrib/apmgrpc/cov.out> coverage.txt
           pushd ao/internal/reporter
           rm for_test.crt for_test.key
           popd
