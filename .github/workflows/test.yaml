@@ -36,8 +36,8 @@ jobs:
           popd
 
           pushd ao
-          go build -v github.com/solarwindscloud/solarwinds-apm-go/v1/ao github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host
-          go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/ao,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host
+          go build -v github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host
+          go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host
           pushd internal/reporter/
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
@@ -54,7 +54,7 @@ jobs:
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
           pushd opentracing
-          go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/opentracing,github.com/solarwindscloud/solarwinds-apm-go/v1/ao,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer
+          go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/opentracing,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer
           popd
           popd
           pushd contrib/aogrpc

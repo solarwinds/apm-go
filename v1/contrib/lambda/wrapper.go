@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/pkg/errors"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 )
 
 const (
@@ -246,7 +246,7 @@ func HandlerWithWrapper(handlerFunc interface{}, w Wrapper) interface{} {
 	invocationCount := 1
 	var endArgs []interface{}
 	if f := runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()); f != nil {
-		// e.g. "main.slowHandler", "github.com/solarwindscloud/solarwinds-apm-go/v1/ao_test.handler404"
+		// e.g. "main.slowHandler", "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm_test.handler404"
 		fname := f.Name()
 		if s := strings.SplitN(fname[strings.LastIndex(fname, "/")+1:], ".", 2); len(s) == 2 {
 			endArgs = append(endArgs, "Controller", s[0], "Action", s[1])

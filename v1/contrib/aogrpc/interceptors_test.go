@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/aogrpc/mocks"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,10 +45,10 @@ func TestGetTopFramePkg(t *testing.T) {
 	e = solarwinds_apm.SetLogLevel("invalid_level")
 	if ste, ok := e.(StackTracer); ok {
 		pkg, err = getTopFramePkg(ste)
-		assert.Equal(t, "ao", pkg)
+		assert.Equal(t, "solarwinds_apm", pkg)
 		assert.Nil(t, err)
 
-		assert.Equal(t, "ao", getErrClass(e))
+		assert.Equal(t, "solarwinds_apm", getErrClass(e))
 	} else {
 		assert.Equal(t, "error", getErrClass(e))
 	}
