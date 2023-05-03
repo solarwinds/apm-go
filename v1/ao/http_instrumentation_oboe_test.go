@@ -14,7 +14,7 @@ import (
 )
 
 func TestCustomTransactionNameWithDomain(t *testing.T) {
-	os.Setenv("SWO_PREPEND_DOMAIN", "true")
+	os.Setenv("SW_APM_PREPEND_DOMAIN", "true")
 	config.Load()
 	r := reporter.SetTestReporter() // set up test reporter
 
@@ -54,5 +54,5 @@ func TestCustomTransactionNameWithDomain(t *testing.T) {
 				n.Map["TransactionName"].(string))
 		}},
 	})
-	os.Unsetenv("SWO_PREPEND_DOMAIN")
+	os.Unsetenv("SW_APM_PREPEND_DOMAIN")
 }

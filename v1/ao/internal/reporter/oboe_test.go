@@ -468,8 +468,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 
 	resetSettings()
 	// Remote setting has the override flag && local config has lower rate
-	_ = os.Setenv("SWO_TRACING_MODE", "enabled")
-	_ = os.Setenv("SWO_SAMPLE_RATE", "10000")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "enabled")
+	_ = os.Setenv("SW_APM_SAMPLE_RATE", "10000")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -479,8 +479,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, 10000, rate)
 
 	// Remote setting has the override flag && local config has higher rate
-	_ = os.Setenv("SWO_TRACING_MODE", "enabled")
-	_ = os.Setenv("SWO_SAMPLE_RATE", "10000")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "enabled")
+	_ = os.Setenv("SW_APM_SAMPLE_RATE", "10000")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -490,8 +490,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, 1000, rate)
 
 	// Remote setting doesn't have the override flag && local config has lower rate
-	_ = os.Setenv("SWO_TRACING_MODE", "enabled")
-	_ = os.Setenv("SWO_SAMPLE_RATE", "10000")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "enabled")
+	_ = os.Setenv("SW_APM_SAMPLE_RATE", "10000")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -500,8 +500,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting doesn't have the override flag && local config has higher rate
-	_ = os.Setenv("SWO_TRACING_MODE", "enabled")
-	_ = os.Setenv("SWO_SAMPLE_RATE", "10000")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "enabled")
+	_ = os.Setenv("SW_APM_SAMPLE_RATE", "10000")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -510,8 +510,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting has the override flag && no local config
-	_ = os.Unsetenv("SWO_TRACING_MODE")
-	_ = os.Unsetenv("SWO_SAMPLE_RATE")
+	_ = os.Unsetenv("SW_APM_TRACING_MODE")
+	_ = os.Unsetenv("SW_APM_SAMPLE_RATE")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -520,8 +520,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, SAMPLE_SOURCE_DEFAULT, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting doesn't have the override flag && no local config
-	_ = os.Unsetenv("SWO_TRACING_MODE")
-	_ = os.Unsetenv("SWO_SAMPLE_RATE")
+	_ = os.Unsetenv("SW_APM_TRACING_MODE")
+	_ = os.Unsetenv("SW_APM_SAMPLE_RATE")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -530,8 +530,8 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	assert.Equal(t, SAMPLE_SOURCE_DEFAULT, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting has the override flag && local tracing mode = DISABLED
-	_ = os.Setenv("SWO_TRACING_MODE", "disabled")
-	_ = os.Setenv("SWO_SAMPLE_RATE", "10000")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "disabled")
+	_ = os.Setenv("SW_APM_SAMPLE_RATE", "10000")
 	_ = config.Load()
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),

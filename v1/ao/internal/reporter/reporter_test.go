@@ -38,8 +38,8 @@ var _ = func() (_ struct{}) {
 	periodicTasksDisabled = true
 
 	os.Clearenv()
-	os.Setenv("SWO_SERVICE_KEY", TestServiceKey)
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
+	os.Setenv("SW_APM_SERVICE_KEY", TestServiceKey)
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
 
 	config.Load()
 	return
@@ -141,7 +141,7 @@ func startTestUDPListener(t *testing.T, bufs *[][]byte, numbufs int) chan struct
 	done := make(chan struct{})
 	assert.IsType(t, &udpReporter{}, globalReporter)
 
-	addr, err := net.ResolveUDPAddr("udp4", os.Getenv("SWO_COLLECTOR_UDP"))
+	addr, err := net.ResolveUDPAddr("udp4", os.Getenv("SW_APM_COLLECTOR_UDP"))
 	assert.NoError(t, err)
 	conn, err := net.ListenUDP("udp4", addr)
 	assert.NoError(t, err)
@@ -165,9 +165,9 @@ func startTestUDPListener(t *testing.T, bufs *[][]byte, numbufs int) chan struct
 
 func assertUDPMode(t *testing.T) {
 	// for UDP mode run test like this:
-	// SWO_REPORTER=udp go test -v
+	// SW_APM_REPORTER=udp go test -v
 
-	if os.Getenv("SWO_REPORTER") != "udp" {
+	if os.Getenv("SW_APM_REPORTER") != "udp" {
 		t.Skip("not running in UDP mode, skipping.")
 	}
 }
@@ -196,22 +196,22 @@ func TestUDPReporter(t *testing.T) {
 // ========================= GRPC Reporter =============================
 
 func assertSSLMode(t *testing.T) {
-	if os.Getenv("SWO_REPORTER") == "udp" {
+	if os.Getenv("SW_APM_REPORTER") == "udp" {
 		t.Skip("not running in SSL mode, skipping.")
 	}
 }
 
 func TestGRPCReporter(t *testing.T) {
 	// start test gRPC server
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
 	config.Load()
 	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
 	// set gRPC reporter
-	os.Setenv("SWO_COLLECTOR", addr)
-	os.Setenv("SWO_TRUSTEDPATH", testCertFile)
+	os.Setenv("SW_APM_COLLECTOR", addr)
+	os.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
 	setGlobalReporter("ssl")
@@ -297,14 +297,14 @@ func TestGRPCReporter(t *testing.T) {
 
 func TestShutdownGRPCReporter(t *testing.T) {
 	// start test gRPC server
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
 	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
 	// set gRPC reporter
-	os.Setenv("SWO_COLLECTOR", addr)
-	os.Setenv("SWO_TRUSTEDPATH", testCertFile)
+	os.Setenv("SW_APM_COLLECTOR", addr)
+	os.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
 	// numGo := runtime.NumGoroutine()
@@ -345,12 +345,12 @@ func TestInvalidKey(t *testing.T) {
 	}()
 
 	invalidKey := "invalidf6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:Go"
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
-	oldKey := os.Getenv("SWO_SERVICE_KEY")
-	os.Setenv("SWO_SERVICE_KEY", invalidKey)
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
+	oldKey := os.Getenv("SW_APM_SERVICE_KEY")
+	os.Setenv("SW_APM_SERVICE_KEY", invalidKey)
 	addr := "localhost:4567"
-	os.Setenv("SWO_COLLECTOR", addr)
-	os.Setenv("SWO_TRUSTEDPATH", testCertFile)
+	os.Setenv("SW_APM_COLLECTOR", addr)
+	os.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
 
 	// start test gRPC server
 	server := StartTestGRPCServer(t, addr)
@@ -380,7 +380,7 @@ func TestInvalidKey(t *testing.T) {
 	// Tear down everything.
 	server.Stop()
 	globalReporter = oldReporter
-	os.Setenv("SWO_SERVICE_KEY", oldKey)
+	os.Setenv("SW_APM_SERVICE_KEY", oldKey)
 
 	patterns := []string{
 		"rsp=INVALID_API_KEY",
@@ -574,14 +574,14 @@ func TestInvokeRPC(t *testing.T) {
 
 func TestInitReporter(t *testing.T) {
 	// Test disable agent
-	os.Setenv("SWO_DISABLED", "true")
+	os.Setenv("SW_APM_DISABLED", "true")
 	config.Load()
 	initReporter()
 	require.IsType(t, &nullReporter{}, globalReporter)
 
 	// Test enable agent
-	os.Unsetenv("SWO_DISABLED")
-	os.Setenv("SWO_REPORTER", "ssl")
+	os.Unsetenv("SW_APM_DISABLED")
+	os.Setenv("SW_APM_REPORTER", "ssl")
 	config.Load()
 	assert.False(t, config.GetDisabled())
 
@@ -660,13 +660,13 @@ func TestCustomMetrics(t *testing.T) {
 func testProxy(t *testing.T, proxyUrl string) {
 	addr := "localhost:4567"
 
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
-	os.Setenv("SWO_COLLECTOR", addr)
-	os.Setenv("SWO_TRUSTEDPATH", testCertFile)
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
+	os.Setenv("SW_APM_COLLECTOR", addr)
+	os.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
 
 	// set proxy
-	os.Setenv("SWO_PROXY", proxyUrl)
-	os.Setenv("SWO_PROXY_CERT_PATH", testCertFile)
+	os.Setenv("SW_APM_PROXY", proxyUrl)
+	os.Setenv("SW_APM_PROXY_CERT_PATH", testCertFile)
 	proxy, err := NewTestProxyServer(proxyUrl, testCertFile, testKeyFile)
 	require.Nil(t, err)
 	require.Nil(t, proxy.Start())

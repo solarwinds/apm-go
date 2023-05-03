@@ -24,18 +24,18 @@ func TestDebugLevel(t *testing.T) {
 		val      string
 		expected LogLevel
 	}{
-		{"SWO_DEBUG_LEVEL", "DEBUG", DEBUG},
-		{"SWO_DEBUG_LEVEL", "Info", INFO},
-		{"SWO_DEBUG_LEVEL", "warn", WARNING},
-		{"SWO_DEBUG_LEVEL", "erroR", ERROR},
-		{"SWO_DEBUG_LEVEL", "erroR  ", ERROR},
-		{"SWO_DEBUG_LEVEL", "HelloWorld", DefaultLevel},
-		{"SWO_DEBUG_LEVEL", "0", DEBUG},
-		{"SWO_DEBUG_LEVEL", "1", INFO},
-		{"SWO_DEBUG_LEVEL", "2", WARNING},
-		{"SWO_DEBUG_LEVEL", "3", ERROR},
-		{"SWO_DEBUG_LEVEL", "4", DefaultLevel},
-		{"SWO_DEBUG_LEVEL", "1000", DefaultLevel},
+		{"SW_APM_DEBUG_LEVEL", "DEBUG", DEBUG},
+		{"SW_APM_DEBUG_LEVEL", "Info", INFO},
+		{"SW_APM_DEBUG_LEVEL", "warn", WARNING},
+		{"SW_APM_DEBUG_LEVEL", "erroR", ERROR},
+		{"SW_APM_DEBUG_LEVEL", "erroR  ", ERROR},
+		{"SW_APM_DEBUG_LEVEL", "HelloWorld", DefaultLevel},
+		{"SW_APM_DEBUG_LEVEL", "0", DEBUG},
+		{"SW_APM_DEBUG_LEVEL", "1", INFO},
+		{"SW_APM_DEBUG_LEVEL", "2", WARNING},
+		{"SW_APM_DEBUG_LEVEL", "3", ERROR},
+		{"SW_APM_DEBUG_LEVEL", "4", DefaultLevel},
+		{"SW_APM_DEBUG_LEVEL", "1000", DefaultLevel},
 	}
 
 	for _, test := range tests {
@@ -44,7 +44,7 @@ func TestDebugLevel(t *testing.T) {
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
 
-	os.Unsetenv("SWO_DEBUG_LEVEL")
+	os.Unsetenv("SW_APM_DEBUG_LEVEL")
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 	assert.EqualValues(t, Level(), DefaultLevel)
 }
@@ -53,7 +53,7 @@ func TestLog(t *testing.T) {
 	var buffer bytes.Buffer
 	SetOutput(&buffer)
 
-	os.Setenv("SWO_DEBUG_LEVEL", "debug")
+	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 
 	tests := map[string]string{
@@ -97,7 +97,7 @@ func TestLog(t *testing.T) {
 	assert.True(t, strings.HasSuffix(buffer.String(), "show me the code\n"))
 
 	SetOutput(os.Stderr)
-	os.Unsetenv("SWO_DEBUG_LEVEL")
+	os.Unsetenv("SW_APM_DEBUG_LEVEL")
 
 }
 

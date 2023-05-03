@@ -14,10 +14,10 @@ import (
 )
 
 func TestServerless(t *testing.T) {
-	serverless := os.Getenv("SWO_SERVERLESS")
-	defer func() { os.Setenv("SWO_SERVERLESS", serverless) }()
+	serverless := os.Getenv("SW_APM_SERVERLESS")
+	defer func() { os.Setenv("SW_APM_SERVERLESS", serverless) }()
 
-	os.Setenv("SWO_SERVERLESS", "true")
+	os.Setenv("SW_APM_SERVERLESS", "true")
 	config.Load()
 
 	var sb utils.SafeBuffer
@@ -55,10 +55,10 @@ func TestServerless(t *testing.T) {
 }
 
 func TestServerlessShutdown(t *testing.T) {
-	serverless := os.Getenv("SWO_SERVERLESS")
-	defer func() { os.Setenv("SWO_SERVERLESS", serverless) }()
+	serverless := os.Getenv("SW_APM_SERVERLESS")
+	defer func() { os.Setenv("SW_APM_SERVERLESS", serverless) }()
 
-	os.Setenv("SWO_SERVERLESS", "true")
+	os.Setenv("SW_APM_SERVERLESS", "true")
 	config.Load()
 
 	globalReporter = newServerlessReporter(os.Stderr)

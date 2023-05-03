@@ -43,7 +43,7 @@ const (
 	grpcReporterVersion = "2"
 
 	// default certificate used to verify the collector endpoint,
-	// can be overridden via SWO_TRUSTEDPATH
+	// can be overridden via SW_APM_TRUSTEDPATH
 	grpcCertDefault = `-----BEGIN CERTIFICATE-----
 MIID8TCCAtmgAwIBAgIJAMoDz7Npas2/MA0GCSqGSIb3DQEBCwUAMIGOMQswCQYD
 VQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5j

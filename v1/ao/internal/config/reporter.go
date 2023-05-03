@@ -10,10 +10,10 @@ import (
 // must be accessed through atomic operators
 type ReporterOptions struct {
 	// Events flush interval in seconds
-	EventFlushInterval int64 `yaml:"EventFlushInterval,omitempty" env:"SWO_EVENTS_FLUSH_INTERVAL" default:"2"`
+	EventFlushInterval int64 `yaml:"EventFlushInterval,omitempty" env:"SW_APM_EVENTS_FLUSH_INTERVAL" default:"2"`
 
 	// The maximum bytes per RPC request
-	MaxReqBytes int64 `yaml:"MaxReqBytes,omitempty" env:"SWO_MAX_REQUEST_BYTES" default:"2048000"`
+	MaxReqBytes int64 `yaml:"MaxReqBytes,omitempty" env:"SW_APM_MAX_REQUEST_BYTES" default:"2048000"`
 
 	// Metrics flush interval in seconds
 	MetricFlushInterval int64 `yaml:"MetricFlushInterval,omitempty" default:"30"`

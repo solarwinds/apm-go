@@ -9,8 +9,8 @@ cov_files=cov.out internal/reporter/cov.out opentracing/cov.out
 cov_merge=covmerge.out
 test_args=-race
 
-test: export SWO_DEBUG_LEVEL=1
-#test: export SWO_DEBUG_LEVEL=0
+test: export SW_APM_DEBUG_LEVEL=1
+#test: export SW_APM_DEBUG_LEVEL=0
 test:
 	go test $(test_args) $(cov_args) -v $(cov_out)
 	cd internal/reporter && go test $(test_args) $(cov_args) $(cov_out) -v

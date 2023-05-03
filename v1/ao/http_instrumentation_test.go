@@ -123,7 +123,7 @@ func TestHTTPHandler404(t *testing.T) {
 }
 
 func TestHTTPHandler200(t *testing.T) {
-	os.Setenv("SWO_PREPEND_DOMAIN", "false")
+	os.Setenv("SW_APM_PREPEND_DOMAIN", "false")
 	config.Load()
 	r := reporter.SetTestReporter() // set up test reporter
 	response := httpTestWithEndpoint(handler200CustomTxnName, "http://test.com/hello world/one/two/three?testq")

@@ -90,7 +90,7 @@ func (r *nullReporter) SetServiceKey(string) {}
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
-// can be overridden via SWO_REPORTER
+// can be overridden via SW_APM_REPORTER
 func init() {
 	log.SetLevelFromStr(config.DebugLevel())
 	initReporter()

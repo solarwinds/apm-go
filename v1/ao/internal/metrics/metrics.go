@@ -313,10 +313,10 @@ var metricsHTTPHistograms = &histograms{
 // TODO: use config package, and add validator (0-5)
 // initialize values according to env variables
 func init() {
-	pEnv := "SWO_HISTOGRAM_PRECISION"
+	pEnv := "SW_APM_HISTOGRAM_PRECISION"
 	precision := os.Getenv(pEnv)
 	if precision != "" {
-		log.Infof("Non-default SWO_HISTOGRAM_PRECISION: %s", precision)
+		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
 		if p, err := strconv.Atoi(precision); err == nil {
 			if p >= 0 && p <= 5 {
 				metricsHTTPHistograms.precision = p

@@ -166,7 +166,7 @@ func TestRelaxedTriggerTraceRateLimited(t *testing.T) {
 
 // trigger trace: local disabled, remote enabled, unsigned TT request
 func TestTriggerTraceLocalDisabledRemoteEnabled(t *testing.T) {
-	_ = os.Setenv("SWO_TRIGGER_TRACE", "false")
+	_ = os.Setenv("SW_APM_TRIGGER_TRACE", "false")
 	_ = config.Load()
 
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
@@ -181,13 +181,13 @@ func TestTriggerTraceLocalDisabledRemoteEnabled(t *testing.T) {
 	assert.EqualValues(t, "trigger-trace=trigger-tracing-disabled", rHeader.Get("X-Trace-Options-Response"))
 	assert.True(t, strings.HasSuffix(rHeader.Get("X-Trace"), "00"))
 
-	_ = os.Unsetenv("SWO_TRIGGER_TRACE")
+	_ = os.Unsetenv("SW_APM_TRIGGER_TRACE")
 	_ = config.Load()
 }
 
 // trigger trace: local enabled, remote disabled, unsigned TT request
 func TestTriggerTraceLocalEnabledRemoteDisabled(t *testing.T) {
-	_ = os.Setenv("SWO_TRIGGER_TRACE", "true")
+	_ = os.Setenv("SW_APM_TRIGGER_TRACE", "true")
 	_ = config.Load()
 
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.NoTriggerTraceST))
@@ -202,13 +202,13 @@ func TestTriggerTraceLocalEnabledRemoteDisabled(t *testing.T) {
 	assert.EqualValues(t, "trigger-trace=trigger-tracing-disabled", rHeader.Get("X-Trace-Options-Response"))
 	assert.True(t, strings.HasSuffix(rHeader.Get("X-Trace"), "00"))
 
-	_ = os.Unsetenv("SWO_TRIGGER_TRACE")
+	_ = os.Unsetenv("SW_APM_TRIGGER_TRACE")
 	_ = config.Load()
 }
 
 // trigger trace enabled but tracing mode disabled locally
 func TestTriggerTraceEnabledTracingModeDisabled(t *testing.T) {
-	_ = os.Setenv("SWO_TRACING_MODE", "disabled")
+	_ = os.Setenv("SW_APM_TRACING_MODE", "disabled")
 	_ = config.Load()
 
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
@@ -223,7 +223,7 @@ func TestTriggerTraceEnabledTracingModeDisabled(t *testing.T) {
 	assert.EqualValues(t, "trigger-trace=tracing-disabled", rHeader.Get("X-Trace-Options-Response"))
 	assert.True(t, strings.HasSuffix(rHeader.Get("X-Trace"), "00"))
 
-	_ = os.Unsetenv("SWO_TRACING_MODE")
+	_ = os.Unsetenv("SW_APM_TRACING_MODE")
 	_ = config.Load()
 }
 

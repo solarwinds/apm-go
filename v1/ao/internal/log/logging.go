@@ -37,7 +37,7 @@ const (
 )
 
 const (
-	envSolarWindsAPMLogLevel = "SWO_DEBUG_LEVEL"
+	envSolarWindsAPMLogLevel = "SW_APM_DEBUG_LEVEL"
 )
 
 // LevelStr represents the log levels in strings
