@@ -1,4 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
 // test usage example from doc.go
 
 package solarwinds_apm_test

@@ -1,8 +1,6 @@
 //go:build go1.7
 // +build go1.7
 
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 package solarwinds_apm_test
 
 import (

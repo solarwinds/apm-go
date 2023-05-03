@@ -1,8 +1,6 @@
 //go:build !linux
 // +build !linux
 
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 package host
 
 // IsPhysicalInterface checks if the network interface is physical. It always

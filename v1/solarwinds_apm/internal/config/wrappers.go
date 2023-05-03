@@ -1,5 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 package config
 
 import "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"

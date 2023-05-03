@@ -1,5 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 package solarwinds_apm
 
 import (

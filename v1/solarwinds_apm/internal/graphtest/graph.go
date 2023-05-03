@@ -1,5 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 // Package graphtest provides test utilities for asserting properties of event graphs.
 package graphtest
 

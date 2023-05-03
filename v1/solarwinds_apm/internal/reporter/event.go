@@ -1,5 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 // Package reporter provides a low-level API for creating and reporting events for
 // distributed tracing with SolarWinds Observability.
 package reporter

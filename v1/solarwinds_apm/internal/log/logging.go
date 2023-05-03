@@ -1,5 +1,3 @@
-// Copyright (C) 2023 SolarWinds Worldwide, LLC. All rights reserved.
-
 // Package log implements a leveled logging system. It checks the current log
 // level and decides whether to print the logging texts or ignore them.
 package log
