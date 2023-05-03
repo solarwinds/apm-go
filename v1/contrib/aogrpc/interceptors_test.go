@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao"
-	"github.com/solarwindscloud/swo-golang/v1/contrib/aogrpc/mocks"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/aogrpc/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

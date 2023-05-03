@@ -7,10 +7,10 @@ import (
 	"net"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
 )
 
 const (

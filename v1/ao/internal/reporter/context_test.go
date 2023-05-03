@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
+	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter/collector"
 )
 
 // Method defines the interface of an RPC call

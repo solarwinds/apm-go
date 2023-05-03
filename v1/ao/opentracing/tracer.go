@@ -13,7 +13,7 @@ import (
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/opentracing/opentracing-go/log"
-	"github.com/solarwindscloud/swo-golang/v1/ao"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 )
 
 // NewTracer returns a new SolarWinds Observability tracer.

@@ -12,8 +12,8 @@ import (
 	bt "github.com/opentracing/basictracer-go"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/harness"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
-	mt "github.com/solarwindscloud/swo-golang/v1/contrib/multitracer"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
+	mt "github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer"
 )
 
 // This test sets up SWO Tracer and the OT "BasicTracer" side by side

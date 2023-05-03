@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/hdrhist"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/hdrhist"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
 	"github.com/stretchr/testify/assert"
 	mbson "gopkg.in/mgo.v2/bson"
 )
@@ -149,8 +149,8 @@ func TestGetTransactionFromURL(t *testing.T) {
 	}
 	var test = []record{
 		{
-			"/solarwindscloud/swo-golang/blob/metrics/reporter.go#L867",
-			"/solarwindscloud/swo-golang",
+			"/solarwindscloud/solarwinds-apm-go/blob/metrics/reporter.go#L867",
+			"/solarwindscloud/solarwinds-apm-go",
 		},
 		{
 			"/librato",
@@ -161,15 +161,15 @@ func TestGetTransactionFromURL(t *testing.T) {
 			"/",
 		},
 		{
-			"/solarwindscloud/swo-golang/blob",
-			"/solarwindscloud/swo-golang",
+			"/solarwindscloud/solarwinds-apm-go/blob",
+			"/solarwindscloud/solarwinds-apm-go",
 		},
 		{
-			"/solarwindscloud/swo-golang/blob",
-			"/solarwindscloud/swo-golang",
+			"/solarwindscloud/solarwinds-apm-go/blob",
+			"/solarwindscloud/solarwinds-apm-go",
 		},
 		{
-			"http://test.com/solarwindscloud/swo-golang/blob",
+			"http://test.com/solarwindscloud/solarwinds-apm-go/blob",
 			"http://test.com",
 		},
 		{

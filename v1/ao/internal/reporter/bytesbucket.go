@@ -5,7 +5,7 @@ package reporter
 import (
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
 )
 
 // BytesBucket is a struct to simulate a bucket. It has two actions: pour

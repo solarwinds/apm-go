@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	pb "github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	pb "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter/collector"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"

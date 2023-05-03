@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
 )
 
 const (

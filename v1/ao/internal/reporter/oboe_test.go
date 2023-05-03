@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 	"github.com/stretchr/testify/require"
 	mbson "gopkg.in/mgo.v2/bson"
 
-	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
+	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func assertInitMessage(t *testing.T, bufs [][]byte) {
 			assert.Equal(t, 1, n.Map["__Init"])
 			assert.Equal(t, utils.Version(), n.Map["Go.SolarWindsAPM.Version"])
 			assert.NotEmpty(t, n.Map["Go.Version"])
-			assert.True(t, strings.HasSuffix(n.Map["Go.InstallDirectory"].(string), "swo-golang/v1/ao"))
+			assert.True(t, strings.HasSuffix(n.Map["Go.InstallDirectory"].(string), "solarwinds-apm-go/v1/ao"))
 			assert.Less(t, baseline.Unix(), n.Map["Go.InstallTimestamp"])
 			assert.Less(t, baseline.UnixNano()/1e3, n.Map["Go.LastRestart"])
 		}},

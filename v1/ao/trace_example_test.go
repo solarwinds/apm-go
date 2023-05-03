@@ -5,7 +5,7 @@ package ao_test
 import (
 	"context"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
 )
 
 func ExampleNewTrace() {

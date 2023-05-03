@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/hdrhist"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/hdrhist"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 )
 
 const (
@@ -647,7 +647,7 @@ func addMetricsValue(bbuf *bson.Buffer, index *int, name string, value interface
 
 // GetTransactionFromPath performs fingerprinting on a given escaped path to extract the transaction name
 // We can get the path so there is no need to parse the full URL.
-// e.g. Escaped Path path: /solarwindscloud/swo-golang/blob/metrics becomes /solarwindscloud/swo-golang
+// e.g. Escaped Path path: /solarwindscloud/solarwinds-apm-go/blob/metrics becomes /solarwindscloud/solarwinds-apm-go
 func GetTransactionFromPath(path string) string {
 	if path == "" || path == "/" {
 		return "/"

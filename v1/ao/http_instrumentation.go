@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 )
 
 // key used for HTTP span to indicate a new context
-var httpSpanKey = contextKeyT("github.com/solarwindscloud/swo-golang/v1/ao.HTTPSpan")
+var httpSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/ao.HTTPSpan")
 
 // HTTPHandler wraps an http.HandlerFunc with entry / exit events,
 // returning a new handler that can be used in its place.
@@ -41,7 +41,7 @@ func HTTPHandler(handler func(http.ResponseWriter, *http.Request), opts ...SpanO
 	// At wrap time (when binding handler to router): get name of wrapped handler func
 	var endArgs []interface{}
 	if f := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()); f != nil {
-		// e.g. "main.slowHandler", "github.com/solarwindscloud/swo-golang/v1/ao_test.handler404"
+		// e.g. "main.slowHandler", "github.com/solarwindscloud/solarwinds-apm-go/v1/ao_test.handler404"
 		fname := f.Name()
 		if s := strings.SplitN(fname[strings.LastIndex(fname, "/")+1:], ".", 2); len(s) == 2 {
 			endArgs = append(endArgs, "Controller", s[0], "Action", s[1])

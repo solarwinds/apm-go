@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

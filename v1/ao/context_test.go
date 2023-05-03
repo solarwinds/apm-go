@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-version"
-	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
 )
 

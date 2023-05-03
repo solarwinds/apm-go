@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/bson"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/bson"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 )
 
 // gets and appends UnameSysName/UnameVersion to a BSON buffer

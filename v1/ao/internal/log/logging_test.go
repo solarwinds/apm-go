@@ -14,7 +14,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

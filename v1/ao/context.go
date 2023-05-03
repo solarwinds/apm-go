@@ -5,14 +5,14 @@ package ao
 import (
 	"context"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/log"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 )
 
 type contextKeyT interface{}
 
-var contextKey = contextKeyT("github.com/solasolarwindscloud/swo-golangao.Trace")
-var contextSpanKey = contextKeyT("github.com/solarwindscloud/swo-golang/v1/ao.Span")
+var contextKey = contextKeyT("github.com/solasolarwindscloud/solarwinds-apm-goao.Trace")
+var contextSpanKey = contextKeyT("github.com/solarwindscloud/solarwinds-apm-go/v1/ao.Span")
 
 // NewContext returns a copy of the parent context and associates it with a Trace.
 func NewContext(ctx context.Context, t Trace) context.Context {

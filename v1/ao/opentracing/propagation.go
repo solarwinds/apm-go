@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	ot "github.com/opentracing/opentracing-go"
 )
 

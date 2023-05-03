@@ -1,4 +1,4 @@
-module github.com/solarwindscloud/swo-golang
+module github.com/solarwindscloud/solarwinds-apm-go
 
 go 1.20
 

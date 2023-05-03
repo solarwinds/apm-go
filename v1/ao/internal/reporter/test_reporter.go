@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
 )
 
 // TestReporter appends reported events to Bufs if ShouldTrace is true.

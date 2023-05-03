@@ -3,8 +3,8 @@
 package ao
 
 import (
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 )
 
 // MetricOptions is a struct for the optional parameters of a measurement.

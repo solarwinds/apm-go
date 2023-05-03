@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 )
 
 const (

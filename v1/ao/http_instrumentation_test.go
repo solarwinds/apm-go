@@ -22,11 +22,11 @@ import (
 
 	"context"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
-	g "github.com/solarwindscloud/swo-golang/v1/ao/internal/graphtest"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
+	g "github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/graphtest"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

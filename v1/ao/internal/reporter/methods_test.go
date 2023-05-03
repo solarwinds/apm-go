@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/host"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/collector"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/mocks"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter/collector"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

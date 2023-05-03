@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/config"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/metrics"
-	"github.com/solarwindscloud/swo-golang/v1/ao/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

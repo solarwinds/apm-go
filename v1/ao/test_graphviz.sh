@@ -3,7 +3,7 @@
 # runs go test $@ in current dir, e.g.:
 # ./test_graphviz.sh -v
 # ./test_graphviz.sh -v -run TestTraceHTTP
-# ./test_graphviz.sh -v github.com/solarwindscloud/swo-golang/v1/ao/internal/reporter/
+# ./test_graphviz.sh -v github.com/solarwindscloud/solarwinds-apm-go/v1/ao/internal/reporter/
 graphdir="${DOT_GRAPHDIR:=$(pwd)}"
 DOT_GRAPHS=1 DOT_GRAPHDIR="$graphdir" go test "$@"
 OPEN="echo"
