@@ -35,7 +35,7 @@ type LogData struct {
 }
 
 // ServerlessMessage denotes the message to be written to AWS CloudWatch. The
-// forwarder will decode the message and sent the messages to the SWO collector.
+// forwarder will decode the message and sent the messages to the SolarWinds Observability collector.
 type ServerlessMessage struct {
 	Data LogData `json:"ao-data"`
 }

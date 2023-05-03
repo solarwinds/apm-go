@@ -279,7 +279,7 @@ func newGRPCReporter() reporter {
 	}
 
 	// create connection object for events client and metrics client
-	grpcConn, err1 := newGrpcConnection("SWO gRPC channel", addr, opts...)
+	grpcConn, err1 := newGrpcConnection("SolarWinds Observability gRPC channel", addr, opts...)
 	if err1 != nil {
 		log.Errorf("Failed to initialize gRPC reporter %v: %v", addr, err1)
 		return &nullReporter{}

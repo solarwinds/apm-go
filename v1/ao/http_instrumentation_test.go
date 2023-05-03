@@ -44,7 +44,7 @@ func handlerDelay503(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(httpSpanSleep)
 }
 
-// checkSWOContext checks if the SWO context is attached
+// checkSWOContext checks if the SolarWinds Observability context is attached
 func checkSWOContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) {
 	xtrace := ""
 	var t ao.Trace

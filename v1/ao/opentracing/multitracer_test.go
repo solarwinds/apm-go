@@ -9,7 +9,7 @@ import (
 	mt "github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer"
 )
 
-// This test sets up the SWO Tracer wrapped in a MultiTracer
+// This test sets up the SolarWinds Observability Tracer wrapped in a MultiTracer
 func TestMultiTracerAPICheck(t *testing.T) {
 	_ = reporter.SetTestReporter(reporter.TestReporterDisableDefaultSetting(true)) // set up test reporter
 	multiTracer := &mt.MultiTracer{Tracers: []opentracing.Tracer{NewTracer()}}
