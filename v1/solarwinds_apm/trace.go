@@ -97,7 +97,7 @@ type traceHTTPSpan struct {
 	action     string
 }
 
-type aoTrace struct {
+type apmTrace struct {
 	layerSpan
 	exitEvent      reporter.Event
 	httpSpan       traceHTTPSpan
@@ -105,7 +105,7 @@ type aoTrace struct {
 	overrides      Overrides
 }
 
-func (t *aoTrace) aoContext() reporter.Context { return t.aoCtx }
+func (t *apmTrace) aoContext() reporter.Context { return t.aoCtx }
 
 // NewTrace creates a new Trace for reporting to SolarWinds Observability and immediately records
 // the beginning of a root span named spanName. If this trace is sampled, it may report
@@ -137,7 +137,7 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 	if !ok {
 		return NewNullTrace()
 	}
-	t := &aoTrace{
+	t := &apmTrace{
 		layerSpan:      layerSpan{span: span{aoCtx: ctx, labeler: spanLabeler{spanName}}},
 		httpRspHeaders: make(map[string]string),
 	}
@@ -206,7 +206,7 @@ func GetTransactionName(ctx context.Context) string {
 
 // End reports the exit event for the span name that was used when calling NewTrace().
 // No more events should be reported from this trace.
-func (t *aoTrace) End(args ...interface{}) {
+func (t *apmTrace) End(args ...interface{}) {
 	if t.ok() {
 		t.AddEndArgs(args...)
 		t.reportExit()
@@ -214,7 +214,7 @@ func (t *aoTrace) End(args ...interface{}) {
 	}
 }
 
-func (t *aoTrace) EndWithOverrides(overrides Overrides, args ...interface{}) {
+func (t *apmTrace) EndWithOverrides(overrides Overrides, args ...interface{}) {
 	if t.ok() {
 		t.overrides = overrides
 		t.AddEndArgs(args...)
@@ -224,7 +224,7 @@ func (t *aoTrace) EndWithOverrides(overrides Overrides, args ...interface{}) {
 }
 
 // EndCallback ends a Trace, reporting additional KV pairs returned by calling cb
-func (t *aoTrace) EndCallback(cb func() KVMap) {
+func (t *apmTrace) EndCallback(cb func() KVMap) {
 	if t.ok() {
 		if cb != nil {
 			var args []interface{}
@@ -239,35 +239,35 @@ func (t *aoTrace) EndCallback(cb func() KVMap) {
 }
 
 // SetStartTime sets the start time of a trace
-func (t *aoTrace) SetStartTime(start time.Time) {
+func (t *apmTrace) SetStartTime(start time.Time) {
 	t.httpSpan.start = start
 }
 
-func (t *aoTrace) SetEndTime(end time.Time) {
+func (t *apmTrace) SetEndTime(end time.Time) {
 	t.httpSpan.end = end
 }
 
 // SetMethod sets the request's HTTP method, if any
-func (t *aoTrace) SetMethod(method string) {
+func (t *apmTrace) SetMethod(method string) {
 	t.httpSpan.span.Method = method
 }
 
 // SetPath extracts the Path from http.Request
-func (t *aoTrace) SetPath(path string) {
+func (t *apmTrace) SetPath(path string) {
 	t.httpSpan.span.Path = path
 }
 
 // SetHost extracts the host information from http.Request
-func (t *aoTrace) SetHost(host string) {
+func (t *apmTrace) SetHost(host string) {
 	t.httpSpan.span.Host = host
 }
 
 // SetStatus sets the request's HTTP status code of the trace, if any
-func (t *aoTrace) SetStatus(status int) {
+func (t *apmTrace) SetStatus(status int) {
 	t.httpSpan.span.Status = status
 }
 
-func (t *aoTrace) reportExit() {
+func (t *apmTrace) reportExit() {
 	if t.ok() {
 		t.lock.Lock()
 		defer t.lock.Unlock()
@@ -311,11 +311,11 @@ func (t *aoTrace) reportExit() {
 }
 
 // IsSampled indicates if the trace is sampled.
-func (t *aoTrace) IsSampled() bool { return t != nil && t.aoCtx.IsSampled() }
+func (t *apmTrace) IsSampled() bool { return t != nil && t.aoCtx.IsSampled() }
 
 // ExitMetadata reports the X-Trace metadata string that will be used by the exit event.
 // This is useful for setting response headers before reporting the end of the span.
-func (t *aoTrace) ExitMetadata() (mdHex string) {
+func (t *apmTrace) ExitMetadata() (mdHex string) {
 	if t.exitEvent == nil {
 		t.exitEvent = t.aoCtx.NewEvent(reporter.LabelExit, t.layerName(), false)
 	}
@@ -327,7 +327,7 @@ func (t *aoTrace) ExitMetadata() (mdHex string) {
 
 // recordHTTPSpan extract http status, controller and action from the deferred endArgs
 // and fill them into trace's httpSpan struct. The data is then sent to the span message channel.
-func (t *aoTrace) recordHTTPSpan() {
+func (t *apmTrace) recordHTTPSpan() {
 	var controller, action string
 	num := len([]string{keyStatus, keyController, keyAction})
 	for i := 0; (i+1 < len(t.endArgs)) && (num > 0); i += 2 {
@@ -366,7 +366,7 @@ func (t *aoTrace) recordHTTPSpan() {
 
 // finalizeTxnName finalizes the transaction name based on the following factors:
 // custom transaction name, action/controller, Path and the value of SW_APM_PREPEND_DOMAIN
-func (t *aoTrace) finalizeTxnName(controller string, action string) {
+func (t *apmTrace) finalizeTxnName(controller string, action string) {
 	// The precedence:
 	// custom transaction name > framework specific transaction naming > controller.action > 1st and 2nd segment of Path
 	customTxnName := t.aoCtx.GetTransactionName()
@@ -391,7 +391,7 @@ func (t *aoTrace) finalizeTxnName(controller string, action string) {
 }
 
 // prependDomainToTxnName prepends the domain to the transaction name if SW_APM_PREPEND_DOMAIN = true
-func (t *aoTrace) prependDomainToTxnName() {
+func (t *apmTrace) prependDomainToTxnName() {
 	if !config.GetPrependDomain() || t.httpSpan.span.Host == "" {
 		return
 	}
@@ -404,7 +404,7 @@ func (t *aoTrace) prependDomainToTxnName() {
 }
 
 // LoggableTraceID returns the loggable trace ID for log injection.
-func (t *aoTrace) LoggableTraceID() string {
+func (t *apmTrace) LoggableTraceID() string {
 	sampledFlag := "-0"
 	if t.IsSampled() {
 		sampledFlag = "-1"
@@ -418,12 +418,12 @@ func (t *aoTrace) LoggableTraceID() string {
 }
 
 // HTTPRspHeaders returns the headers which will be attached to the HTTP response.
-func (t *aoTrace) HTTPRspHeaders() map[string]string {
+func (t *apmTrace) HTTPRspHeaders() map[string]string {
 	return t.httpRspHeaders
 }
 
 // SetHTTPRspHeaders attaches the headers map to the trace.
-func (t *aoTrace) SetHTTPRspHeaders(headers map[string]string) {
+func (t *apmTrace) SetHTTPRspHeaders(headers map[string]string) {
 	if t.httpRspHeaders == nil {
 		return
 	}

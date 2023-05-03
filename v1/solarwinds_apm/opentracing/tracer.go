@@ -51,15 +51,15 @@ func (t *Tracer) startSpanWithOptions(operationName string, opts ot.StartSpanOpt
 		case ot.ChildOfRef, ot.FollowsFromRef:
 			refCtx := ref.ReferencedContext.(spanContext)
 			if refCtx.span == nil { // referenced spanContext created by Extract()
-				var aoTrace solarwinds_apm.Trace
+				var apmTrace solarwinds_apm.Trace
 				if refCtx.sampled {
-					aoTrace = solarwinds_apm.NewTraceFromID(operationName, refCtx.remoteMD, nil)
+					apmTrace = solarwinds_apm.NewTraceFromID(operationName, refCtx.remoteMD, nil)
 				} else {
-					aoTrace = solarwinds_apm.NewNullTrace()
+					apmTrace = solarwinds_apm.NewNullTrace()
 				}
 				newSpan = &spanImpl{tracer: t, context: spanContext{
-					trace:   aoTrace,
-					span:    aoTrace,
+					trace:   apmTrace,
+					span:    apmTrace,
 					sampled: refCtx.sampled,
 					baggage: refCtx.baggage,
 				},
@@ -76,8 +76,8 @@ func (t *Tracer) startSpanWithOptions(operationName string, opts ot.StartSpanOpt
 
 	// otherwise, no parent span found, so make new trace and return as span
 	if newSpan == nil {
-		aoTrace := solarwinds_apm.NewTrace(operationName)
-		newSpan = &spanImpl{tracer: t, context: spanContext{trace: aoTrace, span: aoTrace}}
+		apmTrace := solarwinds_apm.NewTrace(operationName)
+		newSpan = &spanImpl{tracer: t, context: spanContext{trace: apmTrace, span: apmTrace}}
 	}
 
 	// add tags, if provided in span options
