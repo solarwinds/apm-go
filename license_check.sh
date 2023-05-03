@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # © 2023 SolarWinds Worldwide, LLC. All rights reserved.
 #
@@ -14,11 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
-  -keyout for_test.key -out for_test.crt -extensions san -config \
-  <(echo "[req]";
-    echo distinguished_name=req;
-    echo "[san]";
-    echo subjectAltName=DNS:localhost
-    ) \
-  -subj "/CN=localhost"
+check_file() {
+    head -n 5 $1 | grep -q "Licensed under the Apache License"
+    if [ $? -ne 0 ];
+    then
+        echo "No license header found: $1"
+    fi
+}
+
+export -f check_file
+
+find . -type f \
+    -not -path '*/\.git*' \
+    -not -path '*/go.sum' \
+    -not -path '*/go.mod' \
+    -not -path './LICENSE' \
+    -not -path './README.md' \
+    -not -path './\.editorconfig' \
+    -not -path './\.codecov.yaml' \
+    -exec bash -c 'check_file "$0"' {} \;
