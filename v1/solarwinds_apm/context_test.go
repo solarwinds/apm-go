@@ -94,10 +94,10 @@ func TestNullSpan(t *testing.T) {
 	assert.False(t, c1.IsSampled())
 	assert.False(t, c1.ok())
 	assert.Empty(t, c1.MetadataString())
-	c1.addChildEdge(l1.aoContext())
+	c1.addChildEdge(l1.apmContext())
 	c1.addProfile(p1)
 
-	nctx := c1.aoContext()
+	nctx := c1.apmContext()
 	assert.Equal(t, reflect.TypeOf(nctx).Elem().Name(), "nullContext")
 	assert.IsType(t, reflect.TypeOf(nctx.Copy()).Elem().Name(), "nullContext")
 

@@ -122,7 +122,7 @@ type Span interface {
 	IsReporting() bool
 	addChildEdge(reporter.Context)
 	addProfile(Profile)
-	aoContext() reporter.Context
+	apmContext() reporter.Context
 	ok() bool
 }
 
@@ -209,7 +209,7 @@ func BeginSpanWithOptions(ctx context.Context, spanName string, opts SpanOptions
 func BeginSpanWithOverrides(ctx context.Context, spanName string, opts SpanOptions, overrides Overrides, args ...interface{}) (Span, context.Context) {
 	kvs := addKVsFromOpts(opts, args...)
 	if parent, ok := fromContext(ctx); ok && parent.ok() { // report span entry from parent context
-		l := newSpan(parent.aoContext().Copy(), spanName, parent, overrides, kvs...)
+		l := newSpan(parent.apmContext().Copy(), spanName, parent, overrides, kvs...)
 		return l, newSpanContext(ctx, l)
 	}
 	return nullSpan{}, ctx
@@ -456,7 +456,7 @@ func (s nullSpan) IsReporting() bool                                            
 func (s nullSpan) addChildEdge(reporter.Context)                                                {}
 func (s nullSpan) addProfile(Profile)                                                           {}
 func (s nullSpan) ok() bool                                                                     { return false }
-func (s nullSpan) aoContext() reporter.Context                                                  { return reporter.NewNullContext() }
+func (s nullSpan) apmContext() reporter.Context                                                 { return reporter.NewNullContext() }
 func (s nullSpan) MetadataString() string                                                       { return "" }
 func (s nullSpan) IsSampled() bool                                                              { return false }
 func (s nullSpan) SetAsync(bool)                                                                {}
@@ -464,8 +464,8 @@ func (s nullSpan) SetOperationName(string)                                      
 func (s nullSpan) SetTransactionName(string) error                                              { return nil }
 func (s nullSpan) GetTransactionName() string                                                   { return "" }
 
-func (s contextSpan) aoContext() reporter.Context { return s.apmCtx }
-func (s contextSpan) ok() bool                    { return true }
+func (s contextSpan) apmContext() reporter.Context { return s.apmCtx }
+func (s contextSpan) ok() bool                     { return true }
 
 // is this span still valid (has it timed out, expired, not sampled)
 func (s *span) ok() bool {
@@ -476,8 +476,8 @@ func (s *span) ok() bool {
 	defer s.lock.RUnlock()
 	return !s.ended
 }
-func (s *span) IsReporting() bool           { return s.ok() }
-func (s *span) aoContext() reporter.Context { return s.apmCtx }
+func (s *span) IsReporting() bool            { return s.ok() }
+func (s *span) apmContext() reporter.Context { return s.apmCtx }
 
 // addChildEdge keeps track of edges to closed child spans
 func (s *span) addChildEdge(ctx reporter.Context) {

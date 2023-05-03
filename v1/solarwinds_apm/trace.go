@@ -105,7 +105,7 @@ type apmTrace struct {
 	overrides      Overrides
 }
 
-func (t *apmTrace) aoContext() reporter.Context { return t.apmCtx }
+func (t *apmTrace) apmContext() reporter.Context { return t.apmCtx }
 
 // NewTrace creates a new Trace for reporting to SolarWinds Observability and immediately records
 // the beginning of a root span named spanName. If this trace is sampled, it may report
