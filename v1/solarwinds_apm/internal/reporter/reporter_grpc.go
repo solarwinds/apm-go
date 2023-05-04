@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,9 +53,7 @@ import (
 const (
 	grpcReporterVersion = "2"
 
-	// default certificate used to verify the collector endpoint,
-	// can be overridden via SW_APM_TRUSTEDPATH
-	grpcCertDefault = `-----BEGIN CERTIFICATE-----
+	legacyAOcertificate = `-----BEGIN CERTIFICATE-----
 MIID8TCCAtmgAwIBAgIJAMoDz7Npas2/MA0GCSqGSIb3DQEBCwUAMIGOMQswCQYD
 VQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5j
 aXNjbzEVMBMGA1UECgwMTGlicmF0byBJbmMuMRUwEwYDVQQDDAxBcHBPcHRpY3Mg
@@ -110,7 +108,7 @@ type grpcConnection struct {
 	client         collector.TraceCollectorClient // GRPC client instance
 	connection     *grpc.ClientConn               // GRPC connection object
 	address        string                         // collector address
-	certificate    []byte                         // collector certificate
+	certificate    string                         // collector certificate
 	pingTicker     *time.Timer                    // timer for keep alive pings in seconds
 	pingTickerLock sync.Mutex                     // lock to ensure sequential access of pingTicker
 	lock           sync.RWMutex                   // lock to ensure sequential access (in case of connection loss)
@@ -138,7 +136,7 @@ type grpcConnection struct {
 type GrpcConnOpt func(c *grpcConnection)
 
 // WithCert returns a function that sets the certificate
-func WithCert(cert []byte) GrpcConnOpt {
+func WithCert(cert string) GrpcConnOpt {
 	return func(c *grpcConnection) {
 		c.certificate = cert
 	}
@@ -185,7 +183,7 @@ func newGrpcConnection(name string, target string, opts ...GrpcConnOpt) (*grpcCo
 		client:      nil,
 		connection:  nil,
 		address:     target,
-		certificate: []byte(grpcCertDefault),
+		certificate: "",
 		pingTicker:  time.NewTimer(time.Duration(grpcPingIntervalDefault) * time.Second),
 		queueStats:  &metrics.EventQueueStats{},
 		backoff:     DefaultBackoff,
@@ -279,7 +277,7 @@ func newGRPCReporter() reporter {
 			log.Errorf("Error reading cert file %s: %v", certPath, err)
 			return &nullReporter{}
 		}
-		opts = append(opts, WithCert(cert))
+		opts = append(opts, WithCert(string(cert)))
 	}
 
 	opts = append(opts, WithMaxReqBytes(config.ReporterOpts().GetMaxReqBytes()))
@@ -1266,7 +1264,7 @@ type Dialer interface {
 }
 
 type DialParams struct {
-	Certificate   []byte
+	Certificate   string
 	Address       string
 	Proxy         string
 	ProxyCertPath string
@@ -1279,10 +1277,29 @@ type DefaultDialer struct{}
 // Dial issues the connection to the remote address with attributes provided by
 // the grpcConnection.
 func (d *DefaultDialer) Dial(p DialParams) (*grpc.ClientConn, error) {
-	certPool := x509.NewCertPool()
+	var certPool *x509.CertPool
+	var err error
 
-	if ok := certPool.AppendCertsFromPEM(p.Certificate); !ok {
-		return nil, errors.New("unable to append the certificate to pool")
+	// If the certificate is not overriden and the address contains
+	// `appoptics.com`, then we need to specify the self-signed certificate. The
+	// original code did this by default since AO had a self-signed certificate,
+	// whereas SolarWinds Observability has a CA-signed cert.
+	if p.Certificate == "" && strings.Contains(p.Address, "appoptics.com") {
+		log.Debug("Defaulting to Appoptics certificate")
+		p.Certificate = legacyAOcertificate
+	}
+
+	if p.Certificate != "" {
+		certPool = x509.NewCertPool()
+		cert := []byte(p.Certificate)
+		if ok := certPool.AppendCertsFromPEM(cert); !ok {
+			return nil, errors.New("unable to append the certificate to pool")
+		}
+	} else {
+		certPool, err = x509.SystemCertPool()
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to obtain system cert pool")
+		}
 	}
 
 	// trim port from server name used for TLS verification
