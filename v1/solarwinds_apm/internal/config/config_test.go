@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -69,7 +69,6 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv(envSolarWindsAPMServiceKey, key1)
 	os.Setenv(envSolarWindsAPMHostnameAlias, "test")
 	os.Setenv(envSolarWindsAPMTrustedPath, "test.crt")
-	os.Setenv(envSolarWindsAPMCollectorUDP, "hello.udp")
 	os.Setenv(envSolarWindsAPMDisabled, "invalidValue")
 	os.Setenv(envSolarWindsAPMServerlessServiceName, "AWSLambda")
 	os.Setenv(envSolarWindsAPMTokenBucketCap, "2.0")
@@ -82,7 +81,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, ToServiceKey(key1), c.GetServiceKey())
 	assert.Equal(t, "test", c.GetHostAlias())
 	assert.Equal(t, "test.crt", filepath.Base(c.GetTrustedPath()))
-	assert.Equal(t, "hello.udp", c.GetCollectorUDP())
 	assert.Equal(t, false, c.GetDisabled())
 	assert.Equal(t, "", c.GetTransactionName()) // ignore it in non-lambda mode
 }
@@ -136,7 +134,6 @@ func TestConfigInit(t *testing.T) {
 		Collector:    defaultSSLCollector,
 		ServiceKey:   "",
 		TrustedPath:  "",
-		CollectorUDP: "",
 		ReporterType: "ssl",
 		Sampling: &SamplingConfig{
 			TracingMode:           "enabled",
@@ -230,8 +227,7 @@ func TestEnvsLoading(t *testing.T) {
 		"SW_APM_COLLECTOR=collector.test.com",
 		"SW_APM_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		"SW_APM_TRUSTEDPATH=/collector.crt",
-		"SW_APM_COLLECTOR_UDP=udp.test.com",
-		"SW_APM_REPORTER=udp",
+		"SW_APM_REPORTER=ssl",
 		"SW_APM_TRACING_MODE=never",
 		"SW_APM_SAMPLE_RATE=1000",
 		"SW_APM_PREPEND_DOMAIN=true",
@@ -259,8 +255,7 @@ func TestEnvsLoading(t *testing.T) {
 		Collector:    "collector.test.com",
 		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		TrustedPath:  "/collector.crt",
-		CollectorUDP: "udp.test.com",
-		ReporterType: "udp",
+		ReporterType: "ssl",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -307,8 +302,7 @@ func TestYamlConfig(t *testing.T) {
 		Collector:    "yaml.test.com",
 		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189218:go",
 		TrustedPath:  "/yaml-collector.crt",
-		CollectorUDP: "yamludp.test.com",
-		ReporterType: "udp",
+		ReporterType: "ssl",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -367,8 +361,7 @@ func TestYamlConfig(t *testing.T) {
 		"SW_APM_COLLECTOR=collector.test.com",
 		"SW_APM_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		"SW_APM_TRUSTEDPATH=/collector.crt",
-		"SW_APM_COLLECTOR_UDP=udp.test.com",
-		"SW_APM_REPORTER=udp",
+		"SW_APM_REPORTER=ssl",
 		"SW_APM_TRACING_MODE=never",
 		"SW_APM_SAMPLE_RATE=1000",
 		"SW_APM_PREPEND_DOMAIN=true",
@@ -392,8 +385,7 @@ func TestYamlConfig(t *testing.T) {
 		Collector:    "collector.test.com",
 		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		TrustedPath:  "/collector.crt",
-		CollectorUDP: "udp.test.com",
-		ReporterType: "udp",
+		ReporterType: "ssl",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -502,7 +494,6 @@ func TestInvalidConfig(t *testing.T) {
 		Collector:    "",
 		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		TrustedPath:  "",
-		CollectorUDP: "",
 		ReporterType: "invalid",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",

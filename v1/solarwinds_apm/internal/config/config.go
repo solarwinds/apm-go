@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -56,7 +56,6 @@ const (
 	envSolarWindsAPMCollector             = "SW_APM_COLLECTOR"
 	envSolarWindsAPMServiceKey            = "SW_APM_SERVICE_KEY"
 	envSolarWindsAPMTrustedPath           = "SW_APM_TRUSTEDPATH"
-	envSolarWindsAPMCollectorUDP          = "SW_APM_COLLECTOR_UDP"
 	envSolarWindsAPMReporter              = "SW_APM_REPORTER"
 	envSolarWindsAPMTracingMode           = "SW_APM_TRACING_MODE"
 	envSolarWindsAPMSampleRate            = "SW_APM_SAMPLE_RATE"
@@ -95,10 +94,7 @@ type Config struct {
 	// The file path of the cert file for gRPC connection
 	TrustedPath string `yaml:"TrustedPath,omitempty" env:"SW_APM_TRUSTEDPATH"`
 
-	// The host and port of the UDP collector
-	CollectorUDP string `yaml:"CollectorUDP,omitempty" env:"SW_APM_COLLECTOR_UDP"`
-
-	// The reporter type, ssl or udp
+	// The reporter type, ssl or serverless
 	ReporterType string `yaml:"ReporterType,omitempty" env:"SW_APM_REPORTER" default:"ssl"`
 
 	Sampling *SamplingConfig `yaml:"Sampling,omitempty"`
@@ -789,13 +785,6 @@ func (c *Config) GetReporterType() string {
 	c.RLock()
 	defer c.RUnlock()
 	return c.ReporterType
-}
-
-// GetCollectorUDP returns the UDP collector host
-func (c *Config) GetCollectorUDP() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.CollectorUDP
 }
 
 // GetTracingMode returns the local tracing mode

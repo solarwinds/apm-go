@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -78,9 +78,9 @@ func TestIsValidTracingMode(t *testing.T) {
 }
 
 func TestIsValidReporterType(t *testing.T) {
-	assert.Equal(t, true, IsValidReporterType("udp"))
+	assert.Equal(t, false, IsValidReporterType("udp"))
 	assert.Equal(t, true, IsValidReporterType("ssl"))
-	assert.Equal(t, true, IsValidReporterType("Udp"))
+	assert.Equal(t, false, IsValidReporterType("Udp"))
 	assert.Equal(t, false, IsValidReporterType("xxx"))
 	assert.Equal(t, false, IsValidReporterType(""))
 	assert.Equal(t, false, IsValidReporterType("udpabc"))
