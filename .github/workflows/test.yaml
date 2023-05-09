@@ -17,15 +17,15 @@ jobs:
       GO15VENDOREXPERIMENT: 1
       SW_APM_DEBUG_LEVEL: 1
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
       - name: Install dependencies
         run: |
           go get golang.org/x/tools/cmd/cover
           go get github.com/mattn/goveralls
-          go get github.com/wadey/gocovmerge
+          go install github.com/wadey/gocovmerge
           go get -t -v ./...
 
       - name: Run tests
@@ -66,4 +66,4 @@ jobs:
           popd
 
       - uses: codecov/codecov-action@v1
-        if: matrix.goversion == '1.15'
+        if: matrix.goversion == '1.20'
