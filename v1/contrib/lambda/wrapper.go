@@ -1,3 +1,16 @@
+// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package lambda
 
 import (
@@ -14,11 +27,11 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/pkg/errors"
 
-	"github.com/appoptics/appoptics-apm-go/v1/ao"
+	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 )
 
 const (
-	AOHTTPHeader = "x-trace"
+	APMHTTPHeader = "x-trace"
 )
 
 // Wrapper offers the ability to be called before and after a handler is executed.
@@ -30,7 +43,7 @@ type Wrapper interface {
 }
 
 type traceWrapper struct {
-	trace ao.Trace
+	trace solarwinds_apm.Trace
 	mdStr string
 }
 
@@ -72,7 +85,7 @@ func (w *traceWrapper) getRequestContext(ctx context.Context, msg json.RawMessag
 		for k, v := range headers {
 			k = strings.ToLower(k)
 			switch k {
-			case AOHTTPHeader:
+			case APMHTTPHeader:
 				mdStr = v
 			case "host":
 				host = v
@@ -110,8 +123,8 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 		args = append(args, "LogStreamName", lambdacontext.LogStreamName)
 	}
 
-	cb := func() ao.KVMap {
-		m := ao.KVMap{}
+	cb := func() solarwinds_apm.KVMap {
+		m := solarwinds_apm.KVMap{}
 		for i := 0; i < len(args)-1; i += 2 {
 			if k, ok := args[i].(string); ok {
 				m[k] = args[i+1]
@@ -120,9 +133,9 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 		return m
 	}
 
-	w.trace = ao.NewTraceWithOptions("aws_lambda_go",
-		ao.SpanOptions{
-			ContextOptions: ao.ContextOptions{
+	w.trace = solarwinds_apm.NewTraceWithOptions("aws_lambda_go",
+		solarwinds_apm.SpanOptions{
+			ContextOptions: solarwinds_apm.ContextOptions{
 				MdStr: mdStr,
 				CB:    cb,
 			},
@@ -132,7 +145,7 @@ func (w *traceWrapper) Before(ctx context.Context, msg json.RawMessage, args ...
 	txnName := strings.TrimLeft(method+"."+lambdacontext.FunctionName, ".")
 	w.trace.SetTransactionName(txnName)
 	w.trace.SetMethod(method)
-	return ao.NewContext(ctx, w.trace)
+	return solarwinds_apm.NewContext(ctx, w.trace)
 }
 
 type typedError struct {
@@ -192,12 +205,12 @@ func (w *traceWrapper) injectTraceContext(result interface{}, mdStr string) (res
 
 	if gwRsp, ok := result.(events.APIGatewayProxyResponse); ok {
 		if gwRsp.Headers != nil {
-			gwRsp.Headers[AOHTTPHeader] = mdStr
+			gwRsp.Headers[APMHTTPHeader] = mdStr
 			return result
 		}
 	} else if gwRsp, ok := result.(events.APIGatewayV2HTTPResponse); ok {
 		if gwRsp.Headers != nil {
-			gwRsp.Headers[AOHTTPHeader] = mdStr
+			gwRsp.Headers[APMHTTPHeader] = mdStr
 			return result
 		}
 	} else {
@@ -222,7 +235,7 @@ func (w *traceWrapper) injectTraceContext(result interface{}, mdStr string) (res
 			fieldType.Type.Elem().Kind() == reflect.String &&
 			fieldType.Type.Key().Kind() == reflect.String &&
 			fieldVal.CanSet() {
-			traceContextMap := map[string]string{AOHTTPHeader: mdStr}
+			traceContextMap := map[string]string{APMHTTPHeader: mdStr}
 			fieldVal.Set(reflect.Indirect(reflect.ValueOf(traceContextMap)))
 		}
 	}
@@ -246,7 +259,7 @@ func HandlerWithWrapper(handlerFunc interface{}, w Wrapper) interface{} {
 	invocationCount := 1
 	var endArgs []interface{}
 	if f := runtime.FuncForPC(reflect.ValueOf(handlerFunc).Pointer()); f != nil {
-		// e.g. "main.slowHandler", "github.com/appoptics/appoptics-apm-go/v1/ao_test.handler404"
+		// e.g. "main.slowHandler", "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm_test.handler404"
 		fname := f.Name()
 		if s := strings.SplitN(fname[strings.LastIndex(fname, "/")+1:], ".", 2); len(s) == 2 {
 			endArgs = append(endArgs, "Controller", s[0], "Action", s[1])

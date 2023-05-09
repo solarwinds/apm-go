@@ -1,3 +1,16 @@
+// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package lambda
 
 import (
@@ -91,7 +104,7 @@ func TestInjectTraceContext(t *testing.T) {
 
 	expected := events.APIGatewayProxyResponse{
 		StatusCode:        200,
-		Headers:           map[string]string{AOHTTPHeader: "my-x-trace-id"},
+		Headers:           map[string]string{APMHTTPHeader: "my-x-trace-id"},
 		MultiValueHeaders: map[string][]string{"key": {"value1", "value2"}},
 		Body:              "response body",
 		IsBase64Encoded:   true,
@@ -114,7 +127,7 @@ func TestInjectTraceContextWithExistingHeaders(t *testing.T) {
 
 	expected := events.APIGatewayProxyResponse{
 		StatusCode:        200,
-		Headers:           map[string]string{AOHTTPHeader: "my-x-trace-id", "header": "value"},
+		Headers:           map[string]string{APMHTTPHeader: "my-x-trace-id", "header": "value"},
 		MultiValueHeaders: map[string][]string{"key": {"value1", "value2"}},
 		Body:              "response body",
 		IsBase64Encoded:   true,
