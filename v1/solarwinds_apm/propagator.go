@@ -28,6 +28,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 	traceStateHeader := carrier.Get(cTraceState)
 
 	var traceState trace.TraceState
+	var err error
 	if traceStateHeader == "" {
 		if !sc.IsValid() {
 			return
@@ -35,7 +36,6 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		// Create new trace state
 		traceState = trace.TraceState{}
 	} else {
-		var err error
 		traceState, err = trace.ParseTraceState(traceStateHeader)
 		if err != nil {
 			log.Debugf("error parsing trace state `%s`", traceStateHeader)
@@ -43,7 +43,11 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		}
 	}
 	// Note: Insert will update the key if it exists
-	traceState.Insert(VendorID, swVal)
+	traceState, err = traceState.Insert(VendorID, swVal)
+	if err != nil {
+		log.Debugf("could not insert vendor info into tracestate `%s`", swVal)
+		return
+	}
 
 	// TODO maybe. From the python apm library: Remove any
 	// xtrace_options_response stored for ResponsePropagator
