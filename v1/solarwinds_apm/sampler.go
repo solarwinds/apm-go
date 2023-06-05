@@ -20,8 +20,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const traceStateKey = "sw"
-
 type Sampler struct{}
 
 func (s *Sampler) Description() string {
