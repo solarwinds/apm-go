@@ -17,7 +17,7 @@ func (s *Sampler) Description() string {
 
 func newTraceState() trace.TraceState {
 	ts := trace.TraceState{}
-	ts.Insert(traceStateKey, "TODO")
+	ts.Insert(VendorID, "TODO")
 	return ts
 }
 

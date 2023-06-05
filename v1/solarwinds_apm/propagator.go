@@ -2,7 +2,8 @@ package solarwinds_apm
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"go.opentelemetry.io/otel/propagation"
@@ -21,10 +22,8 @@ type SolarwindsPropagator struct{}
 var _ propagation.TextMapPropagator = SolarwindsPropagator{}
 
 func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
-	fmt.Println("SolarwindsPropagator Inject called")
 	span := trace.SpanFromContext(ctx)
 	sc := span.SpanContext()
-	fmt.Println("span, ctx", span, sc)
 	swVal := w3cfmt.SwFromCtx(sc)
 	traceStateHeader := carrier.Get(cTraceState)
 
@@ -39,11 +38,10 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		var err error
 		traceState, err = trace.ParseTraceState(traceStateHeader)
 		if err != nil {
-			fmt.Println("err parsing trace state from string!!!")
+			log.Debugf("error parsing trace state `%s`", traceStateHeader)
 			return
 		}
 	}
-	fmt.Println("Inserting tracestate", swVal)
 	// Note: Insert will update the key if it exists
 	traceState.Insert(VendorID, swVal)
 
