@@ -14,61 +14,57 @@
 package solarwinds_apm
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
-type Sampler struct{}
+type sampler struct {
+	decider
+}
 
-func (s *Sampler) Description() string {
+func NewSampler() sdktrace.Sampler {
+	return sampler{defaultDecider}
+}
+
+type decider interface {
+	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string)
+}
+
+type reporterDecider struct{}
+
+func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string) {
+	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode)
+}
+
+var defaultDecider decider = reporterDecider{}
+
+var _ sdktrace.Sampler = sampler{}
+
+func (s sampler) Description() string {
 	return "SolarWinds APM Sampler"
 }
 
-func newTraceState() trace.TraceState {
-	ts := trace.TraceState{}
-	ts.Insert(VendorID, "TODO")
-	return ts
-}
-
-func (s *Sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
+func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	parentContext := parameters.ParentContext
 	traced := false
 
 	psc := trace.SpanContextFromContext(parentContext)
-	log.Info("Parent context", parentContext)
-	psc.TraceState()
-	if !psc.IsValid() {
-		_ = newTraceState()
-		psc.HasSpanID()
-		psc.SpanID()
-		psc.TraceID()
-	}
-
-	if psc.IsValid() {
-		log.Info("valid: %#v", psc)
-	}
-	if psc.IsRemote() {
-		log.Info("remote: %#v", psc)
-	}
-	if psc.IsValid() && psc.IsRemote() {
-		log.Infof("remote: %#v", psc)
-	}
 
 	// TODO
 	url := ""
 
-	xtoValue := parentContext.Value("X-Trace-Options")
-	xtosValue := parentContext.Value("X-Trace-Options-Signature")
-	var ttMode reporter.TriggerTraceMode
-	if xtoValue != nil && xtosValue != nil {
-		log.Infof("Got xtrace: %s %s", xtoValue, xtosValue)
-		ttMode = reporter.ParseTriggerTrace(xtoValue.(string), xtosValue.(string))
-	} else {
-		ttMode = reporter.ModeTriggerTraceNotPresent
+	// TODO: re-examine whether this x-trace logic is valid. This was imported
+	// from some test code before my time -jared
+	ttMode := reporter.ModeTriggerTraceNotPresent
+	if parentContext != nil {
+		xtoValue := parentContext.Value("X-Trace-Options")
+		xtosValue := parentContext.Value("X-Trace-Options-Signature")
+		if xtoValue != nil && xtosValue != nil {
+			ttMode = reporter.ParseTriggerTrace(xtoValue.(string), xtosValue.(string))
+		}
 	}
-	traceDecision, _ := reporter.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
+	traceDecision, _ := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
 
 	var decision sdktrace.SamplingDecision
 	if traceDecision {
