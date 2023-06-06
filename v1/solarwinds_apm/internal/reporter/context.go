@@ -642,7 +642,6 @@ func NewContext(layer string, reportEntry bool, opts ContextOptions,
 		} else if ctx.GetVersion() != xtrCurrentVersion {
 			log.Info("passed in x-trace has wrong version, ignoring")
 		} else if ctx.IsSampled() {
-			//log.Info("passed in x-trace is sampled")
 			traced = true
 			explicitTraceDecision = true
 		} else {
