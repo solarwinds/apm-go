@@ -72,12 +72,18 @@ func TestInjectWithTracestateNoSw(t *testing.T) {
 		TraceFlags: 0,
 	})
 	carrier := propagation.MapCarrier{}
+	carrier.Set("tracestate", "other=shouldnotmodify")
 	p := SolarwindsPropagator{}
 	ctx := trace.ContextWithSpanContext(context.Background(), sc)
 
 	p.Inject(ctx, carrier)
 
-	assert.Equal(t, fmt.Sprintf("sw=%s-00", spanIdHex), carrier.Get("tracestate"))
+	ts, err := trace.ParseTraceState(carrier.Get("tracestate"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, fmt.Sprintf("%s-00", spanIdHex), ts.Get("sw"))
+	assert.Equal(t, "shouldnotmodify", ts.Get("other"))
 }
 
 func TestInjectWithTracestatePrevSw(t *testing.T) {
