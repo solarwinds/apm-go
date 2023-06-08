@@ -35,6 +35,7 @@ type XTraceOptions interface {
 	Timestamp() int64
 	TriggerTrace() bool
 	Signature() string
+	IgnoredKeys() []string
 }
 
 func NewXTraceOptions(opts string, sig string) XTraceOptions {
@@ -45,6 +46,7 @@ func NewXTraceOptions(opts string, sig string) XTraceOptions {
 		swKeys:      "",
 		customKVs:   make(map[string]string),
 		timestamp:   0,
+		ignoredKeys: make([]string, 0),
 	}
 }
 
@@ -56,6 +58,7 @@ type xTraceOptions struct {
 	customKVs   map[string]string
 	timestamp   int64
 	tt          bool
+	ignoredKeys []string
 }
 
 func (x *xTraceOptions) init() {
@@ -71,10 +74,15 @@ func (x *xTraceOptions) extractOpts() {
 	for _, opt := range opts {
 		k, v, found := strings.Cut(opt, "=")
 		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
 		if !found {
 			// Only support trigger-trace without an equals sign
 			if k == "trigger-trace" {
 				x.tt = true
+			} else {
+				x.ignoredKeys = append(x.ignoredKeys, k)
 			}
 			continue
 		}
@@ -85,15 +93,20 @@ func (x *xTraceOptions) extractOpts() {
 			ts, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
 				log.Debug("Invalid x-trace timestamp value", ts)
+				x.ignoredKeys = append(x.ignoredKeys, k)
 			} else {
 				x.timestamp = ts
 			}
 		} else if k == "trigger-trace" {
 			log.Debug("trigger-trace must be standalone flag, ignoring.")
 		} else if customKeyRegex.MatchString(k) {
-			x.customKVs[k] = strings.TrimSpace(v)
+			x.customKVs[k] = v
+		} else {
+			x.ignoredKeys = append(x.ignoredKeys, k)
 		}
-
+	}
+	if len(x.ignoredKeys) > 0 {
+		log.Debugf("Some x-trace-options were ignored: %s", x.ignoredKeys)
 	}
 }
 
@@ -123,6 +136,13 @@ func (x xTraceOptions) TriggerTrace() bool {
 		x.init()
 	}
 	return x.tt
+}
+
+func (x xTraceOptions) IgnoredKeys() []string {
+	if !x.initialized {
+		x.init()
+	}
+	return x.ignoredKeys
 }
 
 func (x xTraceOptions) Signature() string {
