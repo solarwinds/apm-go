@@ -19,8 +19,17 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+)
+
+type swCtxKey int
+
+const (
+	//TODO rename?
+	swXtraceOptionsKey swCtxKey = iota
+	swSigKey
 )
 
 const (
@@ -68,6 +77,16 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 }
 
 func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+	xtraceOptionsHeader := carrier.Get(xtrace.XTraceOptionsHeaderName)
+	if xtraceOptionsHeader != "" {
+		ctx = context.WithValue(ctx, swXtraceOptionsKey, xtraceOptionsHeader)
+	}
+
+	xtraceSig := carrier.Get(xtrace.XTraceOptionsSigHeaderName)
+	if xtraceSig != "" {
+		ctx = context.WithValue(ctx, swSigKey, xtraceSig)
+	}
+
 	return ctx
 }
 
