@@ -13,10 +13,13 @@ const (
 	XTraceOptionsSigHeaderName = "x-trace-options-signature"
 )
 
+var optRegex = regexp.MustCompile(";+")
+var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
+
 type XTraceOptions interface {
 	SwKeys() string
 	CustomKVs() map[string]string
-	Timestamp() int64 // TODO: should be actual Timestamp type?
+	Timestamp() int64
 	TriggerTrace() bool
 	Signature() string
 }
@@ -51,16 +54,6 @@ func (x *xTraceOptions) init() {
 }
 
 func (x *xTraceOptions) extractOpts() {
-	//TODO constant
-	optRegex, err := regexp.Compile(";+")
-	if err != nil {
-		panic("Could not parse known regex!")
-	}
-	customKeyRegex, err := regexp.Compile(`^custom-[^\s]*$`)
-	if err != nil {
-		panic("Could not parse known regex!")
-	}
-
 	opts := optRegex.Split(x.opts, -1)
 	for _, opt := range opts {
 		k, v, found := strings.Cut(opt, "=")
