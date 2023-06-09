@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package xtrace
 
 import (
@@ -29,49 +30,16 @@ const (
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 
-type XTraceOptions interface {
-	SwKeys() string
-	CustomKVs() map[string]string
-	Timestamp() int64
-	TriggerTrace() bool
-	Signature() string
-	IgnoredKeys() []string
-}
-
-func NewXTraceOptions(opts string, sig string) XTraceOptions {
-	return xTraceOptions{
+func ParseXTraceOptions(opts string, sig string) Options {
+	x := Options{
 		opts:        opts,
 		sig:         sig,
-		initialized: false,
 		swKeys:      "",
 		customKVs:   make(map[string]string),
 		timestamp:   0,
 		ignoredKeys: make([]string, 0),
 	}
-}
-
-type xTraceOptions struct {
-	opts        string
-	sig         string
-	initialized bool
-	swKeys      string
-	customKVs   map[string]string
-	timestamp   int64
-	tt          bool
-	ignoredKeys []string
-}
-
-func (x *xTraceOptions) init() {
-	if x.opts != "" {
-		x.extractOpts()
-	}
-
-	x.initialized = true
-}
-
-func (x *xTraceOptions) extractOpts() {
-	opts := optRegex.Split(x.opts, -1)
-	for _, opt := range opts {
+	for _, opt := range optRegex.Split(opts, -1) {
 		k, v, found := strings.Cut(opt, "=")
 		k = strings.TrimSpace(k)
 		if k == "" {
@@ -108,44 +76,39 @@ func (x *xTraceOptions) extractOpts() {
 	if len(x.ignoredKeys) > 0 {
 		log.Debugf("Some x-trace-options were ignored: %s", x.ignoredKeys)
 	}
+	return x
 }
 
-func (x xTraceOptions) SwKeys() string {
-	if !x.initialized {
-		x.init()
-	}
+type Options struct {
+	opts        string
+	sig         string
+	swKeys      string
+	customKVs   map[string]string
+	timestamp   int64
+	tt          bool
+	ignoredKeys []string
+}
+
+func (x Options) SwKeys() string {
 	return x.swKeys
 }
 
-func (x xTraceOptions) CustomKVs() map[string]string {
-	if !x.initialized {
-		x.init()
-	}
+func (x Options) CustomKVs() map[string]string {
 	return x.customKVs
 }
 
-func (x xTraceOptions) Timestamp() int64 {
-	if !x.initialized {
-		x.init()
-	}
+func (x Options) Timestamp() int64 {
 	return x.timestamp
 }
 
-func (x xTraceOptions) TriggerTrace() bool {
-	if !x.initialized {
-		x.init()
-	}
+func (x Options) TriggerTrace() bool {
 	return x.tt
 }
 
-func (x xTraceOptions) IgnoredKeys() []string {
-	if !x.initialized {
-		x.init()
-	}
+func (x Options) IgnoredKeys() []string {
 	return x.ignoredKeys
 }
 
-func (x xTraceOptions) Signature() string {
-	// This is set on instantiation, no need to initialize
+func (x Options) Signature() string {
 	return x.sig
 }
