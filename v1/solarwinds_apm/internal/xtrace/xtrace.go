@@ -27,6 +27,13 @@ const (
 	XTraceOptionsSigHeaderName = "x-trace-options-signature"
 )
 
+type CtxKey int
+
+const (
+	OptionsKey CtxKey = iota
+	SignatureKey
+)
+
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 

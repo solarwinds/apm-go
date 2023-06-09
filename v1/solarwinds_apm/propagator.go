@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
@@ -22,14 +23,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-type swCtxKey int
-
-const (
-	//TODO rename?
-	swXtraceOptionsKey swCtxKey = iota
-	swSigKey
 )
 
 const (
@@ -76,15 +69,16 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 	carrier.Set(cTraceState, traceState.String())
 }
 
+// TODO test me
 func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	xtraceOptionsHeader := carrier.Get(xtrace.XTraceOptionsHeaderName)
 	if xtraceOptionsHeader != "" {
-		ctx = context.WithValue(ctx, swXtraceOptionsKey, xtraceOptionsHeader)
+		ctx = context.WithValue(ctx, xtrace.OptionsKey, xtraceOptionsHeader)
 	}
 
 	xtraceSig := carrier.Get(xtrace.XTraceOptionsSigHeaderName)
 	if xtraceSig != "" {
-		ctx = context.WithValue(ctx, swSigKey, xtraceSig)
+		ctx = context.WithValue(ctx, xtrace.SignatureKey, xtraceSig)
 	}
 
 	return ctx
