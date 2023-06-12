@@ -40,3 +40,43 @@ func TestSwFromCtx(t *testing.T) {
 	sc = sc.WithTraceFlags(trace.TraceFlags(0x01))
 	assert.Equal(t, fmt.Sprintf("%s-01", spanIdHex), SwFromCtx(sc))
 }
+
+func TestParseSwTraceState(t *testing.T) {
+	ts := fmt.Sprintf("%s-00", spanIdHex)
+	result := ParseSwTraceState(ts)
+	assert.True(t, result.IsValid())
+	assert.Equal(t, spanIdHex, result.SpanId())
+	assert.Equal(t, byte(0x00), result.Flags())
+
+	ts = fmt.Sprintf("%s-01", spanIdHex)
+	result = ParseSwTraceState(ts)
+	assert.True(t, result.IsValid())
+	assert.Equal(t, spanIdHex, result.SpanId())
+	assert.Equal(t, byte(0x01), result.Flags())
+}
+
+func TestParseInvalidTraceStates(t *testing.T) {
+	foo := []string{
+		"foo",
+		// spanID too long
+		"0123456789abcdefa-00",
+		// spanID not long enough
+		"0123456789abcde-00",
+		// spanID not hex
+		"g123456789abcdef-00",
+		// flags too long
+		"0123456789abcdef-000",
+		// flags not long enough
+		"0123456789abcdef-0",
+		// flags not hex
+		"a123456789abcdef-0g",
+	}
+
+	for _, ts := range foo {
+		result := ParseSwTraceState(ts)
+		assert.False(t, result.IsValid())
+		assert.Equal(t, "", result.SpanId())
+		assert.Equal(t, byte(0x00), result.Flags())
+	}
+
+}
