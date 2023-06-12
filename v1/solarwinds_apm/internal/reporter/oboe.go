@@ -231,6 +231,27 @@ type SampleDecision struct {
 	bucketRate    float64
 }
 
+// TODO: this is only used in testing, remove/refactor
+func NewSampleDecision(trace bool) SampleDecision {
+	return SampleDecision{
+		trace:         trace,
+		rate:          0,
+		source:        0,
+		enabled:       false,
+		xTraceOptsRsp: "",
+		bucketCap:     0,
+		bucketRate:    0,
+	}
+}
+
+func (s SampleDecision) Trace() bool {
+	return s.trace
+}
+
+func (s SampleDecision) XTraceOptsRsp() string {
+	return s.xTraceOptsRsp
+}
+
 type TriggerTraceMode int
 
 const (

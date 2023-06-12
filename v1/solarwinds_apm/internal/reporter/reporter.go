@@ -212,14 +212,8 @@ func prepareEvent(ctx *oboeContext, e *event) error {
 	return nil
 }
 
-func ParseTriggerTrace(xTraceOptions string, xTraceOptionsSig string) TriggerTraceMode {
-	tMode, _, _, _ := parseTriggerTraceFlag(xTraceOptions, xTraceOptionsSig)
-	return tMode
-}
-
-func ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode TriggerTraceMode) (bool, string) {
-	d := shouldTraceRequestWithURL(layer, traced, url, ttMode)
-	return d.trace, d.xTraceOptsRsp
+func ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode TriggerTraceMode) SampleDecision {
+	return shouldTraceRequestWithURL(layer, traced, url, ttMode)
 }
 
 func shouldTraceRequestWithURL(layer string, traced bool, url string, triggerTrace TriggerTraceMode) SampleDecision {

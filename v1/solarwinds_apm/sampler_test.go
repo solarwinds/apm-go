@@ -23,16 +23,16 @@ import (
 )
 
 type staticDecider struct {
-	retval bool
+	retval reporter.SampleDecision
 }
 
-func (d staticDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string) {
-	return d.retval, ""
+func (d staticDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
+	return d.retval
 }
 
 // Note: I don't love these, but they work for this simple case.
-var trueDecider decider = staticDecider{true}
-var falseDecider decider = staticDecider{false}
+var trueDecider decider = staticDecider{reporter.NewSampleDecision(true)}
+var falseDecider decider = staticDecider{reporter.NewSampleDecision(false)}
 
 func TestShouldSample(t *testing.T) {
 	s := sampler{decider: trueDecider}

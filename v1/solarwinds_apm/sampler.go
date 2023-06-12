@@ -33,12 +33,12 @@ func NewSampler() sdktrace.Sampler {
 }
 
 type decider interface {
-	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string)
+	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision
 }
 
 type reporterDecider struct{}
 
-func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string) {
+func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
 	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode)
 }
 
@@ -88,9 +88,9 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		}
 		// TODO replace this section with a nicer oboe-like interface
 		// TODO handle RecordOnly (metrics)
-		traceDecision, _ := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
+		traceDecision := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
 		var decision sdktrace.SamplingDecision
-		if traceDecision {
+		if traceDecision.Trace() {
 			decision = sdktrace.RecordAndSample
 		} else {
 			decision = sdktrace.Drop
