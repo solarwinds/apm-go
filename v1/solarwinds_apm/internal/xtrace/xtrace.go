@@ -15,6 +15,7 @@
 package xtrace
 
 import (
+	"context"
 	"regexp"
 	"strconv"
 	"strings"
@@ -37,7 +38,20 @@ const (
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 
-func ParseXTraceOptions(opts string, sig string) Options {
+func GetXTraceOptions(ctx context.Context) Options {
+	xtoStr, ok := ctx.Value(OptionsKey).(string)
+	if !ok {
+		xtoStr = ""
+	}
+	xtoSig, ok := ctx.Value(SignatureKey).(string)
+	if !ok {
+		xtoSig = ""
+	}
+
+	return parseXTraceOptions(xtoStr, xtoSig)
+}
+
+func parseXTraceOptions(opts string, sig string) Options {
 	x := Options{
 		opts:        opts,
 		sig:         sig,
