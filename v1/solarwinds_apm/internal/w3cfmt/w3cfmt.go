@@ -23,6 +23,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var invalidSwTraceState = SwTraceState{
+	isValid: false,
+	spanId:  "",
+	flags:   0,
+}
+
 // Note: We only accept lowercase hex, and therefore cannot use `[[:xdigit:]]`
 var swTraceStateRegex = regexp.MustCompile(`^([0-9a-f]{16})-([0-9a-f]{2})$`)
 
@@ -32,7 +38,16 @@ func SwFromCtx(sc trace.SpanContext) string {
 	return fmt.Sprintf("%x-%x", spanID[:], []byte{byte(traceFlags)})
 }
 
-func ParseSwTraceState(s string) SwTraceState {
+func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
+	if ctx.IsValid() {
+		tracestate := ctx.TraceState()
+		swVal := tracestate.Get("sw") // TODO constant
+		return parseSwTraceState(swVal)
+	}
+	return invalidSwTraceState
+}
+
+func parseSwTraceState(s string) SwTraceState {
 	matches := swTraceStateRegex.FindStringSubmatch(s)
 	if matches != nil {
 		flags, err := hex.DecodeString(matches[2])
