@@ -36,6 +36,17 @@ func TestGetXTraceOptions(t *testing.T) {
 	assert.Equal(t, "signature 123", xto.Signature())
 }
 
+func TestGetXTraceOptionsInvalidType(t *testing.T) {
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, OptionsKey, 123)
+	ctx = context.WithValue(ctx, SignatureKey, 321)
+
+	xto := GetXTraceOptions(ctx)
+	assert.Equal(t, "", xto.SwKeys())
+	assert.Equal(t, []string{}, xto.IgnoredKeys())
+	assert.Equal(t, "", xto.Signature())
+}
+
 func TestNoKeyNoValue(t *testing.T) {
 	xto := parseXTraceOptions("=", "")
 	assert.Empty(t, xto.CustomKVs())
