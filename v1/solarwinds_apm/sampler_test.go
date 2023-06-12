@@ -14,6 +14,7 @@
 package solarwinds_apm
 
 import (
+	"context"
 	"testing"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
@@ -35,7 +36,9 @@ var falseDecider decider = staticDecider{false}
 
 func TestShouldSample(t *testing.T) {
 	s := sampler{decider: trueDecider}
-	params := sdktrace.SamplingParameters{}
+	params := sdktrace.SamplingParameters{
+		ParentContext: context.TODO(),
+	}
 	result := s.ShouldSample(params)
 	assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
 	// todo: figure out how to test resulting tracestate
@@ -43,7 +46,9 @@ func TestShouldSample(t *testing.T) {
 
 func TestShouldSampleFalse(t *testing.T) {
 	s := sampler{decider: falseDecider}
-	params := sdktrace.SamplingParameters{}
+	params := sdktrace.SamplingParameters{
+		ParentContext: context.TODO(),
+	}
 	result := s.ShouldSample(params)
 	assert.Equal(t, sdktrace.Drop, result.Decision)
 }
