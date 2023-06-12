@@ -23,7 +23,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var swTraceStateRegex = regexp.MustCompile(`^([[:xdigit:]]{16})-([[:xdigit:]]{2})$`)
+// Note: We only accept lowercase hex, and therefore cannot use `[[:xdigit:]]`
+var swTraceStateRegex = regexp.MustCompile(`^([0-9a-f]{16})-([0-9a-f]{2})$`)
 
 func SwFromCtx(sc trace.SpanContext) string {
 	spanID := sc.SpanID()

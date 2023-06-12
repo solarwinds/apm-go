@@ -64,12 +64,16 @@ func TestParseInvalidTraceStates(t *testing.T) {
 		"0123456789abcde-00",
 		// spanID not hex
 		"g123456789abcdef-00",
+		// spanID has uppercase
+		"0123456789Abcdef-00",
 		// flags too long
 		"0123456789abcdef-000",
 		// flags not long enough
 		"0123456789abcdef-0",
 		// flags not hex
 		"a123456789abcdef-0g",
+		// flags has uppercase
+		"0123456789abcdef-0A",
 	}
 
 	for _, ts := range foo {
