@@ -17,6 +17,7 @@ package w3cfmt
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"regexp"
 
@@ -41,7 +42,7 @@ func SwFromCtx(sc trace.SpanContext) string {
 func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
 	if ctx.IsValid() {
 		tracestate := ctx.TraceState()
-		swVal := tracestate.Get("sw") // TODO constant
+		swVal := tracestate.Get(solarwinds_apm.VendorID)
 		return parseSwTraceState(swVal)
 	}
 	return invalidSwTraceState

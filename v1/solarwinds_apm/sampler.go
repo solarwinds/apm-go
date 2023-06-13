@@ -62,7 +62,6 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 	xto := xtrace.GetXTraceOptions(parentContext)
 
 	var result sdktrace.SamplingResult
-
 	if swState.IsValid() && !psc.IsRemote() {
 		// Follow upstream trace decision
 		if swState.Flags().IsSampled() {
