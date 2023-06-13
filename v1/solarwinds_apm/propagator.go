@@ -16,6 +16,7 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 
@@ -23,13 +24,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-const (
-	// TODO rename
-	cTraceState = "tracestate"
-	traceParent = "traceparent"
-	VendorID    = "sw"
 )
 
 type SolarwindsPropagator struct{}
@@ -40,7 +34,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 	span := trace.SpanFromContext(ctx)
 	sc := span.SpanContext()
 	swVal := w3cfmt.SwFromCtx(sc)
-	traceStateHeader := carrier.Get(cTraceState)
+	traceStateHeader := carrier.Get(constants.TraceState)
 
 	var traceState trace.TraceState
 	var err error
@@ -58,7 +52,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		}
 	}
 	// Note: Insert will update the key if it exists
-	traceState, err = traceState.Insert(VendorID, swVal)
+	traceState, err = traceState.Insert(constants.SWTraceStateKey, swVal)
 	if err != nil {
 		log.Debugf("could not insert vendor info into tracestate `%s`", swVal)
 		return
@@ -66,7 +60,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 
 	// TODO maybe. From the python apm library: Remove any
 	// xtrace_options_response stored for ResponsePropagator
-	carrier.Set(cTraceState, traceState.String())
+	carrier.Set(constants.TraceState, traceState.String())
 }
 
 // TODO test me
@@ -86,5 +80,5 @@ func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation
 
 // Fields returns the keys who's values are set with Inject.
 func (swp SolarwindsPropagator) Fields() []string {
-	return []string{cTraceState}
+	return []string{constants.TraceState}
 }
