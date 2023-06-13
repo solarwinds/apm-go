@@ -74,23 +74,11 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		// Broken or non-existent tracestate; treat as a new trace
 		// TODO url
 		url := ""
-		var ttMode reporter.TriggerTraceMode
-		if xto.TriggerTrace() {
-			switch xto.SignatureState() {
-			case xtrace.ValidSignature:
-				ttMode = reporter.ModeRelaxedTriggerTrace
-			case xtrace.InvalidSignature:
-				ttMode = reporter.ModeInvalidTriggerTrace
-			default:
-				ttMode = reporter.ModeStrictTriggerTrace
-			}
-		} else {
-			ttMode = reporter.ModeTriggerTraceNotPresent
-		}
+		ttMode := getTtMode(xto)
 		// TODO replace this section with a nicer oboe-like interface
-		// TODO handle RecordOnly (metrics)
 		traceDecision := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
 		var decision sdktrace.SamplingDecision
+		// TODO handle RecordOnly (metrics)
 		if traceDecision.Trace() {
 			decision = sdktrace.RecordAndSample
 		} else {
@@ -106,4 +94,19 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 
 	return result
 
+}
+
+func getTtMode(xto xtrace.Options) reporter.TriggerTraceMode {
+	if xto.TriggerTrace() {
+		switch xto.SignatureState() {
+		case xtrace.ValidSignature:
+			return reporter.ModeRelaxedTriggerTrace
+		case xtrace.InvalidSignature:
+			return reporter.ModeInvalidTriggerTrace
+		default:
+			return reporter.ModeStrictTriggerTrace
+		}
+	} else {
+		return reporter.ModeTriggerTraceNotPresent
+	}
 }
