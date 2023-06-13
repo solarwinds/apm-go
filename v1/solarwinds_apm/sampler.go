@@ -15,8 +15,6 @@
 package solarwinds_apm
 
 import (
-	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
@@ -58,13 +56,10 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 	traced := false
 
 	psc := trace.SpanContextFromContext(parentContext)
-	fmt.Println("psc", psc)
 
 	// If parent context is not valid, swState will also not be valid
 	swState := w3cfmt.GetSwTraceState(psc)
 	xto := xtrace.GetXTraceOptions(parentContext)
-	log.Debug("XTO", xto)
-	fmt.Println("XTO", xto)
 
 	var result sdktrace.SamplingResult
 

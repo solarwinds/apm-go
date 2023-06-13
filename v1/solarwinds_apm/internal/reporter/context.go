@@ -478,7 +478,7 @@ func parseTriggerTraceFlag(opts, sig string) (TriggerTraceMode, map[string]strin
 
 	var authErr error
 	if sig != "" {
-		authErr = validateXTraceOptionsSignature(sig, ts, opts)
+		authErr = ValidateXTraceOptionsSignature(sig, ts, opts)
 		if authErr == nil {
 			mode = ModeRelaxedTriggerTrace
 		} else {
@@ -503,7 +503,8 @@ const (
 	ttAuthBadSignature   = "bad-signature"
 )
 
-func validateXTraceOptionsSignature(signature, ts, data string) error {
+// TODO: move/copy?
+func ValidateXTraceOptionsSignature(signature, ts, data string) error {
 	var err error
 	ts, err = tsInScope(ts)
 	if err != nil {
@@ -519,6 +520,14 @@ func validateXTraceOptionsSignature(signature, ts, data string) error {
 		return errors.New(ttAuthBadSignature)
 	}
 	return nil
+}
+
+func HmacHashTT(data []byte) (string, error) {
+	token, err := getTriggerTraceToken()
+	if err != nil {
+		return "", err
+	}
+	return HmacHash(token, data), nil
 }
 
 func HmacHash(token, data []byte) string {
