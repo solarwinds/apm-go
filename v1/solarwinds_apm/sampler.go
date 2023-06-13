@@ -75,9 +75,15 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		// TODO url
 		url := ""
 		var ttMode reporter.TriggerTraceMode
-		// TODO verify hmac signature
 		if xto.TriggerTrace() {
-			ttMode = reporter.ModeStrictTriggerTrace
+			switch xto.SignatureState() {
+			case xtrace.ValidSignature:
+				ttMode = reporter.ModeRelaxedTriggerTrace
+			case xtrace.InvalidSignature:
+				ttMode = reporter.ModeInvalidTriggerTrace
+			default:
+				ttMode = reporter.ModeStrictTriggerTrace
+			}
 		} else {
 			ttMode = reporter.ModeTriggerTraceNotPresent
 		}
