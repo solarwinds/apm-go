@@ -29,6 +29,7 @@ import (
 )
 
 func TestGetXTraceOptions(t *testing.T) {
+	// We set the test reporter which will set the TT Token used for HMAC verification
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
 	defer r.Close(0)
 	ctx := context.TODO()
