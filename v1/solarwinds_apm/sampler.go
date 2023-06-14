@@ -74,6 +74,8 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		// TODO url
 		url := ""
 		ttMode := getTtMode(xto)
+		// TODO double check this
+		traced = swState.Flags().IsSampled()
 		// TODO replace this section with a nicer oboe-like interface
 		traceDecision := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
 		var decision sdktrace.SamplingDecision
@@ -83,9 +85,12 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		} else {
 			decision = sdktrace.Drop
 		}
+		newTraceState := trace.TraceState{}
+		// TODO set `sw`
+		// TODO set `x-trace`
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
-			Tracestate: psc.TraceState(),
+			Tracestate: newTraceState,
 		}
 	}
 
