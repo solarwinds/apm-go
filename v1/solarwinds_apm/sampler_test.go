@@ -122,9 +122,9 @@ func TestScenario2(t *testing.T) {
 // start a new trace decision
 func TestScenario3(t *testing.T) {
 	scen := SamplingScenario{
-		validTraceParent:      false,
-		traceStateContainerSw: true,
-		newTraceDecision:      true,
+		validTraceParent:     false,
+		traceStateContainsSw: true,
+		newTraceDecision:     true,
 	}
 	scen.test(t)
 }
@@ -134,9 +134,9 @@ func TestScenario3(t *testing.T) {
 // continue trace decision from sw value in tracestate
 func TestScenario4(t *testing.T) {
 	scen := SamplingScenario{
-		validTraceParent:      true,
-		traceStateContainerSw: true,
-		newTraceDecision:      false,
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		newTraceDecision:     false,
 	}
 	scen.test(t)
 }
@@ -191,10 +191,10 @@ func TestScenario7(t *testing.T) {
 // continue trace decision from sw value in tracestate
 func TestScenario8(t *testing.T) {
 	scen := SamplingScenario{
-		validTraceParent:      true,
-		traceStateContainerSw: true,
-		triggerTrace:          true,
-		xtraceSignature:       false,
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		triggerTrace:         true,
+		xtraceSignature:      false,
 
 		newTraceDecision: false,
 		ttMode:           reporter.ModeStrictTriggerTrace,
@@ -205,7 +205,7 @@ func TestScenario8(t *testing.T) {
 type SamplingScenario struct {
 	// inputs
 	validTraceParent        bool
-	traceStateContainerSw   bool
+	traceStateContainsSw    bool
 	traceStateContainsOther bool
 
 	triggerTrace    bool
@@ -213,7 +213,7 @@ type SamplingScenario struct {
 
 	// expectations
 	newTraceDecision bool // Should call oboe's sampling logic
-	obeyTT           bool // TODO verify this somehow
+	obeyTT           bool // TODO verify this somehow (NH-5731)
 	ttMode           reporter.TriggerTraceMode
 }
 
@@ -230,7 +230,7 @@ func (s SamplingScenario) test(t *testing.T) {
 
 	smplr := sampler{decider: mock}
 	traceState := trace.TraceState{}
-	if s.traceStateContainerSw {
+	if s.traceStateContainsSw {
 		// TODO test when tracestate flags are `unsampled`
 		traceState, err = traceState.Insert(constants.SWTraceStateKey, "2222222222222222-01")
 		if err != nil {
@@ -262,7 +262,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		ctx = context.WithValue(ctx, xtrace.OptionsKey, "trigger-trace")
 	}
 	if s.xtraceSignature {
-		// TODO do hmac
+		// TODO do hmac (NH-5731)
 		//ctx = context.WithValue(ctx, xtrace.SignatureKey, s.xtraceSig)
 	}
 	params := sdktrace.SamplingParameters{
