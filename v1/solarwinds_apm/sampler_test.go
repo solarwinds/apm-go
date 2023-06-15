@@ -15,6 +15,7 @@ package solarwinds_apm
 
 import (
 	"context"
+	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/trace"
@@ -32,29 +33,6 @@ type staticDecider struct {
 func (d staticDecider) ShouldTraceRequestWithURL(
 	layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
 	return d.retval
-}
-
-// Note: I don't love these, but they work for this simple case.
-var trueDecider decider = staticDecider{reporter.NewSampleDecision(true)}
-var falseDecider decider = staticDecider{reporter.NewSampleDecision(false)}
-
-func TestShouldSample(t *testing.T) {
-	s := sampler{decider: trueDecider}
-	params := sdktrace.SamplingParameters{
-		ParentContext: context.TODO(),
-	}
-	result := s.ShouldSample(params)
-	assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
-	// todo: figure out how to test resulting tracestate
-}
-
-func TestShouldSampleFalse(t *testing.T) {
-	s := sampler{decider: falseDecider}
-	params := sdktrace.SamplingParameters{
-		ParentContext: context.TODO(),
-	}
-	result := s.ShouldSample(params)
-	assert.Equal(t, sdktrace.Drop, result.Decision)
 }
 
 func TestNewSampler(t *testing.T) {
@@ -103,6 +81,7 @@ var _ decider = &mockDecider{}
 func TestScenario1(t *testing.T) {
 	scen := SamplingScenario{
 		newTraceDecision: true,
+		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -113,6 +92,7 @@ func TestScenario2(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent: true,
 		newTraceDecision: true,
+		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -125,6 +105,7 @@ func TestScenario3(t *testing.T) {
 		validTraceParent:     false,
 		traceStateContainsSw: true,
 		newTraceDecision:     true,
+		decision:             sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -133,10 +114,23 @@ func TestScenario3(t *testing.T) {
 // valid tracestate with our vendor entry
 // continue trace decision from sw value in tracestate
 func TestScenario4(t *testing.T) {
+	// sampled
 	scen := SamplingScenario{
 		validTraceParent:     true,
 		traceStateContainsSw: true,
+		traceStateSwSampled:  true,
 		newTraceDecision:     false,
+		decision:             sdktrace.RecordAndSample,
+	}
+	scen.test(t)
+
+	// unsampled
+	scen = SamplingScenario{
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		traceStateSwSampled:  false,
+		newTraceDecision:     false,
+		decision:             sdktrace.Drop,
 	}
 	scen.test(t)
 }
@@ -149,6 +143,7 @@ func TestScenario5(t *testing.T) {
 		validTraceParent:        true,
 		traceStateContainsOther: true,
 		newTraceDecision:        true,
+		decision:                sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -164,6 +159,7 @@ func TestScenario6(t *testing.T) {
 
 		newTraceDecision: true,
 		ttMode:           reporter.ModeStrictTriggerTrace,
+		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -181,6 +177,7 @@ func TestScenario7(t *testing.T) {
 
 		newTraceDecision: true,
 		ttMode:           reporter.ModeStrictTriggerTrace,
+		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -190,14 +187,31 @@ func TestScenario7(t *testing.T) {
 // valid unsigned trigger trace x-trace-options: trigger-trace
 // continue trace decision from sw value in tracestate
 func TestScenario8(t *testing.T) {
+	// sampled
 	scen := SamplingScenario{
 		validTraceParent:     true,
 		traceStateContainsSw: true,
+		traceStateSwSampled:  true,
 		triggerTrace:         true,
 		xtraceSignature:      false,
 
 		newTraceDecision: false,
 		ttMode:           reporter.ModeStrictTriggerTrace,
+		decision:         sdktrace.RecordAndSample,
+	}
+	scen.test(t)
+
+	// unsampled
+	scen = SamplingScenario{
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		traceStateSwSampled:  false,
+		triggerTrace:         true,
+		xtraceSignature:      false,
+
+		newTraceDecision: false,
+		ttMode:           reporter.ModeStrictTriggerTrace,
+		decision:         sdktrace.Drop,
 	}
 	scen.test(t)
 }
@@ -206,6 +220,7 @@ type SamplingScenario struct {
 	// inputs
 	validTraceParent        bool
 	traceStateContainsSw    bool
+	traceStateSwSampled     bool
 	traceStateContainsOther bool
 
 	triggerTrace    bool
@@ -215,6 +230,7 @@ type SamplingScenario struct {
 	newTraceDecision bool // Should call oboe's sampling logic
 	obeyTT           bool // TODO verify this somehow (NH-5731)
 	ttMode           reporter.TriggerTraceMode
+	decision         sdktrace.SamplingDecision
 }
 
 func (s SamplingScenario) test(t *testing.T) {
@@ -231,8 +247,11 @@ func (s SamplingScenario) test(t *testing.T) {
 	smplr := sampler{decider: mock}
 	traceState := trace.TraceState{}
 	if s.traceStateContainsSw {
-		// TODO test when tracestate flags are `unsampled`
-		traceState, err = traceState.Insert(constants.SWTraceStateKey, "2222222222222222-01")
+		flags := "00"
+		if s.traceStateSwSampled {
+			flags = "01"
+		}
+		traceState, err = traceState.Insert(constants.SWTraceStateKey, fmt.Sprintf("2222222222222222-%s", flags))
 		if err != nil {
 			t.Fatal("Could not insert tracestate key")
 		}
@@ -270,6 +289,6 @@ func (s SamplingScenario) test(t *testing.T) {
 		TraceID:       traceId,
 	}
 	result := smplr.ShouldSample(params)
-	assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+	assert.Equal(t, s.decision, result.Decision)
 	assert.Equal(t, s.newTraceDecision, mock.Called())
 }
