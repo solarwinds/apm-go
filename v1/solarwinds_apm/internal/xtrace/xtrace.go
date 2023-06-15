@@ -108,7 +108,6 @@ func parseXTraceOptions(opts string, sig string) Options {
 	if sig == "" {
 		x.sigState = NoSignature
 	} else {
-		// TODO extract this function?
 		err := reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
 		if err != nil {
 			log.Warning("Invalid xtrace options signature", err)

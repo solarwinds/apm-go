@@ -58,12 +58,12 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		return
 	}
 
-	// TODO maybe. From the python apm library: Remove any
+	// TODO (NH-5731). From the python apm library: Remove any
 	// xtrace_options_response stored for ResponsePropagator
 	carrier.Set(constants.TraceState, traceState.String())
 }
 
-// TODO test me
+// TODO (NH-5731) test
 func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	xtraceOptionsHeader := carrier.Get(xtrace.XTraceOptionsHeaderName)
 	if xtraceOptionsHeader != "" {

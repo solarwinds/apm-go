@@ -32,7 +32,7 @@ func TestGetXTraceOptions(t *testing.T) {
 	// We set the test reporter which will set the TT Token used for HMAC verification
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
 	defer r.Close(0)
-	ctx := context.TODO()
+	ctx := context.Background()
 	// Timestamp required in signature validation
 	opts := fmt.Sprintf("sw-keys=check-id:check-1013,website-id;booking-demo;ts=%d", time.Now().Unix())
 	ctx = context.WithValue(ctx, OptionsKey, opts)
@@ -50,7 +50,7 @@ func TestGetXTraceOptions(t *testing.T) {
 }
 
 func TestGetXTraceOptionsInvalidType(t *testing.T) {
-	ctx := context.TODO()
+	ctx := context.Background()
 	ctx = context.WithValue(ctx, OptionsKey, 123)
 	ctx = context.WithValue(ctx, SignatureKey, 321)
 
