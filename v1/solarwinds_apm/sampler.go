@@ -51,33 +51,44 @@ func (s sampler) Description() string {
 var alwaysSampler = sdktrace.AlwaysSample()
 var neverSampler = sdktrace.NeverSample()
 
-func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	parentContext := parameters.ParentContext
-	traced := false
+func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, decision sdktrace.SamplingDecision) trace.TraceState {
+	var ts trace.TraceState
+	if !psc.IsValid() {
+		// create new tracestate
+		ts = trace.TraceState{}
+	} else {
+		ts = psc.TraceState()
+	}
+	if xto.Opts() != "" {
+		// TODO: NH-5731
+	}
+	return ts
+}
 
-	psc := trace.SpanContextFromContext(parentContext)
+func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	psc := trace.SpanContextFromContext(params.ParentContext)
 
 	// If parent context is not valid, swState will also not be valid
 	swState := w3cfmt.GetSwTraceState(psc)
-	xto := xtrace.GetXTraceOptions(parentContext)
 
 	var result sdktrace.SamplingResult
 	if swState.IsValid() && !psc.IsRemote() {
-		// Follow upstream trace decision
 		if swState.Flags().IsSampled() {
-			result = alwaysSampler.ShouldSample(parameters)
+			result = alwaysSampler.ShouldSample(params)
 		} else {
-			result = neverSampler.ShouldSample(parameters)
+			result = neverSampler.ShouldSample(params)
 		}
 	} else {
-		// Broken or non-existent tracestate; treat as a new trace
 		// TODO url
 		url := ""
+		xto := xtrace.GetXTraceOptions(params.ParentContext)
 		ttMode := getTtMode(xto)
-		// TODO double check this
-		traced = swState.Flags().IsSampled()
-		// TODO replace this section with a nicer oboe-like interface
-		traceDecision := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
+		traceDecision := s.decider.ShouldTraceRequestWithURL(
+			params.Name,
+			swState.Flags().IsSampled(),
+			url,
+			ttMode,
+		)
 		var decision sdktrace.SamplingDecision
 		// TODO handle RecordOnly (metrics)
 		if traceDecision.Trace() {
@@ -85,17 +96,14 @@ func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.S
 		} else {
 			decision = sdktrace.Drop
 		}
-		newTraceState := trace.TraceState{}
-		// TODO set `sw`
-		// TODO set `x-trace`
+		ts := hydrateTraceState(psc, xto, decision)
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
-			Tracestate: newTraceState,
+			Tracestate: ts,
 		}
 	}
 
-	// TODO look at the additionalAttributesBuilder in the java implementation
-
+	// TODO NH-43627
 	return result
 
 }

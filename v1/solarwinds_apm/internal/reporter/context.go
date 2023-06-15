@@ -503,7 +503,9 @@ const (
 	ttAuthBadSignature   = "bad-signature"
 )
 
-// TODO: move/copy?
+// TODO: This could live in the `xtrace` package, except it requires
+// TODO: the ability to extract the TT Token from oboe settings.
+// TODO: Determine a clean/elegant way to clean this up.
 func ValidateXTraceOptionsSignature(signature, ts, data string) error {
 	var err error
 	ts, err = tsInScope(ts)

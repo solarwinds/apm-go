@@ -158,3 +158,7 @@ func (x Options) Signature() string {
 func (x Options) SignatureState() SignatureState {
 	return x.sigState
 }
+
+func (x Options) Opts() string {
+	return x.opts
+}
