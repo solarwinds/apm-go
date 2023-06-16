@@ -59,7 +59,7 @@ func ParseSwTraceState(s string) SwTraceState {
 		return SwTraceState{isValid: true, spanId: matches[1], flags: trace.TraceFlags(flags[0])}
 	}
 
-	return SwTraceState{isValid: false, spanId: "", flags: 0x00}
+	return invalidSwTraceState
 }
 
 type SwTraceState struct {
