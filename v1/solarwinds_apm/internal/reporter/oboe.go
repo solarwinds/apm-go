@@ -16,6 +16,7 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
 	"math/rand"
 	"strings"
@@ -310,7 +311,13 @@ func (tm TriggerTraceMode) Requested() bool {
 	}
 }
 
-func oboeSampleRequest(layer string, traced bool, url string, triggerTrace TriggerTraceMode) SampleDecision {
+func oboeSampleRequest(
+	layer string,
+	continued bool,
+	url string,
+	triggerTrace TriggerTraceMode,
+	swState *w3cfmt.SwTraceState,
+) SampleDecision {
 	if usingTestReporter {
 		if r, ok := globalReporter.(*TestReporter); ok {
 			if !r.UseSettings {
@@ -338,7 +345,7 @@ func oboeSampleRequest(layer string, traced bool, url string, triggerTrace Trigg
 		bucket = setting.triggerTraceStrictBucket
 	}
 
-	if triggerTrace.Requested() && !traced {
+	if triggerTrace.Requested() && !continued {
 		sampled := (triggerTrace != ModeInvalidTriggerTrace) && (flags.TriggerTraceEnabled())
 		rsp := ttOK
 
@@ -361,24 +368,41 @@ func oboeSampleRequest(layer string, traced bool, url string, triggerTrace Trigg
 		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap}
 	}
 
-	if !traced {
+	if !continued {
 		// A new request
 		if flags&FLAG_SAMPLE_START != 0 {
+			// roll the dice
 			retval = shouldSample(sampleRate)
 			if retval {
 				doRateLimiting = true
 			}
 		}
 	} else {
-		// A traced request
-		if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
-			retval = true
-		} else if flags&FLAG_SAMPLE_THROUGH != 0 {
-			retval = shouldSample(sampleRate)
+		// TODO: When we refactor oboe, extract into something easier to test
+		if swState != nil && swState.IsValid() {
+			if swState.Flags().IsSampled() {
+				if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+					retval = true
+				} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+					// roll the dice
+					retval = shouldSample(sampleRate)
+				}
+			} else {
+				retval = false
+			}
+		} else {
+			// A continued request
+			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+				retval = true
+			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+				// roll the dice
+				retval = shouldSample(sampleRate)
+			}
+
 		}
 	}
 
-	retval = bucket.count(retval, traced, doRateLimiting)
+	retval = bucket.count(retval, continued, doRateLimiting)
 
 	rsp := ttNotRequested
 	if triggerTrace.Requested() {

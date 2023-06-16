@@ -31,13 +31,13 @@ func NewSampler() sdktrace.Sampler {
 }
 
 type decider interface {
-	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision
+	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode, swState *w3cfmt.SwTraceState) reporter.SampleDecision
 }
 
 type reporterDecider struct{}
 
-func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
-	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode)
+func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode, swState *w3cfmt.SwTraceState) reporter.SampleDecision {
+	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode, swState)
 }
 
 var defaultDecider decider = reporterDecider{}
@@ -68,14 +68,9 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, decision sdktr
 func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(params.ParentContext)
 
-	// If parent context is not valid, swState will also not be valid
-	swState := w3cfmt.GetSwTraceState(psc)
-
 	var result sdktrace.SamplingResult
-	// If swstate is valid and is explicitly not sampled, ignore.
-	// If swstate is valid and is not remote, trust local swstate decision.
-	if swState.IsValid() && (!swState.Flags().IsSampled() || !psc.IsRemote()) {
-		if swState.Flags().IsSampled() {
+	if psc.IsValid() && !psc.IsRemote() {
+		if psc.IsSampled() {
 			result = alwaysSampler.ShouldSample(params)
 		} else {
 			result = neverSampler.ShouldSample(params)
@@ -85,11 +80,14 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		url := ""
 		xto := xtrace.GetXTraceOptions(params.ParentContext)
 		ttMode := getTtMode(xto)
+		// If parent context is not valid, swState will also not be valid
+		swState := w3cfmt.GetSwTraceState(psc)
 		traceDecision := s.decider.ShouldTraceRequestWithURL(
-			params.Name,
-			swState.Flags().IsSampled(),
+			params.Name, // "may not be super relevant" -- lin
+			swState.IsValid(),
 			url,
 			ttMode,
+			&swState,
 		)
 		var decision sdktrace.SamplingDecision
 		// TODO handle RecordOnly (metrics)

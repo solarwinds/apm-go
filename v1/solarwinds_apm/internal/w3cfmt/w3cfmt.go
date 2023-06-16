@@ -43,12 +43,12 @@ func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
 	if ctx.IsValid() {
 		tracestate := ctx.TraceState()
 		swVal := tracestate.Get(constants.SWTraceStateKey)
-		return parseSwTraceState(swVal)
+		return ParseSwTraceState(swVal)
 	}
 	return invalidSwTraceState
 }
 
-func parseSwTraceState(s string) SwTraceState {
+func ParseSwTraceState(s string) SwTraceState {
 	matches := swTraceStateRegex.FindStringSubmatch(s)
 	if matches != nil {
 		flags, err := hex.DecodeString(matches[2])

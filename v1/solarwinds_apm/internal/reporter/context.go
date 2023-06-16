@@ -668,7 +668,7 @@ func NewContext(layer string, reportEntry bool, opts ContextOptions,
 	if explicitTraceDecision {
 		decision = SampleDecision{trace: true}
 	} else {
-		decision = shouldTraceRequestWithURL(layer, traced, opts.URL, tMode)
+		decision = shouldTraceRequestWithURL(layer, traced, opts.URL, tMode, nil)
 	}
 	ctx.SetEnabled(decision.enabled)
 

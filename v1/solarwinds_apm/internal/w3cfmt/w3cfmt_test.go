@@ -78,13 +78,13 @@ func TestGetSwTraceStateInvalid(t *testing.T) {
 }
 func TestParseSwTraceState(t *testing.T) {
 	ts := fmt.Sprintf("%s-00", spanIdHex)
-	result := parseSwTraceState(ts)
+	result := ParseSwTraceState(ts)
 	assert.True(t, result.IsValid())
 	assert.Equal(t, spanIdHex, result.SpanId())
 	assert.Equal(t, trace.TraceFlags(0x00), result.Flags())
 
 	ts = fmt.Sprintf("%s-01", spanIdHex)
-	result = parseSwTraceState(ts)
+	result = ParseSwTraceState(ts)
 	assert.True(t, result.IsValid())
 	assert.Equal(t, spanIdHex, result.SpanId())
 	assert.Equal(t, trace.TraceFlags(0x01), result.Flags())
@@ -112,7 +112,7 @@ func TestParseInvalidTraceStates(t *testing.T) {
 	}
 
 	for _, ts := range foo {
-		result := parseSwTraceState(ts)
+		result := ParseSwTraceState(ts)
 		assert.False(t, result.IsValid())
 		assert.Equal(t, "", result.SpanId())
 		assert.Equal(t, trace.TraceFlags(0x00), result.Flags())

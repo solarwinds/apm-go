@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
@@ -25,15 +26,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-type staticDecider struct {
-	retval reporter.SampleDecision
-}
-
-func (d staticDecider) ShouldTraceRequestWithURL(
-	layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
-	return d.retval
-}
 
 func TestNewSampler(t *testing.T) {
 	s := NewSampler().(sampler)
@@ -46,11 +38,12 @@ func TestDescription(t *testing.T) {
 }
 
 type expectedArgs struct {
-	layer  string
-	traced bool
-	url    string
-	ttMode reporter.TriggerTraceMode
-	t      *testing.T
+	layer   string
+	traced  bool
+	url     string
+	ttMode  reporter.TriggerTraceMode
+	swState w3cfmt.SwTraceState
+	t       *testing.T
 }
 
 type mockDecider struct {
@@ -60,11 +53,16 @@ type mockDecider struct {
 }
 
 func (m *mockDecider) ShouldTraceRequestWithURL(
-	layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) reporter.SampleDecision {
-	assert.Equal(m.t, m.expectedArgs.layer, layer)
-	assert.Equal(m.t, m.expectedArgs.traced, traced)
-	assert.Equal(m.t, m.expectedArgs.url, url)
-	assert.Equal(m.t, m.expectedArgs.ttMode, ttMode)
+	layer string, traced bool, url string, ttMode reporter.TriggerTraceMode, swState *w3cfmt.SwTraceState) reporter.SampleDecision {
+	assert.Equal(m.t, m.expectedArgs.layer, layer, "layer")
+	assert.Equal(m.t, m.expectedArgs.traced, traced, "traced")
+	assert.Equal(m.t, m.expectedArgs.url, url, "url")
+	assert.Equal(m.t, m.expectedArgs.ttMode, ttMode, "ttMode")
+
+	assert.Equal(m.t, m.expectedArgs.swState.Flags(), swState.Flags(), "swstate flags")
+	assert.Equal(m.t, m.expectedArgs.swState.IsValid(), swState.IsValid(), "swstate is valid")
+	assert.Equal(m.t, m.expectedArgs.swState.SpanId(), swState.SpanId(), "swstate span id")
+
 	m.called = true
 	return m.retval
 }
@@ -121,19 +119,7 @@ func TestScenario4(t *testing.T) {
 		traceStateSwSampled:  true,
 		oboeConsulted:        true,
 
-		decision:      sdktrace.RecordAndSample,
-		setTracedFlag: true,
-	}
-	scen.test(t)
-
-	// unsampled
-	scen = SamplingScenario{
-		validTraceParent:     true,
-		traceStateContainsSw: true,
-		traceStateSwSampled:  false,
-		oboeConsulted:        false,
-		decision:             sdktrace.Drop,
-		setTracedFlag:        false,
+		decision: sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -201,21 +187,30 @@ func TestScenario8(t *testing.T) {
 		oboeConsulted: true,
 		ttMode:        reporter.ModeStrictTriggerTrace,
 		decision:      sdktrace.RecordAndSample,
-		setTracedFlag: true,
 	}
 	scen.test(t)
 
-	// unsampled
-	scen = SamplingScenario{
+	// No need to test unsampled here since oboe handles that logic
+}
+
+func TestLocalTraces(t *testing.T) {
+	scen := SamplingScenario{
 		validTraceParent:     true,
 		traceStateContainsSw: true,
-		traceStateSwSampled:  false,
+		traceStateSwSampled:  true,
 		triggerTrace:         true,
-		xtraceSignature:      false,
+		local:                true,
 
 		oboeConsulted: false,
-		ttMode:        reporter.ModeStrictTriggerTrace,
-		decision:      sdktrace.Drop,
+	}
+	scen.test(t)
+
+	scen = SamplingScenario{
+		validTraceParent: false,
+		local:            true,
+
+		oboeConsulted: true,
+		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -226,6 +221,7 @@ type SamplingScenario struct {
 	traceStateContainsSw    bool
 	traceStateSwSampled     bool
 	traceStateContainsOther bool
+	local                   bool
 
 	triggerTrace    bool
 	xtraceSignature bool
@@ -235,18 +231,27 @@ type SamplingScenario struct {
 	obeyTT        bool // TODO verify this somehow (NH-5731)
 	ttMode        reporter.TriggerTraceMode
 	decision      sdktrace.SamplingDecision
-	setTracedFlag bool
 }
 
 func (s SamplingScenario) test(t *testing.T) {
 	var err error
 	decision := reporter.NewSampleDecision(true)
+	swState := w3cfmt.SwTraceState{}
+	// swState is the expected version we call oboe with
+	if s.validTraceParent && s.traceStateContainsSw {
+		flags := "00"
+		if s.traceStateSwSampled {
+			flags = "01"
+		}
+		swState = w3cfmt.ParseSwTraceState(fmt.Sprintf("2222222222222222-%s", flags))
+	}
 	mock := &mockDecider{
 		retval: decision,
 		expectedArgs: expectedArgs{
-			ttMode: s.ttMode,
-			t:      t,
-			traced: s.setTracedFlag,
+			ttMode:  s.ttMode,
+			t:       t,
+			traced:  s.validTraceParent && s.traceStateContainsSw,
+			swState: swState,
 		},
 	}
 
@@ -274,7 +279,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		SpanID:     trace.SpanID{0x00},
 		TraceFlags: trace.TraceFlags(0x00),
 		TraceState: traceState,
-		Remote:     true,
+		Remote:     !s.local,
 	}
 	if s.validTraceParent {
 		spanCtxConfig.TraceID = trace.TraceID{0x01}
