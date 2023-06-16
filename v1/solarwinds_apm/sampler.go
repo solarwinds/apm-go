@@ -72,7 +72,9 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 	swState := w3cfmt.GetSwTraceState(psc)
 
 	var result sdktrace.SamplingResult
-	if swState.IsValid() && !psc.IsRemote() {
+	// If swstate is valid and is explicitly not sampled, ignore.
+	// If swstate is valid and is not remote, trust local swstate decision.
+	if swState.IsValid() && (!swState.Flags().IsSampled() || !psc.IsRemote()) {
 		if swState.Flags().IsSampled() {
 			result = alwaysSampler.ShouldSample(params)
 		} else {

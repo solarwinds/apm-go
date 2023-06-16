@@ -80,8 +80,8 @@ var _ decider = &mockDecider{}
 // Sets X-Trace response header
 func TestScenario1(t *testing.T) {
 	scen := SamplingScenario{
-		newTraceDecision: true,
-		decision:         sdktrace.RecordAndSample,
+		oboeConsulted: true,
+		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -91,7 +91,7 @@ func TestScenario1(t *testing.T) {
 func TestScenario2(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent: true,
-		newTraceDecision: true,
+		oboeConsulted:    true,
 		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -104,7 +104,7 @@ func TestScenario3(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent:     false,
 		traceStateContainsSw: true,
-		newTraceDecision:     true,
+		oboeConsulted:        true,
 		decision:             sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -119,8 +119,10 @@ func TestScenario4(t *testing.T) {
 		validTraceParent:     true,
 		traceStateContainsSw: true,
 		traceStateSwSampled:  true,
-		newTraceDecision:     false,
-		decision:             sdktrace.RecordAndSample,
+		oboeConsulted:        true,
+
+		decision:      sdktrace.RecordAndSample,
+		setTracedFlag: true,
 	}
 	scen.test(t)
 
@@ -129,8 +131,9 @@ func TestScenario4(t *testing.T) {
 		validTraceParent:     true,
 		traceStateContainsSw: true,
 		traceStateSwSampled:  false,
-		newTraceDecision:     false,
+		oboeConsulted:        false,
 		decision:             sdktrace.Drop,
+		setTracedFlag:        false,
 	}
 	scen.test(t)
 }
@@ -142,7 +145,7 @@ func TestScenario5(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent:        true,
 		traceStateContainsOther: true,
-		newTraceDecision:        true,
+		oboeConsulted:           true,
 		decision:                sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -157,9 +160,9 @@ func TestScenario6(t *testing.T) {
 		triggerTrace:     true,
 		xtraceSignature:  false,
 
-		newTraceDecision: true,
-		ttMode:           reporter.ModeStrictTriggerTrace,
-		decision:         sdktrace.RecordAndSample,
+		oboeConsulted: true,
+		ttMode:        reporter.ModeStrictTriggerTrace,
+		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -175,9 +178,9 @@ func TestScenario7(t *testing.T) {
 		triggerTrace:            true,
 		xtraceSignature:         false,
 
-		newTraceDecision: true,
-		ttMode:           reporter.ModeStrictTriggerTrace,
-		decision:         sdktrace.RecordAndSample,
+		oboeConsulted: true,
+		ttMode:        reporter.ModeStrictTriggerTrace,
+		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
 }
@@ -195,9 +198,10 @@ func TestScenario8(t *testing.T) {
 		triggerTrace:         true,
 		xtraceSignature:      false,
 
-		newTraceDecision: false,
-		ttMode:           reporter.ModeStrictTriggerTrace,
-		decision:         sdktrace.RecordAndSample,
+		oboeConsulted: true,
+		ttMode:        reporter.ModeStrictTriggerTrace,
+		decision:      sdktrace.RecordAndSample,
+		setTracedFlag: true,
 	}
 	scen.test(t)
 
@@ -209,9 +213,9 @@ func TestScenario8(t *testing.T) {
 		triggerTrace:         true,
 		xtraceSignature:      false,
 
-		newTraceDecision: false,
-		ttMode:           reporter.ModeStrictTriggerTrace,
-		decision:         sdktrace.Drop,
+		oboeConsulted: false,
+		ttMode:        reporter.ModeStrictTriggerTrace,
+		decision:      sdktrace.Drop,
 	}
 	scen.test(t)
 }
@@ -227,10 +231,11 @@ type SamplingScenario struct {
 	xtraceSignature bool
 
 	// expectations
-	newTraceDecision bool // Should call oboe's sampling logic
-	obeyTT           bool // TODO verify this somehow (NH-5731)
-	ttMode           reporter.TriggerTraceMode
-	decision         sdktrace.SamplingDecision
+	oboeConsulted bool // Should call oboe's sampling logic
+	obeyTT        bool // TODO verify this somehow (NH-5731)
+	ttMode        reporter.TriggerTraceMode
+	decision      sdktrace.SamplingDecision
+	setTracedFlag bool
 }
 
 func (s SamplingScenario) test(t *testing.T) {
@@ -241,6 +246,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		expectedArgs: expectedArgs{
 			ttMode: s.ttMode,
 			t:      t,
+			traced: s.setTracedFlag,
 		},
 	}
 
@@ -268,7 +274,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		SpanID:     trace.SpanID{0x00},
 		TraceFlags: trace.TraceFlags(0x00),
 		TraceState: traceState,
-		Remote:     false,
+		Remote:     true,
 	}
 	if s.validTraceParent {
 		spanCtxConfig.TraceID = trace.TraceID{0x01}
@@ -290,5 +296,5 @@ func (s SamplingScenario) test(t *testing.T) {
 	}
 	result := smplr.ShouldSample(params)
 	assert.Equal(t, s.decision, result.Decision)
-	assert.Equal(t, s.newTraceDecision, mock.Called())
+	assert.Equal(t, s.oboeConsulted, mock.Called())
 }
