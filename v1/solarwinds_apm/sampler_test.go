@@ -81,7 +81,7 @@ func TestScenario4(t *testing.T) {
 	}
 	scen.test(t)
 
-	// sampled
+	// not sampled
 	scen = SamplingScenario{
 		validTraceParent:     true,
 		traceStateContainsSw: true,
