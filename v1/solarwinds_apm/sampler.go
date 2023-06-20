@@ -11,33 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type sampler struct {
-	decider
 }
 
 func NewSampler() sdktrace.Sampler {
-	return sampler{defaultDecider}
+	return sampler{}
 }
-
-type decider interface {
-	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string)
-}
-
-type reporterDecider struct{}
-
-func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode) (bool, string) {
-	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode)
-}
-
-var defaultDecider decider = reporterDecider{}
 
 var _ sdktrace.Sampler = sampler{}
 
@@ -45,38 +35,76 @@ func (s sampler) Description() string {
 	return "SolarWinds APM Sampler"
 }
 
-func (s sampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	parentContext := parameters.ParentContext
-	traced := false
+var alwaysSampler = sdktrace.AlwaysSample()
+var neverSampler = sdktrace.NeverSample()
 
-	psc := trace.SpanContextFromContext(parentContext)
+func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options) trace.TraceState {
+	var ts trace.TraceState
+	if !psc.IsValid() {
+		// create new tracestate
+		ts = trace.TraceState{}
+	} else {
+		ts = psc.TraceState()
+	}
+	if xto.Opts() != "" {
+		// TODO: NH-5731
+	}
+	return ts
+}
 
-	// TODO
-	url := ""
+func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	psc := trace.SpanContextFromContext(params.ParentContext)
 
-	// TODO: re-examine whether this x-trace logic is valid. This was imported
-	// from some test code before my time -jared
-	ttMode := reporter.ModeTriggerTraceNotPresent
-	if parentContext != nil {
-		xtoValue := parentContext.Value("X-Trace-Options")
-		xtosValue := parentContext.Value("X-Trace-Options-Signature")
-		if xtoValue != nil && xtosValue != nil {
-			ttMode = reporter.ParseTriggerTrace(xtoValue.(string), xtosValue.(string))
+	var result sdktrace.SamplingResult
+	if psc.IsValid() && !psc.IsRemote() {
+		if psc.IsSampled() {
+			result = alwaysSampler.ShouldSample(params)
+		} else {
+			result = neverSampler.ShouldSample(params)
+		}
+	} else {
+		// TODO url
+		url := ""
+		xto := xtrace.GetXTraceOptions(params.ParentContext)
+		ttMode := getTtMode(xto)
+		// If parent context is not valid, swState will also not be valid
+		swState := w3cfmt.GetSwTraceState(psc)
+		traceDecision := reporter.ShouldTraceRequestWithURL(
+			params.Name, // "may not be super relevant" -- lin
+			swState.IsValid(),
+			url,
+			ttMode,
+			&swState,
+		)
+		var decision sdktrace.SamplingDecision
+		if traceDecision.Trace() {
+			decision = sdktrace.RecordAndSample
+		} else {
+			decision = sdktrace.RecordOnly
+		}
+		ts := hydrateTraceState(psc, xto)
+		result = sdktrace.SamplingResult{
+			Decision:   decision,
+			Tracestate: ts,
 		}
 	}
-	traceDecision, _ := s.decider.ShouldTraceRequestWithURL(parameters.Name, traced, url, ttMode)
 
-	var decision sdktrace.SamplingDecision
-	if traceDecision {
-		decision = sdktrace.RecordAndSample
+	// TODO NH-43627
+	return result
+
+}
+
+func getTtMode(xto xtrace.Options) reporter.TriggerTraceMode {
+	if xto.TriggerTrace() {
+		switch xto.SignatureState() {
+		case xtrace.ValidSignature:
+			return reporter.ModeRelaxedTriggerTrace
+		case xtrace.InvalidSignature:
+			return reporter.ModeInvalidTriggerTrace
+		default:
+			return reporter.ModeStrictTriggerTrace
+		}
 	} else {
-		decision = sdktrace.Drop
+		return reporter.ModeTriggerTraceNotPresent
 	}
-
-	res := sdktrace.SamplingResult{
-		Decision:   decision,
-		Tracestate: psc.TraceState(),
-	}
-	return res
-
 }

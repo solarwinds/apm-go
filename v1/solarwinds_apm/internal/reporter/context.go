@@ -478,7 +478,7 @@ func parseTriggerTraceFlag(opts, sig string) (TriggerTraceMode, map[string]strin
 
 	var authErr error
 	if sig != "" {
-		authErr = validateXTraceOptionsSignature(sig, ts, opts)
+		authErr = ValidateXTraceOptionsSignature(sig, ts, opts)
 		if authErr == nil {
 			mode = ModeRelaxedTriggerTrace
 		} else {
@@ -503,7 +503,10 @@ const (
 	ttAuthBadSignature   = "bad-signature"
 )
 
-func validateXTraceOptionsSignature(signature, ts, data string) error {
+// TODO: This could live in the `xtrace` package, except it requires
+// TODO: the ability to extract the TT Token from oboe settings.
+// TODO: Determine a clean/elegant way to clean this up.
+func ValidateXTraceOptionsSignature(signature, ts, data string) error {
 	var err error
 	ts, err = tsInScope(ts)
 	if err != nil {
@@ -519,6 +522,14 @@ func validateXTraceOptionsSignature(signature, ts, data string) error {
 		return errors.New(ttAuthBadSignature)
 	}
 	return nil
+}
+
+func HmacHashTT(data []byte) (string, error) {
+	token, err := getTriggerTraceToken()
+	if err != nil {
+		return "", err
+	}
+	return HmacHash(token, data), nil
 }
 
 func HmacHash(token, data []byte) string {
@@ -657,7 +668,7 @@ func NewContext(layer string, reportEntry bool, opts ContextOptions,
 	if explicitTraceDecision {
 		decision = SampleDecision{trace: true}
 	} else {
-		decision = shouldTraceRequestWithURL(layer, traced, opts.URL, tMode)
+		decision = shouldTraceRequestWithURL(layer, traced, opts.URL, tMode, nil)
 	}
 	ctx.SetEnabled(decision.enabled)
 

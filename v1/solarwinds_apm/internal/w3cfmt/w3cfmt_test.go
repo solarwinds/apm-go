@@ -40,3 +40,82 @@ func TestSwFromCtx(t *testing.T) {
 	sc = sc.WithTraceFlags(trace.TraceFlags(0x01))
 	assert.Equal(t, fmt.Sprintf("%s-01", spanIdHex), SwFromCtx(sc))
 }
+
+func TestGetSwTraceState(t *testing.T) {
+	tracestate := trace.TraceState{}
+	tracestate, err = tracestate.Insert("sw", fmt.Sprintf("%s-01", spanIdHex))
+	assert.Nil(t, err)
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x01},
+		SpanID:     spanId,
+		TraceFlags: trace.TraceFlags(0x01),
+		TraceState: tracestate,
+	})
+
+	ts := GetSwTraceState(sc)
+	assert.True(t, ts.IsValid())
+	assert.Equal(t, spanIdHex, ts.SpanId())
+	assert.Equal(t, trace.TraceFlags(0x01), ts.Flags())
+}
+
+func TestGetSwTraceStateInvalid(t *testing.T) {
+	tracestate := trace.TraceState{}
+	tracestate, err = tracestate.Insert("sw", fmt.Sprintf("%s-01", spanIdHex))
+	assert.Nil(t, err)
+	// Zero'd out trace and span make sc.IsValid() return false, so we should
+	// return an invalid trace state
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{0x00},
+		SpanID:     trace.SpanID{0x00},
+		TraceFlags: trace.TraceFlags(0x00),
+		TraceState: tracestate,
+	})
+
+	ts := GetSwTraceState(sc)
+	assert.False(t, ts.IsValid())
+	assert.Equal(t, "", ts.SpanId())
+	assert.Equal(t, trace.TraceFlags(0x00), ts.Flags())
+}
+func TestParseSwTraceState(t *testing.T) {
+	ts := fmt.Sprintf("%s-00", spanIdHex)
+	result := ParseSwTraceState(ts)
+	assert.True(t, result.IsValid())
+	assert.Equal(t, spanIdHex, result.SpanId())
+	assert.Equal(t, trace.TraceFlags(0x00), result.Flags())
+
+	ts = fmt.Sprintf("%s-01", spanIdHex)
+	result = ParseSwTraceState(ts)
+	assert.True(t, result.IsValid())
+	assert.Equal(t, spanIdHex, result.SpanId())
+	assert.Equal(t, trace.TraceFlags(0x01), result.Flags())
+}
+
+func TestParseInvalidTraceStates(t *testing.T) {
+	foo := []string{
+		"foo",
+		// spanID too long
+		"0123456789abcdefa-00",
+		// spanID not long enough
+		"0123456789abcde-00",
+		// spanID not hex
+		"g123456789abcdef-00",
+		// spanID has uppercase
+		"0123456789Abcdef-00",
+		// flags too long
+		"0123456789abcdef-000",
+		// flags not long enough
+		"0123456789abcdef-0",
+		// flags not hex
+		"a123456789abcdef-0g",
+		// flags has uppercase
+		"0123456789abcdef-0A",
+	}
+
+	for _, ts := range foo {
+		result := ParseSwTraceState(ts)
+		assert.False(t, result.IsValid())
+		assert.Equal(t, "", result.SpanId())
+		assert.Equal(t, trace.TraceFlags(0x00), result.Flags())
+	}
+
+}

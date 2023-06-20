@@ -15,6 +15,8 @@
 package xtrace
 
 import (
+	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,18 +29,45 @@ const (
 	XTraceOptionsSigHeaderName = "x-trace-options-signature"
 )
 
+type CtxKey int
+
+const (
+	OptionsKey CtxKey = iota
+	SignatureKey
+)
+
+type SignatureState int
+
+const (
+	NoSignature SignatureState = iota
+	ValidSignature
+	InvalidSignature
+)
+
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 
-func ParseXTraceOptions(opts string, sig string) Options {
+func GetXTraceOptions(ctx context.Context) Options {
+	xtoStr, ok := ctx.Value(OptionsKey).(string)
+	if !ok {
+		xtoStr = ""
+	}
+	xtoSig, ok := ctx.Value(SignatureKey).(string)
+	if !ok {
+		xtoSig = ""
+	}
+
+	return parseXTraceOptions(xtoStr, xtoSig)
+}
+
+func parseXTraceOptions(opts string, sig string) Options {
 	x := Options{
 		opts:        opts,
 		sig:         sig,
-		swKeys:      "",
 		customKVs:   make(map[string]string),
-		timestamp:   0,
 		ignoredKeys: make([]string, 0),
 	}
+
 	for _, opt := range optRegex.Split(opts, -1) {
 		k, v, found := strings.Cut(opt, "=")
 		k = strings.TrimSpace(k)
@@ -76,6 +105,17 @@ func ParseXTraceOptions(opts string, sig string) Options {
 	if len(x.ignoredKeys) > 0 {
 		log.Debugf("Some x-trace-options were ignored: %s", x.ignoredKeys)
 	}
+	if sig == "" {
+		x.sigState = NoSignature
+	} else {
+		err := reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
+		if err != nil {
+			log.Warning("Invalid xtrace options signature", err)
+			x.sigState = InvalidSignature
+		} else {
+			x.sigState = ValidSignature
+		}
+	}
 	return x
 }
 
@@ -87,6 +127,7 @@ type Options struct {
 	timestamp   int64
 	tt          bool
 	ignoredKeys []string
+	sigState    SignatureState
 }
 
 func (x Options) SwKeys() string {
@@ -111,4 +152,12 @@ func (x Options) IgnoredKeys() []string {
 
 func (x Options) Signature() string {
 	return x.sig
+}
+
+func (x Options) SignatureState() SignatureState {
+	return x.sigState
+}
+
+func (x Options) Opts() string {
+	return x.opts
 }

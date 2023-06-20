@@ -16,6 +16,7 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
 	"math/rand"
 	"strings"
@@ -229,6 +230,16 @@ type SampleDecision struct {
 	xTraceOptsRsp string
 	bucketCap     float64
 	bucketRate    float64
+
+	diceRolled bool
+}
+
+func (s SampleDecision) Trace() bool {
+	return s.trace
+}
+
+func (s SampleDecision) XTraceOptsRsp() string {
+	return s.xTraceOptsRsp
 }
 
 type TriggerTraceMode int
@@ -289,19 +300,26 @@ func (tm TriggerTraceMode) Requested() bool {
 	}
 }
 
-func oboeSampleRequest(layer string, traced bool, url string, triggerTrace TriggerTraceMode) SampleDecision {
+func oboeSampleRequest(
+	layer string,
+	continued bool,
+	url string,
+	triggerTrace TriggerTraceMode,
+	swState *w3cfmt.SwTraceState,
+) SampleDecision {
 	if usingTestReporter {
 		if r, ok := globalReporter.(*TestReporter); ok {
 			if !r.UseSettings {
-				return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0} // trace tests
+				return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0, false} // trace tests
 			}
 		}
 	}
 
 	var setting *oboeSettings
 	var ok bool
+	diceRolled := false
 	if setting, ok = getSetting(layer); !ok {
-		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0}
+		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
 	retval := false
@@ -317,7 +335,7 @@ func oboeSampleRequest(layer string, traced bool, url string, triggerTrace Trigg
 		bucket = setting.triggerTraceStrictBucket
 	}
 
-	if triggerTrace.Requested() && !traced {
+	if triggerTrace.Requested() && !continued {
 		sampled := (triggerTrace != ModeInvalidTriggerTrace) && (flags.TriggerTraceEnabled())
 		rsp := ttOK
 
@@ -337,27 +355,48 @@ func oboeSampleRequest(layer string, traced bool, url string, triggerTrace Trigg
 			}
 		}
 		ttCap, ttRate := getTokenBucketSetting(setting, triggerTrace)
-		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap}
+		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap, diceRolled}
 	}
 
-	if !traced {
+	if !continued {
 		// A new request
 		if flags&FLAG_SAMPLE_START != 0 {
+			// roll the dice
+			diceRolled = true
 			retval = shouldSample(sampleRate)
 			if retval {
 				doRateLimiting = true
 			}
 		}
 	} else {
-		// A traced request
-		if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
-			retval = true
-		} else if flags&FLAG_SAMPLE_THROUGH != 0 {
-			retval = shouldSample(sampleRate)
+		// TODO: When we refactor oboe, extract into something easier to test
+		if swState != nil && swState.IsValid() {
+			if swState.Flags().IsSampled() {
+				if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+					retval = true
+				} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+					// roll the dice
+					diceRolled = true
+					retval = shouldSample(sampleRate)
+				}
+			} else {
+				retval = false
+			}
+		} else {
+			// This path will only be hit by the legacy non-otel code
+			// TODO remove when we rip out the ao-style context/trace/span/etc
+			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+				retval = true
+			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+				// roll the dice
+				diceRolled = true
+				retval = shouldSample(sampleRate)
+			}
+
 		}
 	}
 
-	retval = bucket.count(retval, traced, doRateLimiting)
+	retval = bucket.count(retval, continued, doRateLimiting)
 
 	rsp := ttNotRequested
 	if triggerTrace.Requested() {
@@ -366,7 +405,7 @@ func oboeSampleRequest(layer string, traced bool, url string, triggerTrace Trigg
 
 	ttCap, ttRate := getTokenBucketSetting(setting, ModeTriggerTraceNotPresent)
 
-	return SampleDecision{retval, sampleRate, source, flags.Enabled(), rsp, ttCap, ttRate}
+	return SampleDecision{retval, sampleRate, source, flags.Enabled(), rsp, ttCap, ttRate, diceRolled}
 }
 
 func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (float64, float64) {
