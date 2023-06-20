@@ -14,6 +14,7 @@
 package reporter
 
 import (
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"os"
 	"strings"
 	"sync"
@@ -459,6 +460,143 @@ func TestCheckSettingsTimeout(t *testing.T) {
 	assert.NotContains(t, sc.settings, k1, k1.layer)
 }
 
+// -- Scenarios testing -- matching up with sampler_test -- //
+
+// Scenarios 2, 3, 5:
+// UNTESTED because the inputs are the same as Scenario 1
+
+// Scenario 7:
+// UNTESTED because the inputs are the same as Scenario 6
+
+type OboeScenario struct {
+	validSwState   bool
+	swStateSampled bool
+	ttMode         TriggerTraceMode
+
+	// expectations
+	trace      bool
+	diceRolled bool
+}
+
+func (s OboeScenario) runTest(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+
+	swState := w3cfmt.ParseSwTraceState("")
+	if s.validSwState {
+		if s.swStateSampled {
+			swState = w3cfmt.ParseSwTraceState("1234567890abcdef-01")
+		} else {
+			swState = w3cfmt.ParseSwTraceState("1234567890abcdef-00")
+		}
+	}
+
+	assert.Equal(t, s.validSwState, swState.IsValid())
+	assert.Equal(t, s.swStateSampled, swState.Flags().IsSampled())
+
+	result := oboeSampleRequest("", swState.IsValid(), "", s.ttMode, &swState)
+	assert.Equal(t, s.trace, result.trace)
+	assert.Equal(t, s.diceRolled, result.diceRolled)
+}
+
+func TestScenario1(t *testing.T) {
+	// Scenario 1
+	// Input Headers - None
+	// Start a new trace decision
+	scen := OboeScenario{
+		validSwState: false,
+		ttMode:       ModeTriggerTraceNotPresent,
+
+		trace:      true,
+		diceRolled: true,
+	}
+	scen.runTest(t)
+}
+
+func TestScenario4Unsampled(t *testing.T) {
+	// valid traceparent 00-aaaaaa-222-01
+	// valid tracestate with our vendor entry
+	// continue trace decision from sw value in tracestate
+	scen := OboeScenario{
+		// Scenario 4
+		validSwState:   true,
+		swStateSampled: false,
+
+		ttMode:     ModeTriggerTraceNotPresent,
+		trace:      false,
+		diceRolled: false,
+	}
+	scen.runTest(t)
+}
+
+func TestScenario4Sampled(t *testing.T) {
+	// valid traceparent 00-aaaaaa-222-01
+	// valid tracestate with our vendor entry
+	// continue trace decision from sw value in tracestate
+	scen := OboeScenario{
+		validSwState:   true,
+		swStateSampled: true,
+
+		ttMode:     ModeTriggerTraceNotPresent,
+		trace:      true,
+		diceRolled: false,
+	}
+	scen.runTest(t)
+}
+
+func TestScenario6(t *testing.T) {
+	// no traceparent
+	// valid unsigned trigger trace x-trace-options: trigger-trace
+	// obey trigger trace rules
+	scen := OboeScenario{
+		validSwState:   false,
+		swStateSampled: false,
+
+		ttMode:     ModeStrictTriggerTrace,
+		trace:      true,
+		diceRolled: false,
+	}
+	scen.runTest(t)
+}
+
+func TestScenario8Sampled(t *testing.T) {
+	// valid traceparent 00-aaaaaa-111-01
+	// valid tracestate with our vendor entry
+	// valid unsigned trigger trace x-trace-options: trigger-trace
+	// continue trace decision from sw value in tracestate
+	scen := OboeScenario{
+		validSwState:   true,
+		swStateSampled: true,
+
+		ttMode:     ModeStrictTriggerTrace,
+		trace:      true,
+		diceRolled: false,
+	}
+	scen.runTest(t)
+}
+
+func TestScenario8Unsampled(t *testing.T) {
+	// valid traceparent 00-aaaaaa-111-01
+	// valid tracestate with our vendor entry
+	// valid unsigned trigger trace x-trace-options: trigger-trace
+	// continue trace decision from sw value in tracestate
+	scen := OboeScenario{
+		validSwState:   true,
+		swStateSampled: false,
+
+		ttMode:     ModeStrictTriggerTrace,
+		trace:      false,
+		diceRolled: false,
+	}
+	scen.runTest(t)
+}
+
+// -- End Scenario testing -- //
+
+// NOTE: There be dragons here. When I originally added the above scenario
+// tests, this test (TestMergeRemoteSettingWithLocalConfig) modified some
+// global state that caused my tests to fail. Placing them above ensures they
+// run first, but is a short-term fix.
 func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	// No remote setting
 	resetSettings()

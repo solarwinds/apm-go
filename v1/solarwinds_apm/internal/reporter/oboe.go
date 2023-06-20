@@ -230,19 +230,8 @@ type SampleDecision struct {
 	xTraceOptsRsp string
 	bucketCap     float64
 	bucketRate    float64
-}
 
-// TODO: this is only used in testing, remove/refactor
-func NewSampleDecision(trace bool) SampleDecision {
-	return SampleDecision{
-		trace:         trace,
-		rate:          0,
-		source:        0,
-		enabled:       false,
-		xTraceOptsRsp: "",
-		bucketCap:     0,
-		bucketRate:    0,
-	}
+	diceRolled bool
 }
 
 func (s SampleDecision) Trace() bool {
@@ -321,15 +310,16 @@ func oboeSampleRequest(
 	if usingTestReporter {
 		if r, ok := globalReporter.(*TestReporter); ok {
 			if !r.UseSettings {
-				return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0} // trace tests
+				return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0, false} // trace tests
 			}
 		}
 	}
 
 	var setting *oboeSettings
 	var ok bool
+	diceRolled := false
 	if setting, ok = getSetting(layer); !ok {
-		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0}
+		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
 	retval := false
@@ -365,13 +355,14 @@ func oboeSampleRequest(
 			}
 		}
 		ttCap, ttRate := getTokenBucketSetting(setting, triggerTrace)
-		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap}
+		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap, diceRolled}
 	}
 
 	if !continued {
 		// A new request
 		if flags&FLAG_SAMPLE_START != 0 {
 			// roll the dice
+			diceRolled = true
 			retval = shouldSample(sampleRate)
 			if retval {
 				doRateLimiting = true
@@ -385,6 +376,7 @@ func oboeSampleRequest(
 					retval = true
 				} else if flags&FLAG_SAMPLE_THROUGH != 0 {
 					// roll the dice
+					diceRolled = true
 					retval = shouldSample(sampleRate)
 				}
 			} else {
@@ -397,6 +389,7 @@ func oboeSampleRequest(
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
 				// roll the dice
+				diceRolled = true
 				retval = shouldSample(sampleRate)
 			}
 
@@ -412,7 +405,7 @@ func oboeSampleRequest(
 
 	ttCap, ttRate := getTokenBucketSetting(setting, ModeTriggerTraceNotPresent)
 
-	return SampleDecision{retval, sampleRate, source, flags.Enabled(), rsp, ttCap, ttRate}
+	return SampleDecision{retval, sampleRate, source, flags.Enabled(), rsp, ttCap, ttRate, diceRolled}
 }
 
 func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (float64, float64) {

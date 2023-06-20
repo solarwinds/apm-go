@@ -23,24 +23,11 @@ import (
 )
 
 type sampler struct {
-	decider
 }
 
 func NewSampler() sdktrace.Sampler {
-	return sampler{defaultDecider}
+	return sampler{}
 }
-
-type decider interface {
-	ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode, swState *w3cfmt.SwTraceState) reporter.SampleDecision
-}
-
-type reporterDecider struct{}
-
-func (r reporterDecider) ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode reporter.TriggerTraceMode, swState *w3cfmt.SwTraceState) reporter.SampleDecision {
-	return reporter.ShouldTraceRequestWithURL(layer, traced, url, ttMode, swState)
-}
-
-var defaultDecider decider = reporterDecider{}
 
 var _ sdktrace.Sampler = sampler{}
 
@@ -82,7 +69,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := s.decider.ShouldTraceRequestWithURL(
+		traceDecision := reporter.ShouldTraceRequestWithURL(
 			params.Name, // "may not be super relevant" -- lin
 			swState.IsValid(),
 			url,
