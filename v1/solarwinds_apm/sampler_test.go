@@ -79,6 +79,7 @@ var _ decider = &mockDecider{}
 func TestScenario1(t *testing.T) {
 	scen := SamplingScenario{
 		oboeConsulted: true,
+		oboeDecision:  true,
 		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -90,6 +91,7 @@ func TestScenario2(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent: true,
 		oboeConsulted:    true,
+		oboeDecision:     true,
 		decision:         sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -103,6 +105,7 @@ func TestScenario3(t *testing.T) {
 		validTraceParent:     false,
 		traceStateContainsSw: true,
 		oboeConsulted:        true,
+		oboeDecision:         true,
 		decision:             sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -118,8 +121,21 @@ func TestScenario4(t *testing.T) {
 		traceStateContainsSw: true,
 		traceStateSwSampled:  true,
 		oboeConsulted:        true,
+		oboeDecision:         true,
 
 		decision: sdktrace.RecordAndSample,
+	}
+	scen.test(t)
+
+	// sampled
+	scen = SamplingScenario{
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		traceStateSwSampled:  false,
+		oboeConsulted:        true,
+		oboeDecision:         false,
+
+		decision: sdktrace.RecordOnly,
 	}
 	scen.test(t)
 }
@@ -132,6 +148,7 @@ func TestScenario5(t *testing.T) {
 		validTraceParent:        true,
 		traceStateContainsOther: true,
 		oboeConsulted:           true,
+		oboeDecision:            true,
 		decision:                sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -147,6 +164,7 @@ func TestScenario6(t *testing.T) {
 		xtraceSignature:  false,
 
 		oboeConsulted: true,
+		oboeDecision:  true,
 		ttMode:        reporter.ModeStrictTriggerTrace,
 		decision:      sdktrace.RecordAndSample,
 	}
@@ -165,6 +183,7 @@ func TestScenario7(t *testing.T) {
 		xtraceSignature:         false,
 
 		oboeConsulted: true,
+		oboeDecision:  true,
 		ttMode:        reporter.ModeStrictTriggerTrace,
 		decision:      sdktrace.RecordAndSample,
 	}
@@ -185,6 +204,7 @@ func TestScenario8(t *testing.T) {
 		xtraceSignature:      false,
 
 		oboeConsulted: true,
+		oboeDecision:  true,
 		ttMode:        reporter.ModeStrictTriggerTrace,
 		decision:      sdktrace.RecordAndSample,
 	}
@@ -210,6 +230,7 @@ func TestLocalTraces(t *testing.T) {
 		local:            true,
 
 		oboeConsulted: true,
+		oboeDecision:  true,
 		decision:      sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -226,6 +247,8 @@ type SamplingScenario struct {
 	triggerTrace    bool
 	xtraceSignature bool
 
+	oboeDecision bool
+
 	// expectations
 	oboeConsulted bool // Should call oboe's sampling logic
 	obeyTT        bool // TODO verify this somehow (NH-5731)
@@ -235,7 +258,7 @@ type SamplingScenario struct {
 
 func (s SamplingScenario) test(t *testing.T) {
 	var err error
-	decision := reporter.NewSampleDecision(true)
+	decision := reporter.NewSampleDecision(s.oboeDecision)
 	swState := w3cfmt.SwTraceState{}
 	// swState is the expected version we call oboe with
 	if s.validTraceParent && s.traceStateContainsSw {

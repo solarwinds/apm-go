@@ -51,7 +51,7 @@ func (s sampler) Description() string {
 var alwaysSampler = sdktrace.AlwaysSample()
 var neverSampler = sdktrace.NeverSample()
 
-func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, decision sdktrace.SamplingDecision) trace.TraceState {
+func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options) trace.TraceState {
 	var ts trace.TraceState
 	if !psc.IsValid() {
 		// create new tracestate
@@ -90,13 +90,12 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 			&swState,
 		)
 		var decision sdktrace.SamplingDecision
-		// TODO handle RecordOnly (metrics)
 		if traceDecision.Trace() {
 			decision = sdktrace.RecordAndSample
 		} else {
-			decision = sdktrace.Drop
+			decision = sdktrace.RecordOnly
 		}
-		ts := hydrateTraceState(psc, xto, decision)
+		ts := hydrateTraceState(psc, xto)
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
 			Tracestate: ts,

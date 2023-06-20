@@ -391,7 +391,8 @@ func oboeSampleRequest(
 				retval = false
 			}
 		} else {
-			// A continued request
+			// This path will only be hit by the legacy non-otel code
+			// TODO remove when we rip out the ao-style context/trace/span/etc
 			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
