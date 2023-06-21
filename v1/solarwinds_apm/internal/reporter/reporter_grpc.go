@@ -383,7 +383,7 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 
 			var g bool
 			if d, ddlSet := ctx.Deadline(); ddlSet {
-				g = d.Sub(time.Now()) > 0
+				g = time.Until(d) > 0
 			} else {
 				g = true
 			}

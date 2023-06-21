@@ -75,7 +75,7 @@ func observer() {
 	}
 
 	// Sleep returns immediately if roundup is before time.Now()
-	time.Sleep(roundup.Sub(time.Now()))
+	time.Sleep(time.Until(roundup))
 
 	tk := time.NewTicker(observeInterval)
 	defer func() { tk.Stop() }()
