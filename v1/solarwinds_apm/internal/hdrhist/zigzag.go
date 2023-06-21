@@ -11,9 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package hdrhist
 
-import "errors"
+package hdrhist
 
 /*
 This file was ported from the Java source of HdrHistogram written
@@ -43,7 +42,7 @@ func encodeZigZag(i int64) []byte {
 		b = append(b, byte(value))
 	} else {
 		b = append(b, byte((value&0x7F)|0x80))
-		if uint64(value)>>14 == 0 {
+		if value>>14 == 0 {
 			b = append(b, byte(value>>7))
 		} else {
 			b = append(b, byte(value>>7|0x80))
@@ -128,17 +127,4 @@ func decodeZigZagUnsafe(b []byte) (int64, int) {
 		}
 	}
 	return int64((uint64(value) >> 1) ^ uint64(-(value & 1))), vlen
-}
-
-// decodeZigZag safely catch bounds errors due to
-// missing data.
-func decodeZigZag(b []byte) (v int64, vlen int, err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = errors.New("got incomplete data")
-		}
-	}()
-
-	v, vlen = decodeZigZagUnsafe(b)
-	return v, vlen, nil
 }

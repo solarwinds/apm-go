@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package hdrhist
 
 // This package doesn't actually do anything unsafe. We just
@@ -21,9 +22,7 @@ package hdrhist
 // is not imported in any of the other files.
 
 import (
-	"time"
 	"unsafe"
 )
 
 var histSize = int(unsafe.Sizeof(Hist{}))
-var timeSize = int(unsafe.Sizeof(time.Time{}) + unsafe.Sizeof(time.Location{}))

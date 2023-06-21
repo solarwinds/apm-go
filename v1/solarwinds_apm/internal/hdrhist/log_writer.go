@@ -76,9 +76,7 @@ func (l *LogWriter) WriteIntervalHist(h *Hist) error {
 	e, okEnd := h.EndTime()
 	if ok && okEnd {
 		if b, ok := l.GetBaseTime(); ok {
-			d := t.Sub(b)
-			t = time.Unix(int64(d/time.Second), int64(d%time.Second))
-			d = e.Sub(b)
+			d := e.Sub(b)
 			t = time.Unix(int64(d/time.Second), int64(d%time.Second))
 		}
 	}
