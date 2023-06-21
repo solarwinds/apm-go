@@ -678,7 +678,7 @@ func (s *HTTPSpanMessage) Process(m *Measurements) {
 
 	// only record the transaction-specific histogram and measurements if we are still within the limit
 	// otherwise report it as an 'other' measurement
-	if err, reusableTags := s.processMeasurements(nil, m); err == ErrExceedsMetricsCountLimit {
+	if reusableTags, err := s.processMeasurements(nil, m); err == ErrExceedsMetricsCountLimit {
 		s.Transaction = OtherTransactionName
 		s.processMeasurements(reusableTags, m)
 		return
@@ -716,7 +716,7 @@ func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
 func (s *HTTPSpanMessage) processMeasurements(tagsList []map[string]string,
-	m *Measurements) (error, []map[string]string) {
+	m *Measurements) ([]map[string]string, error) {
 	name := "TransactionResponseTime"
 	duration := float64(s.Duration / time.Microsecond)
 
@@ -727,7 +727,7 @@ func (s *HTTPSpanMessage) processMeasurements(tagsList []map[string]string,
 	err := m.record(name, tagsList, duration, 1, true)
 
 	if err != nil {
-		return err, tagsList
+		return tagsList, err
 	}
 	return nil, nil
 }
