@@ -16,7 +16,7 @@
 
 set -e
 
-COVERPKG="github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/opentracing"
+COVERPKG="github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 export SW_APM_DEBUG_LEVEL=1
 go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg $COVERPKG
 
@@ -36,10 +36,6 @@ pushd internal/host/
 go test -v -race -covermode=atomic -coverprofile=cov.out
 popd
 
-pushd opentracing
-go test -v -race -covermode=atomic -coverprofile=cov.out
-popd
-
-gocovmerge cov.out internal/reporter/cov.out internal/log/cov.out internal/config/cov.out internal/host/cov.out opentracing/cov.out > covmerge.out
+gocovmerge cov.out internal/reporter/cov.out internal/log/cov.out internal/config/cov.out internal/host/cov.out > covmerge.out
 
 #go tool cover -html=covmerge.out

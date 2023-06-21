@@ -28,7 +28,6 @@ require (
 )
 
 require (
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/sdk v1.3.0

@@ -53,14 +53,11 @@ jobs:
           pushd internal/host/
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
-          pushd opentracing
-          go test -v -race -covermode=atomic -coverprofile=cov.out -coverpkg github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/opentracing,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config,github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host,github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/multitracer
-          popd
           popd
           pushd contrib/apmgrpc
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
-          gocovmerge solarwinds_apm/cov.out solarwinds_apm/internal/reporter/cov.out solarwinds_apm/internal/metrics/cov.out solarwinds_apm/internal/log/cov.out solarwinds_apm/internal/config/cov.out solarwinds_apm/internal/host/cov.out solarwinds_apm/opentracing/cov.out contrib/apmgrpc/cov.out> coverage.txt
+          gocovmerge solarwinds_apm/cov.out solarwinds_apm/internal/reporter/cov.out solarwinds_apm/internal/metrics/cov.out solarwinds_apm/internal/log/cov.out solarwinds_apm/internal/config/cov.out solarwinds_apm/internal/host/cov.out contrib/apmgrpc/cov.out> coverage.txt
           pushd solarwinds_apm/internal/reporter
           rm for_test.crt for_test.key
           popd
