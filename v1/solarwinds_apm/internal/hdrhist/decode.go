@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package hdrhist
 
 import (
@@ -33,20 +34,9 @@ const (
 	encodingV2CookieBase           = 0x1c849303
 	compressedEncodingV2CookieBase = 0x1c849304
 
-	encodingV2maxWordSize = 9
-
 	encodingHeaderSize   = 40
 	encodingV0HeaderSize = 32
 )
-
-func DecodeCompressed(buf []byte) (*Hist, error) {
-	hist := &Hist{}
-	err := decodeCompressed(hist, buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to decode histogram")
-	}
-	return hist, nil
-}
 
 func decodeCompressed(h *Hist, buf []byte) error {
 	const doubleHistCookie = 0x0c72124e
