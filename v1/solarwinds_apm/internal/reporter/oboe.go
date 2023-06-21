@@ -416,16 +416,13 @@ func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (floa
 	case ModeRelaxedTriggerTrace:
 		ttCap = setting.triggerTraceRelaxedBucket.capacity
 		ttRate = setting.triggerTraceRelaxedBucket.ratePerSec
-		break
 	case ModeStrictTriggerTrace:
 		ttCap = setting.triggerTraceStrictBucket.capacity
 		ttRate = setting.triggerTraceStrictBucket.ratePerSec
-		break
-	default:
 	case ModeTriggerTraceNotPresent, ModeInvalidTriggerTrace:
+	default:
 		ttCap = setting.bucket.capacity
 		ttRate = setting.bucket.ratePerSec
-		break
 	}
 	return ttCap, ttRate
 }
