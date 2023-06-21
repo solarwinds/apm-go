@@ -110,7 +110,7 @@ func httpTest(f http.HandlerFunc, opts ...solarwinds_apm.SpanOpt) *httptest.Resp
 func TestHTTPHandler404(t *testing.T) {
 	r := reporter.SetTestReporter() // set up test reporter
 	response := httpTest(handler404)
-	assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
+	assert.Len(t, response.Header()[solarwinds_apm.HTTPHeaderName], 1)
 
 	r.Close(2)
 	g.AssertGraph(t, r.EventBufs, 2, g.AssertNodeMap{
@@ -122,7 +122,7 @@ func TestHTTPHandler404(t *testing.T) {
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Equal(t, response.HeaderMap.Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
+			assert.Equal(t, response.Header().Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 404, n.Map["Status"])
 			assert.Equal(t, "solarwinds_apm_test", n.Map["Controller"])
@@ -147,8 +147,8 @@ func TestHTTPHandler200(t *testing.T) {
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
-			assert.Equal(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName][0], n.Map[solarwinds_apm.HTTPHeaderName])
+			assert.Len(t, response.Header()[solarwinds_apm.HTTPHeaderName], 1)
+			assert.Equal(t, response.Header()[solarwinds_apm.HTTPHeaderName][0], n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 200, n.Map["Status"])
 			assert.Equal(t, "solarwinds_apm_test", n.Map["Controller"])
@@ -829,7 +829,7 @@ func TestConcurrentAppNoTrace(t *testing.T) {
 func TestHTTPHandlerOpts(t *testing.T) {
 	r := reporter.SetTestReporter() // set up test reporter
 	response := httpTest(handler404, solarwinds_apm.WithBackTrace())
-	assert.Len(t, response.HeaderMap[solarwinds_apm.HTTPHeaderName], 1)
+	assert.Len(t, response.Header()[solarwinds_apm.HTTPHeaderName], 1)
 
 	r.Close(2)
 	g.AssertGraph(t, r.EventBufs, 2, g.AssertNodeMap{
@@ -842,7 +842,7 @@ func TestHTTPHandlerOpts(t *testing.T) {
 		}},
 		{"http.HandlerFunc", "exit"}: {Edges: g.Edges{{"http.HandlerFunc", "entry"}}, Callback: func(n g.Node) {
 			// assert that response X-Trace header matches trace exit event
-			assert.Equal(t, response.HeaderMap.Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
+			assert.Equal(t, response.Header().Get(solarwinds_apm.HTTPHeaderName), n.Map[solarwinds_apm.HTTPHeaderName])
 			assert.EqualValues(t, response.Code, n.Map["Status"])
 			assert.EqualValues(t, 404, n.Map["Status"])
 			assert.Equal(t, "solarwinds_apm_test", n.Map["Controller"])
