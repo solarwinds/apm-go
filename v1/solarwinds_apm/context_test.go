@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//lint:file-ignore SA1012 We're testing that our own code does not panic
+
 package solarwinds_apm
 
 import (

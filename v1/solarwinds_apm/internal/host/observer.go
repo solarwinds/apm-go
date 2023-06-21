@@ -11,10 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package host
 
 import (
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -190,7 +191,7 @@ func getAWSMeta(url string) (meta string) {
 		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Debugf("Failed to read AWS metadata response: %s", url)
 		return

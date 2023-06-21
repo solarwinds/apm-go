@@ -20,12 +20,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -272,7 +272,7 @@ func newGRPCReporter() reporter {
 	// certificate override
 	if certPath := config.GetTrustedPath(); certPath != "" {
 		var err error
-		cert, err := ioutil.ReadFile(certPath)
+		cert, err := os.ReadFile(certPath)
 		if err != nil {
 			log.Errorf("Error reading cert file %s: %v", certPath, err)
 			return &nullReporter{}
@@ -1341,7 +1341,7 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 		}
 
 		if proxy.Scheme == "https" {
-			cert, err := ioutil.ReadFile(p.ProxyCertPath)
+			cert, err := os.ReadFile(p.ProxyCertPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to load proxy cert")
 			}

@@ -11,14 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//go:build go1.7
-// +build go1.7
 
 package solarwinds_apm_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
@@ -33,7 +31,7 @@ import (
 
 	"context"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
@@ -640,7 +638,7 @@ func AliceHandler(w http.ResponseWriter, r *http.Request) {
 
 	// read response body
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	l.End() // end HTTP client timing
 	// w.WriteHeader(200)
 	if err != nil {
@@ -677,7 +675,7 @@ func TestDistributedApp(t *testing.T) {
 	resp, err := http.Get("http://localhost:8080/alice")
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	t.Logf("Response: %v BUF %s", resp, buf)
 
@@ -739,7 +737,7 @@ func concurrentAliceHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			// read response body
 			defer resp.Body.Close()
-			buf, err := ioutil.ReadAll(resp.Body)
+			buf, err := io.ReadAll(resp.Body)
 			l.End() // end HTTP client timing
 			if err != nil {
 				outCh <- []byte(fmt.Sprintf(`{"error":"%v"}`, err))
@@ -775,7 +773,7 @@ func TestConcurrentApp(t *testing.T) {
 	resp, err := http.Get("http://localhost:8082/alice")
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	t.Logf("Response: %v BUF %s", resp, buf)
 
@@ -820,7 +818,7 @@ func TestConcurrentAppNoTrace(t *testing.T) {
 	resp, err := http.Get("http://localhost:8094/alice")
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	assert.NotNil(t, buf)
 

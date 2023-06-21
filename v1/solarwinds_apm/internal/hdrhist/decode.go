@@ -17,7 +17,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
-	"io/ioutil"
+	"io"
 	"math"
 
 	"github.com/pkg/errors"
@@ -79,7 +79,7 @@ func decodeCompressed(h *Hist, buf []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "can't create decompressor")
 	}
-	b, err := ioutil.ReadAll(zr)
+	b, err := io.ReadAll(zr)
 	zr.Close()
 	if err != nil {
 		return errors.Wrap(err, "unable to decompress encoded hist")
