@@ -3,7 +3,7 @@ module github.com/solarwindscloud/solarwinds-apm-go
 go 1.20
 
 require (
-	github.com/coocood/freecache v1.2.0
+	github.com/coocood/freecache v1.2.3
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-version v1.3.0
 	github.com/opentracing/basictracer-go v1.1.0
@@ -18,7 +18,7 @@ require (
 )
 
 require (
-	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.1 // indirect
 	github.com/go-logr/stdr v1.2.0 // indirect
