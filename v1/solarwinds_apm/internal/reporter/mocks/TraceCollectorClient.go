@@ -18,7 +18,7 @@ package mocks
 import "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
 
 // FIX: gRPC generated file use x/net/context - import context "context"
-import "golang.org/x/net/context"
+import "context"
 import "google.golang.org/grpc"
 import "github.com/stretchr/testify/mock"
 
