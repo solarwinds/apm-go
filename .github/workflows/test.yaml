@@ -64,3 +64,8 @@ jobs:
 
       - uses: codecov/codecov-action@v1
         if: matrix.goversion == '1.20'
+
+      - uses: dominikh/staticcheck-action@v1.2.0
+        with:
+          install-go: false
+          cache-key: ${{ matrix.goversion }}
