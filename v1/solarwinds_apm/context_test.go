@@ -46,7 +46,7 @@ func TestContext(t *testing.T) {
 	assert.Equal(t, ctx2.Value(traceKey).(*apmTrace).apmCtx.MetadataString(), xt)
 
 	ctxx := tr.apmCtx.Copy()
-	lbl := spanLabeler{"L1"}
+	lbl := &spanLabeler{"L1"}
 	tr2 := &apmTrace{layerSpan: layerSpan{span: span{apmCtx: ctxx, labeler: lbl}}}
 	ctx3 := context.WithValue(ctx2, traceKey, tr2)
 	assert.Equal(t, ctx3.Value(traceKey), tr2)

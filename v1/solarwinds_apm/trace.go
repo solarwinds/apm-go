@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
@@ -149,7 +150,7 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 		return NewNullTrace()
 	}
 	t := &apmTrace{
-		layerSpan:      layerSpan{span: span{apmCtx: ctx, labeler: spanLabeler{spanName}}},
+		layerSpan:      layerSpan{span: span{apmCtx: ctx, labeler: &spanLabeler{spanName}}},
 		httpRspHeaders: make(map[string]string),
 	}
 

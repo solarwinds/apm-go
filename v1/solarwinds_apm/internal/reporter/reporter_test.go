@@ -148,12 +148,6 @@ func TestNullReporter(t *testing.T) {
 
 // ========================= GRPC Reporter =============================
 
-func assertSSLMode(t *testing.T) {
-	if os.Getenv("SW_APM_REPORTER") != "ssl" {
-		t.Skip("not running in SSL mode, skipping.")
-	}
-}
-
 func TestGRPCReporter(t *testing.T) {
 	// start test gRPC server
 	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")

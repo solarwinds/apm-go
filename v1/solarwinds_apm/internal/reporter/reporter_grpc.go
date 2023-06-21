@@ -1060,9 +1060,6 @@ var (
 	// the operation or loop cannot continue as the reporter is exiting.
 	errReporterExiting = errors.New("reporter is exiting")
 
-	// something might be wrong if we run into this error.
-	errShouldNotHappen = errors.New("this should not happen")
-
 	// errNoRetryOnErr means this RPC call method doesn't need retry, e.g., the
 	// Ping method.
 	errNoRetryOnErr = errors.New("method requires no retry")

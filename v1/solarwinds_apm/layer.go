@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
@@ -438,9 +439,8 @@ type span struct {
 	ended         bool // has exit event been reported?
 	lock          sync.RWMutex
 }
-type layerSpan struct{ span }   // satisfies Span
-type profileSpan struct{ span } // satisfies Profile
-type nullSpan struct{}          // a span that is not tracing; satisfies Span & Profile
+type layerSpan struct{ span } // satisfies Span
+type nullSpan struct{}        // a span that is not tracing; satisfies Span & Profile
 type contextSpan struct {
 	nullSpan
 	apmCtx reporter.Context
@@ -511,21 +511,18 @@ type labeler interface {
 }
 type spanLabeler struct{ name string }
 
-// Deprecated: profileLabeler is deprecated, use spanLabeler instead.
-type profileLabeler struct{ name string }
-
 // SolarWinds Observability's Span and Profile spans report their layer and label names slightly differently
-func (l spanLabeler) entryLabel() reporter.Label { return reporter.LabelEntry }
-func (l spanLabeler) exitLabel() reporter.Label  { return reporter.LabelExit }
-func (l spanLabeler) layerName() string          { return l.name }
-func (l spanLabeler) setName(name string)        { l.name = name }
+func (l *spanLabeler) entryLabel() reporter.Label { return reporter.LabelEntry }
+func (l *spanLabeler) exitLabel() reporter.Label  { return reporter.LabelExit }
+func (l *spanLabeler) layerName() string          { return l.name }
+func (l *spanLabeler) setName(name string)        { l.name = name }
 
 func newSpan(apmCtx reporter.Context, spanName string, parent Span, overrides Overrides, args ...interface{}) Span {
 	if spanName == "" {
 		return nullSpan{}
 	}
 
-	ll := spanLabeler{spanName}
+	ll := &spanLabeler{spanName}
 
 	//fmt.Printf("Starting new span with context %+v\n", apmCtx)
 	if err := apmCtx.ReportEventWithOverrides(ll.entryLabel(), ll.layerName(), reporter.Overrides{
