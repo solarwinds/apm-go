@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package host
 
 import (
@@ -240,9 +241,7 @@ func withContainerId(id string) IDSetter {
 func withMAC(mac []string) IDSetter {
 	return func(h *ID) {
 		h.mac = []string{}
-		for _, m := range mac {
-			h.mac = append(h.mac, m)
-		}
+		h.mac = append(h.mac, mac...)
 	}
 }
 

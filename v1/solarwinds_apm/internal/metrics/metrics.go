@@ -637,17 +637,17 @@ func addMetricsValue(bbuf *bson.Buffer, index *int, name string, value interface
 	}()
 
 	bbuf.AppendString("name", name)
-	switch value.(type) {
+	switch v := value.(type) {
 	case int:
-		bbuf.AppendInt("value", value.(int))
+		bbuf.AppendInt("value", v)
 	case int64:
-		bbuf.AppendInt64("value", value.(int64))
+		bbuf.AppendInt64("value", v)
 	case float32:
-		v32 := value.(float32)
+		v32 := v
 		v64 := float64(v32)
 		bbuf.AppendFloat64("value", v64)
 	case float64:
-		bbuf.AppendFloat64("value", value.(float64))
+		bbuf.AppendFloat64("value", v)
 	default:
 		bbuf.AppendString("value", "unknown")
 	}
