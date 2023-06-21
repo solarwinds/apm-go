@@ -76,8 +76,7 @@ type buckets struct {
 // is useful when combining or taking differences of
 // histograms.
 func (h *Hist) Clone() *Hist {
-	var h2 Hist
-	h2 = *h
+	h2 := *h
 	c := make([]int64, len(h2.b.counts))
 	copy(c, h2.b.counts)
 	h2.b.counts = c
@@ -213,10 +212,6 @@ func (b *buckets) medianEquiv(v int64) int64 {
 
 func (b *buckets) highestEquiv(v int64) int64 {
 	return b.lowestEquiv(v) + b.sizeOfEquivalentValueRange(v) - 1
-}
-
-func (b *buckets) areEquiv(v1, v2 int64) bool {
-	return b.lowestEquiv(v1) == b.lowestEquiv(v2)
 }
 
 func leadingZeros(x uint64) int {
