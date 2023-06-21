@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -130,7 +131,7 @@ func (pe *PostEventsMethod) Call(ctx context.Context,
 	}
 	start := time.Now()
 	pe.Resp, pe.err = c.PostEvents(ctx, request)
-	pe.rtt = time.Now().Sub(start)
+	pe.rtt = time.Since(start)
 	return pe.err
 }
 
@@ -218,7 +219,7 @@ func (pm *PostMetricsMethod) Call(ctx context.Context,
 	}
 	start := time.Now()
 	pm.Resp, pm.err = c.PostMetrics(ctx, request)
-	pm.rtt = time.Now().Sub(start)
+	pm.rtt = time.Since(start)
 	return pm.err
 }
 
@@ -306,7 +307,7 @@ func (ps *PostStatusMethod) Call(ctx context.Context,
 	}
 	start := time.Now()
 	ps.Resp, ps.err = c.PostStatus(ctx, request)
-	ps.rtt = time.Now().Sub(start)
+	ps.rtt = time.Since(start)
 	return ps.err
 }
 
@@ -384,7 +385,7 @@ func (gs *GetSettingsMethod) Call(ctx context.Context,
 	}
 	start := time.Now()
 	gs.Resp, gs.err = c.GetSettings(ctx, request)
-	gs.rtt = time.Now().Sub(start)
+	gs.rtt = time.Since(start)
 	return gs.err
 }
 
@@ -458,7 +459,7 @@ func (p *PingMethod) Call(ctx context.Context,
 	}
 	start := time.Now()
 	p.Resp, p.err = c.Ping(ctx, request)
-	p.rtt = time.Now().Sub(start)
+	p.rtt = time.Since(start)
 	return p.err
 }
 
