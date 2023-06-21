@@ -196,7 +196,7 @@ type SamplingScenario struct {
 	oboeDecision bool
 
 	// expectations
-	obeyTT   bool // TODO verify this somehow (NH-5731)
+	//obeyTT   bool // TODO verify this somehow (NH-5731)
 	ttMode   reporter.TriggerTraceMode
 	decision sdktrace.SamplingDecision
 }
@@ -242,10 +242,10 @@ func (s SamplingScenario) test(t *testing.T) {
 	if s.triggerTrace {
 		ctx = context.WithValue(ctx, xtrace.OptionsKey, "trigger-trace")
 	}
-	if s.xtraceSignature {
-		// TODO do hmac (NH-5731)
-		//ctx = context.WithValue(ctx, xtrace.SignatureKey, s.xtraceSig)
-	}
+	//if s.xtraceSignature {
+	//	// TODO do hmac (NH-5731)
+	//	//ctx = context.WithValue(ctx, xtrace.SignatureKey, s.xtraceSig)
+	//}
 	params := sdktrace.SamplingParameters{
 		ParentContext: ctx,
 		TraceID:       traceId,

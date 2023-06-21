@@ -46,9 +46,9 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options) trace.TraceSta
 	} else {
 		ts = psc.TraceState()
 	}
-	if xto.Opts() != "" {
-		// TODO: NH-5731
-	}
+	//if xto.Opts() != "" {
+	//	// TODO: NH-5731
+	//}
 	return ts
 }
 

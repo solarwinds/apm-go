@@ -455,7 +455,6 @@ func (t *nullTrace) SetPath(path string)                         {}
 func (t *nullTrace) SetHost(host string)                         {}
 func (t *nullTrace) SetStatus(status int)                        {}
 func (t *nullTrace) LoggableTraceID() string                     { return "" }
-func (t *nullTrace) recordMetrics()                              {}
 func (t *nullTrace) HTTPRspHeaders() map[string]string           { return nil }
 func (t *nullTrace) SetHTTPRspHeaders(headers map[string]string) {}
 
