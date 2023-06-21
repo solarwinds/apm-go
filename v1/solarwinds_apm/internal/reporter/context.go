@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -64,7 +65,7 @@ var allZeroTaskID = make([]byte, oboeMaxTaskIDLen)
 type oboeIDs struct{ taskID, opID []byte }
 
 func (ids oboeIDs) validate() error {
-	if bytes.Compare(allZeroTaskID, ids.taskID) != 0 {
+	if !bytes.Equal(allZeroTaskID, ids.taskID) {
 		return nil
 	} else {
 		return errInvalidTaskID
