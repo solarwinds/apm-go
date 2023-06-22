@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
@@ -149,7 +150,7 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 		return NewNullTrace()
 	}
 	t := &apmTrace{
-		layerSpan:      layerSpan{span: span{apmCtx: ctx, labeler: spanLabeler{spanName}}},
+		layerSpan:      layerSpan{span: span{apmCtx: ctx, labeler: &spanLabeler{spanName}}},
 		httpRspHeaders: make(map[string]string),
 	}
 
@@ -454,7 +455,6 @@ func (t *nullTrace) SetPath(path string)                         {}
 func (t *nullTrace) SetHost(host string)                         {}
 func (t *nullTrace) SetStatus(status int)                        {}
 func (t *nullTrace) LoggableTraceID() string                     { return "" }
-func (t *nullTrace) recordMetrics()                              {}
 func (t *nullTrace) HTTPRspHeaders() map[string]string           { return nil }
 func (t *nullTrace) SetHTTPRspHeaders(headers map[string]string) {}
 

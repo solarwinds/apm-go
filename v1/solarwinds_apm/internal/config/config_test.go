@@ -16,7 +16,6 @@ package config
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -346,7 +345,7 @@ func TestYamlConfig(t *testing.T) {
 	out, err := yaml.Marshal(&yamlConfig)
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile("/tmp/solarwinds-apm-config.yaml", out, 0644)
+	err = os.WriteFile("/tmp/solarwinds-apm-config.yaml", out, 0644)
 	assert.Nil(t, err)
 
 	// Test with config file
@@ -462,7 +461,7 @@ func TestInvalidConfigFile(t *testing.T) {
 	ClearEnvs()
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
 	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.json")
-	_ = ioutil.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644)
+	_ = os.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644)
 
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), ErrUnsupportedFormat.Error())

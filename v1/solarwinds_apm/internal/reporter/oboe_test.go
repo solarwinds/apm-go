@@ -23,12 +23,10 @@ import (
 	"time"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
-	"github.com/stretchr/testify/require"
-	mbson "gopkg.in/mgo.v2/bson"
-
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTokenBucket(ratePerSec, size float64) *tokenBucket {
@@ -116,10 +114,6 @@ func TestTokenBucketTime(t *testing.T) {
 	assert.EqualValues(t, 5, b.avail())
 	b.setRateCap(5, 3)
 	assert.EqualValues(t, 3, b.available)
-}
-
-func testLayerCount(count int64) interface{} {
-	return mbson.D{mbson.DocElem{Name: testLayer, Value: count}}
 }
 
 func callShouldTraceRequest(total int, isTraced bool) (traced int) {
@@ -613,7 +607,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 
@@ -624,7 +618,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_DEFAULT, source)
 	assert.Equal(t, 1000, rate)
 
@@ -635,7 +629,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting doesn't have the override flag && local config has higher rate
@@ -645,7 +639,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting has the override flag && no local config
@@ -655,7 +649,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		10000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_DEFAULT, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting doesn't have the override flag && no local config
@@ -665,7 +659,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		10000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_DEFAULT, source)
 	assert.Equal(t, 10000, rate)
 	// Remote setting has the override flag && local tracing mode = DISABLED
@@ -675,7 +669,7 @@ func TestMergeRemoteSettingWithLocalConfig(t *testing.T) {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("OVERRIDE,SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte("")))
-	trace, rate, source, _ = shouldTraceRequest(testLayer, false)
+	_, rate, source, _ = shouldTraceRequest(testLayer, false)
 	assert.Equal(t, SAMPLE_SOURCE_FILE, source)
 	assert.Equal(t, 10000, rate)
 }

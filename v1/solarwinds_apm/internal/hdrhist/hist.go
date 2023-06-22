@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package hdrhist
 
 import (
@@ -75,8 +76,7 @@ type buckets struct {
 // is useful when combining or taking differences of
 // histograms.
 func (h *Hist) Clone() *Hist {
-	var h2 Hist
-	h2 = *h
+	h2 := *h
 	c := make([]int64, len(h2.b.counts))
 	copy(c, h2.b.counts)
 	h2.b.counts = c
@@ -88,18 +88,6 @@ type HistVal struct {
 	Count      int64
 	CumCount   int64
 	Percentile float64
-}
-
-// New creates a new Hist that auto-resizes and has
-// a LowestDiscernible value of 1. Valid values for
-// sigfigs are between 0 and 5.
-func New(sigfigs int32) *Hist {
-	return WithConfig(Config{
-		LowestDiscernible: 1,
-		HighestTrackable:  2,
-		SigFigs:           sigfigs,
-		AutoResize:        true,
-	})
 }
 
 // WithConfig creates a new Hist with the provided
@@ -224,10 +212,6 @@ func (b *buckets) medianEquiv(v int64) int64 {
 
 func (b *buckets) highestEquiv(v int64) int64 {
 	return b.lowestEquiv(v) + b.sizeOfEquivalentValueRange(v) - 1
-}
-
-func (b *buckets) areEquiv(v1, v2 int64) bool {
-	return b.lowestEquiv(v1) == b.lowestEquiv(v2)
 }
 
 func leadingZeros(x uint64) int {
@@ -391,10 +375,10 @@ func (h *Hist) Mean() float64 {
 
 func (h *Hist) Stdev() float64 {
 	var sum float64
-	μ := h.Mean()
+	mean := h.Mean()
 	for i, count := range h.b.counts {
 		v := h.b.medianEquiv(h.b.valueFor(i))
-		dev := μ - float64(v)
+		dev := mean - float64(v)
 		sum += dev * dev * float64(count)
 	}
 	return math.Sqrt(sum / math.Max(float64(h.totalCount), 1))
@@ -496,21 +480,6 @@ func (h *Hist) GetConfig() Config {
 
 type Recorder struct {
 	h Hist
-}
-
-func NewRecorder(sigfigs int32) *Recorder {
-	return NewRecorderWithConfig(Config{
-		LowestDiscernible: 1,
-		HighestTrackable:  2,
-		SigFigs:           sigfigs,
-		AutoResize:        true,
-	})
-}
-
-func NewRecorderWithConfig(cfg Config) *Recorder {
-	var r Recorder
-	r.Init(cfg)
-	return &r
 }
 
 func (r *Recorder) Init(cfg Config) {

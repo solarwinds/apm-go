@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // Package graphtest provides test utilities for asserting properties of event graphs.
+
 package graphtest
 
 import (
@@ -22,23 +23,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/mgo.v2/bson"
 )
-
-// assert that each condition in a switch statement only occurs once.
-func assertOnce(t *testing.T) {
-	s := string(debug.Stack())
-	_, contains := seenStacks[s]
-	assert.False(t, contains, fmt.Sprintf("seeing multiple %s", s))
-	seenStacks[s] = true
-}
-
-var seenStacks = make(map[string]bool)
 
 // Node is a decoded event report used for testing assertions.
 type Node struct {
@@ -116,10 +106,6 @@ type AsserterMap interface {
 	Size() int
 	AssertSeen(t *testing.T, n Node)
 	AssertMissing(t *testing.T)
-}
-
-type matcher interface {
-	Match(n Node) (mn matcher, ok bool)
 }
 
 // An AssertNodeMap describes a list of nodes by {Layer, Label} and assertions about them.

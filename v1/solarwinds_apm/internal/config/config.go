@@ -25,7 +25,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -701,7 +700,7 @@ func (c *Config) getConfigPath() string {
 }
 
 func (c *Config) loadYaml(path string) error {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "loadYaml")
 	}

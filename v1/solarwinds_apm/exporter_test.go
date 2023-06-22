@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	ot "go.opentelemetry.io/otel/trace"
 )
 
@@ -65,7 +64,7 @@ func NewDummyExporter() *DummyExporter {
 	return &DummyExporter{}
 }
 
-func (de *DummyExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+func (de *DummyExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
 	return nil
 }
 

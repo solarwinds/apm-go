@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package hdrhist
 
 import (
@@ -27,10 +28,6 @@ type LogWriter struct {
 	w        io.Writer
 	buf      bytes.Buffer
 	baseTime *time.Time
-}
-
-func NewLogWriter(w io.Writer) *LogWriter {
-	return &LogWriter{w: w}
 }
 
 func (l *LogWriter) WriteStartTime(start time.Time) error {
@@ -79,9 +76,7 @@ func (l *LogWriter) WriteIntervalHist(h *Hist) error {
 	e, okEnd := h.EndTime()
 	if ok && okEnd {
 		if b, ok := l.GetBaseTime(); ok {
-			d := t.Sub(b)
-			t = time.Unix(int64(d/time.Second), int64(d%time.Second))
-			d = e.Sub(b)
+			d := e.Sub(b)
 			t = time.Unix(int64(d/time.Second), int64(d%time.Second))
 		}
 	}

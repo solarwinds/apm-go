@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -64,7 +65,7 @@ var allZeroTaskID = make([]byte, oboeMaxTaskIDLen)
 type oboeIDs struct{ taskID, opID []byte }
 
 func (ids oboeIDs) validate() error {
-	if bytes.Compare(allZeroTaskID, ids.taskID) != 0 {
+	if !bytes.Equal(allZeroTaskID, ids.taskID) {
 		return nil
 	} else {
 		return errInvalidTaskID
@@ -202,8 +203,6 @@ func (md *oboeMetadata) Pack(buf []byte) (int, error) {
 		return 0, errors.New("md.Pack: buf too short to pack")
 	}
 
-	var taskBits byte
-
 	/*
 	 * Flag field layout:
 	 *     7    6     5     4     3     2     1     0
@@ -221,7 +220,7 @@ func (md *oboeMetadata) Pack(buf []byte) (int, error) {
 	 *
 	 * version - the version of X-Trace
 	 */
-	taskBits = (uint8(md.taskLen) >> 2) - 1
+	taskBits := (uint8(md.taskLen) >> 2) - 1
 
 	buf[0] = md.version << 4
 	if taskBits == 4 {
@@ -508,7 +507,7 @@ const (
 // TODO: Determine a clean/elegant way to clean this up.
 func ValidateXTraceOptionsSignature(signature, ts, data string) error {
 	var err error
-	ts, err = tsInScope(ts)
+	_, err = tsInScope(ts)
 	if err != nil {
 		return errors.New(ttAuthBadTimestamp)
 	}

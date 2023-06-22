@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -96,6 +97,7 @@ func TestPostStatusMethod(t *testing.T) {
 	err := pe.Call(context.Background(), mockTC)
 	assert.Nil(t, err)
 	code, err := pe.ResultCode()
+	assert.Nil(t, err)
 	assert.Equal(t, collector.ResultCode_OK, code)
 	assert.Equal(t, "", pe.Arg())
 }

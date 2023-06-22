@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -143,6 +144,10 @@ var triggerTraceRelaxedBucket = &tokenBucket{}
 var triggerTraceStrictBucket = &tokenBucket{}
 
 func init() {
+	// TODO Remove this when we deprecate support of Go versions < 1.20
+	// Go >= 1.20 "automatically seeds the global random number generator"
+	// Read more here: https://tip.golang.org/doc/go1.20
+	//lint:ignore SA1019 See reason above
 	rand.Seed(time.Now().UnixNano())
 }
 
@@ -416,16 +421,13 @@ func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (floa
 	case ModeRelaxedTriggerTrace:
 		ttCap = setting.triggerTraceRelaxedBucket.capacity
 		ttRate = setting.triggerTraceRelaxedBucket.ratePerSec
-		break
 	case ModeStrictTriggerTrace:
 		ttCap = setting.triggerTraceStrictBucket.capacity
 		ttRate = setting.triggerTraceStrictBucket.ratePerSec
-		break
-	default:
 	case ModeTriggerTraceNotPresent, ModeInvalidTriggerTrace:
+	default:
 		ttCap = setting.bucket.capacity
 		ttRate = setting.bucket.ratePerSec
-		break
 	}
 	return ttCap, ttRate
 }

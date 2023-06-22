@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -131,7 +132,7 @@ func (b *BytesBucket) PourIn() int {
 		}
 	}
 
-	drainTimeout := time.After(b.nextDrainTimeout.Sub(time.Now()))
+	drainTimeout := time.After(time.Until(b.nextDrainTimeout))
 	// drain the first drop of water ASAP
 	drainASAP := b.neverDrained
 

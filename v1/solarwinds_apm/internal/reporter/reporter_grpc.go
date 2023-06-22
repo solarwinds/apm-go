@@ -20,12 +20,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -272,7 +272,7 @@ func newGRPCReporter() reporter {
 	// certificate override
 	if certPath := config.GetTrustedPath(); certPath != "" {
 		var err error
-		cert, err := ioutil.ReadFile(certPath)
+		cert, err := os.ReadFile(certPath)
 		if err != nil {
 			log.Errorf("Error reading cert file %s: %v", certPath, err)
 			return &nullReporter{}
@@ -383,7 +383,7 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 
 			var g bool
 			if d, ddlSet := ctx.Deadline(); ddlSet {
-				g = d.Sub(time.Now()) > 0
+				g = time.Until(d) > 0
 			} else {
 				g = true
 			}
@@ -1060,9 +1060,6 @@ var (
 	// the operation or loop cannot continue as the reporter is exiting.
 	errReporterExiting = errors.New("reporter is exiting")
 
-	// something might be wrong if we run into this error.
-	errShouldNotHappen = errors.New("this should not happen")
-
 	// errNoRetryOnErr means this RPC call method doesn't need retry, e.g., the
 	// Ping method.
 	errNoRetryOnErr = errors.New("method requires no retry")
@@ -1341,7 +1338,7 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 		}
 
 		if proxy.Scheme == "https" {
-			cert, err := ioutil.ReadFile(p.ProxyCertPath)
+			cert, err := os.ReadFile(p.ProxyCertPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to load proxy cert")
 			}

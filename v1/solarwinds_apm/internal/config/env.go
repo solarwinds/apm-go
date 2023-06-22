@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package config
 
 import (
@@ -121,7 +122,7 @@ func stringToValue(s string, typ reflect.Type) (reflect.Value, error) {
 		if s == "" {
 			return reflect.Zero(typ), nil
 		} else {
-			panic(fmt.Sprintf("Slice with non-empty value is not supported"))
+			panic("Slice with non-empty value is not supported")
 		}
 
 	default:

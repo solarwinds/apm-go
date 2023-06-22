@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -146,7 +147,6 @@ func (sr *serverlessReporter) sendMetrics(msgs [][]byte) {
 			log.Warningf("sendMetrics: %s", err)
 		}
 	}
-	return
 }
 
 func (sr *serverlessReporter) Flush() error {

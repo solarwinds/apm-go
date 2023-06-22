@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package metrics
 
 import (
@@ -392,6 +393,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	_, ok = m["PID"]
 	assert.False(t, ok)
 	_, ok = m[""]
+	assert.False(t, ok)
 	assert.Equal(t, host.Distro(), m["Distro"])
 	assert.True(t, m["Timestamp_u"].(int64) > 1509053785684891)
 	assert.Equal(t, 15, m["MetricsFlushInterval"])
