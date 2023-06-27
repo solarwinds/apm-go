@@ -157,14 +157,6 @@ func Closed() bool {
 	return globalReporter.Closed()
 }
 
-// ReportSpan is called from the app when a span message is available
-// span	span message to be put on the channel
-//
-// returns	error if channel is full
-//func ReportSpan(span metrics.SpanMessage) error {
-//	return globalReporter.reportSpan(span)
-//}
-
 // check if context and event are valid, add general keys like Timestamp, or hostname
 // ctx		oboe context
 // e		event to be prepared for sending
