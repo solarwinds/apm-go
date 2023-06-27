@@ -17,6 +17,7 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -25,8 +26,6 @@ var _ sdktrace.SpanProcessor = &SolarWindsInboundMetricsSpanProcessor{}
 type SolarWindsInboundMetricsSpanProcessor struct{}
 
 func (s *SolarWindsInboundMetricsSpanProcessor) OnStart(parent context.Context, span sdktrace.ReadWriteSpan) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (s *SolarWindsInboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
@@ -34,15 +33,13 @@ func (s *SolarWindsInboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan
 	if parent.IsValid() && !parent.IsRemote() {
 		return
 	}
-	metrics.RecordSpan(span)
+	metrics.RecordSpan(span, reporter.IsAppoptics())
 }
 
 func (s *SolarWindsInboundMetricsSpanProcessor) Shutdown(ctx context.Context) error {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (s *SolarWindsInboundMetricsSpanProcessor) ForceFlush(ctx context.Context) error {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }

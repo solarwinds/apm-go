@@ -684,22 +684,6 @@ func GetTransactionFromPath(path string) string {
 	return strings.Join(p[0:lp], "/")
 }
 
-// Process processes an HttpSpanMessage
-func (s *HTTPSpanMessage) Process(m *Measurements) {
-	// always add to overall histogram
-	apmHistograms.recordHistogram("", s.Duration)
-
-	// only record the transaction-specific histogram and measurements if we are still within the limit
-	// otherwise report it as an 'other' measurement
-	if reusableTags, err := s.processMeasurements(nil, m); err == ErrExceedsMetricsCountLimit {
-		s.Transaction = OtherTransactionName
-		s.processMeasurements(reusableTags, m)
-		return
-	}
-
-	apmHistograms.recordHistogram(s.Transaction, s.Duration)
-}
-
 func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
 	var tagsList []map[string]string
 
@@ -728,7 +712,7 @@ func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
 
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
-func (s *HTTPSpanMessage) processMeasurements(tagsList []map[string]string,
+func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
 	m *Measurements) ([]map[string]string, error) {
 	duration := float64(s.Duration / time.Microsecond)
 
@@ -736,7 +720,7 @@ func (s *HTTPSpanMessage) processMeasurements(tagsList []map[string]string,
 		tagsList = s.produceTagsList()
 	}
 
-	err := m.record(transactionResponseTime, tagsList, duration, 1, true)
+	err := m.record(metricName, tagsList, duration, 1, true)
 
 	if err != nil {
 		return tagsList, err
@@ -1013,26 +997,25 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 
 // -- otel --
 
-func RecordSpan(span sdktrace.ReadOnlySpan) {
+func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	method := ""
 	status := int64(0)
 	isError := span.Status().Code == codes.Error
 	attrs := span.Attributes()
-	swoTags := make(map[string]string, 3)
-	urlTxn := ""
+	swoTags := make(map[string]string)
 	httpRoute := ""
+	hostname := "" // todo: some sane default?
 	for _, attr := range attrs {
 		if attr.Key == semconv.HTTPMethodKey {
 			method = attr.Value.AsString()
 		} else if attr.Key == semconv.HTTPStatusCodeKey {
 			status = attr.Value.AsInt64()
-		} else if attr.Key == semconv.HTTPURLKey {
-			urlTxn = attr.Value.AsString()
 		} else if attr.Key == semconv.HTTPRouteKey {
 			httpRoute = attr.Value.AsString()
+		} else if attr.Key == semconv.HostNameKey {
+			hostname = attr.Value.AsString()
 		}
 	}
-	log.Info(urlTxn)
 	isHttp := span.SpanKind() == trace.SpanKindServer && method != ""
 
 	if isHttp {
@@ -1046,9 +1029,6 @@ func RecordSpan(span sdktrace.ReadOnlySpan) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	// TODO swoTags["sw.transaction"] = ???
-	// TODO custom txn name
-	// TODO filter/sanitize txn name
 	txnName := ""
 	if httpRoute != "" {
 		txnName = httpRoute
@@ -1057,28 +1037,37 @@ func RecordSpan(span sdktrace.ReadOnlySpan) {
 	}
 	swoTags["sw.transaction"] = txnName
 
-	apmHistograms.recordHistogram("", span.EndTime().Sub(span.StartTime()))
-	// TODO make sure we don't go over the number of available txn names
-	apmHistograms.recordHistogram(txnName, span.EndTime().Sub(span.StartTime()))
-
 	duration := span.EndTime().Sub(span.StartTime())
 	s := &HTTPSpanMessage{
 		BaseSpanMessage: BaseSpanMessage{Duration: duration, HasError: isError},
 		Transaction:     txnName,
 		Path:            httpRoute,
 		Status:          int(status),
-		Host:            "host", // todo
+		Host:            hostname,
 		Method:          method,
 	}
-	log.Info(s)
-	if reusableTags, err := s.processMeasurements(nil, ApmMetrics); err == ErrExceedsMetricsCountLimit {
+
+	var tagsList []map[string]string = nil
+	var metricName string
+	if !isAppoptics {
+		tagsList = []map[string]string{swoTags}
+		metricName = responseTime
+	} else {
+		metricName = transactionResponseTime
+	}
+
+	apmHistograms.recordHistogram("", duration)
+	if reusableTags, err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
 		s.Transaction = OtherTransactionName
-		_, err := s.processMeasurements(reusableTags, ApmMetrics)
+		_, err := s.processMeasurements(metricName, reusableTags, ApmMetrics)
 		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
 		// which is handled above, and the reason we retry here.
 		if err != nil {
 			log.Errorf("Failed to process messages", err)
 		}
+	} else {
+		// We didn't hit ErrExceedsMetricsCountLimit
+		apmHistograms.recordHistogram(txnName, duration)
 	}
 
 }
