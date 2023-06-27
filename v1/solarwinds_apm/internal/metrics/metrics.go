@@ -37,8 +37,9 @@ import (
 )
 
 const (
-	metricsTransactionsMaxDefault = 200 // default max amount of transaction names we allow per cycle
-	metricsHistPrecisionDefault   = 2   // default histogram precision
+	metricsTransactionsMaxDefault  = 200 // default max amount of transaction names we allow per cycle
+	metricsCustomMetricsMaxDefault = 500 // default max number of custom metrics
+	metricsHistPrecisionDefault    = 2   // default histogram precision
 
 	metricsTagNameLengthMax  = 64  // max number of characters for tag names
 	metricsTagValueLengthMax = 255 // max number of characters for tag values
@@ -89,8 +90,8 @@ var (
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
 
-var ApmMetrics = NewMeasurements(false, 200 /* todo */)
-var CustomMetrics = NewMeasurements(true, 500 /* todo */)
+var ApmMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
+var CustomMetrics = NewMeasurements(true, metricsCustomMetricsMaxDefault)
 
 // SpanMessage defines a span message
 type SpanMessage interface {
@@ -109,7 +110,7 @@ type HTTPSpanMessage struct {
 	Transaction string // transaction name (e.g. controller.action)
 	Path        string // the url path which will be processed and used as transaction (if Transaction is empty)
 	Status      int    // HTTP status code (e.g. 200, 500, ...)
-	Host        string // HTTP-Host
+	Host        string // HTTP-Host // This could be removed (-jared)
 	Method      string // HTTP method (e.g. GET, POST, ...)
 }
 
@@ -1004,7 +1005,6 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	attrs := span.Attributes()
 	swoTags := make(map[string]string)
 	httpRoute := ""
-	hostname := "" // todo: some sane default?
 	for _, attr := range attrs {
 		if attr.Key == semconv.HTTPMethodKey {
 			method = attr.Value.AsString()
@@ -1012,8 +1012,6 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 			status = attr.Value.AsInt64()
 		} else if attr.Key == semconv.HTTPRouteKey {
 			httpRoute = attr.Value.AsString()
-		} else if attr.Key == semconv.HostNameKey {
-			hostname = attr.Value.AsString()
 		}
 	}
 	isHttp := span.SpanKind() == trace.SpanKindServer && method != ""
@@ -1043,7 +1041,7 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		Transaction:     txnName,
 		Path:            httpRoute,
 		Status:          int(status),
-		Host:            hostname,
+		Host:            "", // intentionally not set
 		Method:          method,
 	}
 
