@@ -86,28 +86,6 @@ func TestReportEvent(t *testing.T) {
 	})
 }
 
-//func TestReportMetric(t *testing.T) {
-//	r := SetTestReporter()
-//	spanMsg := &metrics.HTTPSpanMessage{
-//		BaseSpanMessage: metrics.BaseSpanMessage{
-//			Duration: time.Second,
-//			HasError: false,
-//		},
-//		Transaction: "tname",
-//		Path:        "/path/to/url",
-//		Status:      203,
-//		Method:      "HEAD",
-//	}
-//	err := ReportSpan(spanMsg)
-//	assert.NoError(t, err)
-//	r.Close(1)
-//	assert.Len(t, r.SpanMessages, 1)
-//	sp, ok := r.SpanMessages[0].(*metrics.HTTPSpanMessage)
-//	require.True(t, ok)
-//	require.NotNil(t, sp)
-//	assert.True(t, reflect.DeepEqual(spanMsg, sp))
-//}
-
 // test behavior of the TestReporter
 func TestTestReporter(t *testing.T) {
 	r := SetTestReporter()
