@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,18 +41,13 @@ func TestServerless(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, r.reportEvent(ctx, ev1))
 
-	ReportSpan(&metrics.HTTPSpanMessage{})
-	IncrementMetric("custom_metric", metrics.MetricOptions{Count: 1})
-
 	assert.Nil(t, r.Flush())
 	arr := strings.Split(strings.TrimRight(sb.String(), "\n"), "\n")
 	evtCnt := 0
-	metricCnt := 0
 	for _, s := range arr {
 		sm := &ServerlessMessage{}
 		assert.Nil(t, json.Unmarshal([]byte(s), sm))
 
-		metricCnt += len(sm.Data.Metrics)
 		evtCnt += len(sm.Data.Events)
 
 		for _, s := range sm.Data.Events {
@@ -63,7 +57,6 @@ func TestServerless(t *testing.T) {
 			assert.Contains(t, evt, "layer1")
 		}
 	}
-	assert.Equal(t, 2, metricCnt)
 	assert.Equal(t, 1, evtCnt)
 }
 

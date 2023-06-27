@@ -34,7 +34,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -170,59 +169,6 @@ func TestHTTPHandlerNoTrace(t *testing.T) {
 }
 
 var httpSpanSleep time.Duration
-
-func TestHTTPSpan(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterDisableDefaultSetting(false)) // set up test reporter
-
-	httpSpanSleep = time.Duration(0) // fire off first request just as preparation for the following requests
-	httpTest(handlerDelay200)
-	httpSpanSleep = time.Duration(0)
-	httpTest(handlerDelay200)
-	httpSpanSleep = time.Duration(25 * time.Millisecond)
-	httpTest(handlerDelay200)
-	httpSpanSleep = time.Duration(456 * time.Millisecond)
-	httpTest(handlerDelay200)
-	httpSpanSleep = time.Duration(54 * time.Millisecond)
-	httpTest(handlerDelay503)
-
-	r.Close(5)
-
-	require.Len(t, r.SpanMessages, 5)
-
-	m, ok := r.SpanMessages[1].(*metrics.HTTPSpanMessage)
-	assert.True(t, ok)
-	nullDuration := m.Duration
-
-	m, ok = r.SpanMessages[2].(*metrics.HTTPSpanMessage)
-	assert.True(t, ok)
-	assert.Equal(t, "solarwinds_apm_test.handlerDelay200", m.Transaction)
-	assert.Equal(t, "/hello", m.Path)
-	assert.Equal(t, 200, m.Status)
-	assert.Equal(t, "GET", m.Method)
-	assert.False(t, m.HasError)
-	assert.InDelta(t, (25*time.Millisecond + nullDuration).Seconds(),
-		m.Duration.Seconds(), (10 * time.Millisecond).Seconds(),
-		fmt.Sprintf("%v, %v", nullDuration, m.Duration))
-
-	m, ok = r.SpanMessages[3].(*metrics.HTTPSpanMessage)
-	assert.True(t, ok)
-	assert.InDelta(t, (456*time.Millisecond + nullDuration).Seconds(), m.Duration.Seconds(), (10 * time.Millisecond).Seconds())
-
-	m, ok = r.SpanMessages[4].(*metrics.HTTPSpanMessage)
-	assert.True(t, ok)
-	assert.Equal(t, "solarwinds_apm_test.handlerDelay503", m.Transaction)
-	assert.Equal(t, 503, m.Status)
-	assert.True(t, m.HasError)
-	assert.InDelta(t, (54*time.Millisecond + nullDuration).Seconds(), m.Duration.Seconds(), (10 * time.Millisecond).Seconds())
-}
-
-func TestSingleHTTPSpan(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterDisableDefaultSetting(false)) // set up test reporter
-	httpTest(handlerDoubleWrapped)
-	r.Close(1)
-
-	assert.Equal(t, 1, len(r.SpanMessages))
-}
 
 // testServer tests creating a span/trace from inside an HTTP handler (using solarwinds_apm.TraceFromHTTPRequest)
 func testServer(t *testing.T, list net.Listener) {

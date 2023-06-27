@@ -34,7 +34,7 @@ type serverlessReporter struct {
 
 func newServerlessReporter(writer io.Writer) reporter {
 	r := &serverlessReporter{
-		customMetrics: metrics.NewMeasurements(true, 0, 500),
+		customMetrics: metrics.NewMeasurements(true, 500),
 	}
 
 	r.logWriter = newLogWriter(false, writer, 260000)

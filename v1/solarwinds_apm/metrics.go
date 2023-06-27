@@ -11,11 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 )
 
 // MetricOptions is a struct for the optional parameters of a measurement.
@@ -39,11 +39,11 @@ var (
 // SummaryMetric submits a summary type measurement to the reporter. The measurements
 // will be collected in the background and reported periodically.
 func SummaryMetric(name string, value float64, opts MetricOptions) error {
-	return reporter.SummaryMetric(name, value, opts)
+	return metrics.CustomMetrics.Summary(name, value, opts)
 }
 
 // IncrementMetric submits a incremental measurement to the reporter. The measurements
 // will be collected in the background and reported periodically.
 func IncrementMetric(name string, opts MetricOptions) error {
-	return reporter.IncrementMetric(name, opts)
+	return metrics.CustomMetrics.Increment(name, opts)
 }

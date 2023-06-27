@@ -212,7 +212,7 @@ func TestTransMap(t *testing.T) {
 }
 
 func TestRecordMeasurement(t *testing.T) {
-	var me = NewMeasurements(false, 60, 100)
+	var me = NewMeasurements(false, 100)
 
 	t1 := make(map[string]string)
 	t1["t1"] = "tag1"
@@ -243,15 +243,15 @@ func TestRecordHistogram(t *testing.T) {
 		histograms: make(map[string]*histogram),
 	}
 
-	recordHistogram(hi, "", time.Duration(123))
-	recordHistogram(hi, "", time.Duration(1554))
+	hi.recordHistogram("", time.Duration(123))
+	hi.recordHistogram("", time.Duration(1554))
 	assert.NotNil(t, hi.histograms[""])
 	h := hi.histograms[""]
 	assert.Empty(t, h.tags["TransactionName"])
 	encoded, _ := hdrhist.EncodeCompressed(h.hist)
 	assert.Equal(t, "HISTFAAAACR42pJpmSzMwMDAxIAKGEHEtclLGOw/QASYmAABAAD//1njBIo=", string(encoded))
 
-	recordHistogram(hi, "hist1", time.Duration(453122))
+	hi.recordHistogram("hist1", time.Duration(453122))
 	assert.NotNil(t, hi.histograms["hist1"])
 	h = hi.histograms["hist1"]
 	assert.Equal(t, "hist1", h.tags["TransactionName"])
@@ -260,7 +260,7 @@ func TestRecordHistogram(t *testing.T) {
 
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
-	recordHistogram(hi, "hist2", time.Duration(4531224545454563))
+	hi.recordHistogram("hist2", time.Duration(4531224545454563))
 	log.SetOutput(os.Stderr)
 	assert.Contains(t, buf.String(), "Failed to record histogram: value to large")
 }
@@ -380,7 +380,7 @@ func TestAddHistogramToBSON(t *testing.T) {
 }
 
 func TestGenerateMetricsMessage(t *testing.T) {
-	testMetrics := NewMeasurements(false, 15, metricsTransactionsMaxDefault)
+	testMetrics := NewMeasurements(false, metricsTransactionsMaxDefault)
 	bbuf := bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
 		map[string]*RateCounts{ // requested, sampled, limited, traced, through
 			RCRegular:             {10, 2, 5, 5, 1},
@@ -396,7 +396,6 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, host.Distro(), m["Distro"])
 	assert.True(t, m["Timestamp_u"].(int64) > 1509053785684891)
-	assert.Equal(t, 15, m["MetricsFlushInterval"])
 
 	mts := m["measurements"].([]interface{})
 
@@ -465,7 +464,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 
 	assert.Nil(t, m["TransactionNameOverflow"])
 
-	testMetrics = NewMeasurements(false, 60, metricsTransactionsMaxDefault)
+	testMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
 	for i := 0; i <= metricsTransactionsMaxDefault; i++ {
 		if !testMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
 			break
@@ -537,7 +536,7 @@ func TestHTTPSpanMessageProcess(t *testing.T) {
 		Method:          "GET",
 	}
 
-	m := NewMeasurements(false, 60, metricsTransactionsMaxDefault)
+	m := NewMeasurements(false, metricsTransactionsMaxDefault)
 	s.Process(m)
 	measurement, ok := m.m["TransactionResponseTime&true&TransactionName:transaction&"]
 	assert.True(t, ok)

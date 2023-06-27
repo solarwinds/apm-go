@@ -17,13 +17,11 @@ import (
 	"context"
 	"io"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
 	"strings"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
@@ -88,27 +86,27 @@ func TestReportEvent(t *testing.T) {
 	})
 }
 
-func TestReportMetric(t *testing.T) {
-	r := SetTestReporter()
-	spanMsg := &metrics.HTTPSpanMessage{
-		BaseSpanMessage: metrics.BaseSpanMessage{
-			Duration: time.Second,
-			HasError: false,
-		},
-		Transaction: "tname",
-		Path:        "/path/to/url",
-		Status:      203,
-		Method:      "HEAD",
-	}
-	err := ReportSpan(spanMsg)
-	assert.NoError(t, err)
-	r.Close(1)
-	assert.Len(t, r.SpanMessages, 1)
-	sp, ok := r.SpanMessages[0].(*metrics.HTTPSpanMessage)
-	require.True(t, ok)
-	require.NotNil(t, sp)
-	assert.True(t, reflect.DeepEqual(spanMsg, sp))
-}
+//func TestReportMetric(t *testing.T) {
+//	r := SetTestReporter()
+//	spanMsg := &metrics.HTTPSpanMessage{
+//		BaseSpanMessage: metrics.BaseSpanMessage{
+//			Duration: time.Second,
+//			HasError: false,
+//		},
+//		Transaction: "tname",
+//		Path:        "/path/to/url",
+//		Status:      203,
+//		Method:      "HEAD",
+//	}
+//	err := ReportSpan(spanMsg)
+//	assert.NoError(t, err)
+//	r.Close(1)
+//	assert.Len(t, r.SpanMessages, 1)
+//	sp, ok := r.SpanMessages[0].(*metrics.HTTPSpanMessage)
+//	require.True(t, ok)
+//	require.NotNil(t, sp)
+//	assert.True(t, reflect.DeepEqual(spanMsg, sp))
+//}
 
 // test behavior of the TestReporter
 func TestTestReporter(t *testing.T) {
@@ -334,7 +332,6 @@ func TestInvalidKey(t *testing.T) {
 		"Shutting down the reporter",
 		// "periodicTasks goroutine exiting",
 		"eventSender goroutine exiting",
-		"spanMessageAggregator goroutine exiting",
 		"statusSender goroutine exiting",
 		"eventBatchSender goroutine exiting",
 	}
@@ -541,66 +538,6 @@ func TestCollectMetricsNextInterval(t *testing.T) {
 	next := r.collectMetricsNextInterval()
 	// very weak check
 	assert.True(t, next <= time.Second*10, next)
-}
-
-func TestCustomMetrics(t *testing.T) {
-	r := &grpcReporter{
-		// Other fields are not needed.
-		customMetrics: metrics.NewMeasurements(true, grpcMetricIntervalDefault, 500),
-	}
-
-	// Test non-positive count
-	assert.NotNil(t, r.CustomSummaryMetric("Summary", 1.1, metrics.MetricOptions{
-		Count:   0,
-		HostTag: true,
-		Tags:    map[string]string{"hello": "world"},
-	}))
-	assert.NotNil(t, r.CustomIncrementMetric("Incremental", metrics.MetricOptions{
-		Count:   -1,
-		HostTag: true,
-		Tags:    map[string]string{"hi": "globe"},
-	}))
-
-	r.CustomSummaryMetric("Summary", 1.1, metrics.MetricOptions{
-		Count:   1,
-		HostTag: true,
-		Tags:    map[string]string{"hello": "world"},
-	})
-	r.CustomIncrementMetric("Incremental", metrics.MetricOptions{
-		Count:   1,
-		HostTag: true,
-		Tags:    map[string]string{"hi": "globe"},
-	})
-	custom := metrics.BuildMessage(r.customMetrics.CopyAndReset(grpcMetricIntervalDefault), false)
-
-	bbuf := bson.WithBuf(custom)
-	mMap := mbson.M{}
-	mbson.Unmarshal(bbuf.GetBuf(), mMap)
-
-	assert.Equal(t, mMap["IsCustom"], true)
-	assert.NotEqual(t, mMap["Timestamp_u"], 0)
-	assert.Equal(t, mMap["MetricsFlushInterval"], grpcMetricIntervalDefault)
-	assert.NotEqual(t, mMap["IPAddresses"], nil)
-	assert.NotEqual(t, mMap["Distro"], "")
-
-	mts := mMap["measurements"].([]interface{})
-	require.Equal(t, len(mts), 2)
-
-	mSummary := mts[0].(mbson.M)
-	mIncremental := mts[1].(mbson.M)
-
-	if mSummary["name"] == "Incremental" {
-		mSummary, mIncremental = mIncremental, mSummary
-	}
-
-	assert.Equal(t, mSummary["name"], "Summary")
-	assert.Equal(t, mSummary["count"], 1)
-	assert.Equal(t, mSummary["sum"], 1.1)
-	assert.EqualValues(t, mbson.M{"hello": "world"}, mSummary["tags"])
-
-	assert.Equal(t, mIncremental["name"], "Incremental")
-	assert.Equal(t, mIncremental["count"], 1)
-	assert.EqualValues(t, mbson.M{"hi": "globe"}, mIncremental["tags"])
 }
 
 // testProxy performs tests of http/https proxy.

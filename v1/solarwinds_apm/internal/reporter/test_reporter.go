@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -27,7 +28,6 @@ import (
 // TestReporter appends reported events to Bufs if ShouldTrace is true.
 type TestReporter struct {
 	EventBufs      [][]byte
-	SpanMessages   []metrics.SpanMessage
 	ShouldTrace    bool
 	ShouldError    bool
 	UseSettings    bool
@@ -38,7 +38,6 @@ type TestReporter struct {
 	done           chan int
 	wg             sync.WaitGroup
 	eventChan      chan []byte
-	spanMsgChan    chan metrics.SpanMessage
 	Timeout        time.Duration
 }
 
@@ -103,7 +102,6 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 		Timeout:     defaultTestReporterTimeout,
 		done:        make(chan int),
 		eventChan:   make(chan []byte),
-		spanMsgChan: make(chan metrics.SpanMessage),
 	}
 	for _, option := range options {
 		option(r)
@@ -139,7 +137,7 @@ func (r *TestReporter) resultWriter() {
 	for {
 		select {
 		case numBufs = <-r.done:
-			if len(r.EventBufs)+len(r.SpanMessages) >= numBufs {
+			if len(r.EventBufs) >= numBufs {
 				r.wg.Done()
 				return
 			}
@@ -149,13 +147,7 @@ func (r *TestReporter) resultWriter() {
 			return
 		case buf := <-r.eventChan:
 			r.EventBufs = append(r.EventBufs, buf)
-			if r.done == nil && len(r.EventBufs)+len(r.SpanMessages) >= numBufs {
-				r.wg.Done()
-				return
-			}
-		case buf := <-r.spanMsgChan:
-			r.SpanMessages = append(r.SpanMessages, buf)
-			if r.done == nil && len(r.EventBufs)+len(r.SpanMessages) >= numBufs {
+			if r.done == nil && len(r.EventBufs) >= numBufs {
 				r.wg.Done()
 				return
 			}
@@ -170,7 +162,7 @@ func (r *TestReporter) Close(numBufs int) {
 	// wait for reader goroutine to receive numBufs events, or timeout.
 	r.wg.Wait()
 	close(r.eventChan)
-	received := len(r.EventBufs) + len(r.SpanMessages)
+	received := len(r.EventBufs)
 	if received < numBufs {
 		log.Printf("# FIX: TestReporter.Close() waited for %d events, got %d", numBufs, received)
 	}
@@ -222,11 +214,6 @@ func (r *TestReporter) reportEvent(ctx *oboeContext, e *event) error {
 
 func (r *TestReporter) reportStatus(ctx *oboeContext, e *event) error {
 	return r.report(ctx, e)
-}
-
-func (r *TestReporter) reportSpan(span metrics.SpanMessage) error {
-	r.spanMsgChan <- span
-	return nil
 }
 
 func (r *TestReporter) addDefaultSetting() {

@@ -370,7 +370,8 @@ func (t *apmTrace) recordHTTPSpan() {
 		t.httpSpan.span.HasError = true
 	}
 
-	reporter.ReportSpan(&t.httpSpan.span)
+	// TODO remove entirely?
+	// reporter.ReportSpan(&t.httpSpan.span)
 
 	// This will add the TransactionName KV into the exit event.
 	t.endArgs = append(t.endArgs, keyTransactionName, t.httpSpan.span.Transaction)
