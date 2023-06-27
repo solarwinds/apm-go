@@ -29,7 +29,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
-	ctx, s := tracer.Start(ctx, "span name")
+	_, s := tracer.Start(ctx, "span name")
 	s.End()
 
 	assert.True(t, mock.called)
@@ -51,7 +51,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T)
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
 	ctx, _ = tracer.Start(ctx, "span name")
-	ctx, s2 := tracer.Start(ctx, "child span")
+	_, s2 := tracer.Start(ctx, "child span")
 	s2.End()
 
 	assert.False(t, mock.called)
@@ -73,7 +73,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T
 	ctx := context.Background()
 	ctx, s := tracer.Start(ctx, "span name")
 	ctx = trace.ContextWithRemoteSpanContext(ctx, s.SpanContext())
-	ctx, s2 := tracer.Start(ctx, "child span")
+	_, s2 := tracer.Start(ctx, "child span")
 	s2.End()
 
 	assert.True(t, mock.called)
