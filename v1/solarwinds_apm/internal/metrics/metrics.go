@@ -91,8 +91,14 @@ var (
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
 
+// Package-level state
+
 var ApmMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
 var CustomMetrics = NewMeasurements(true, metricsCustomMetricsMaxDefault)
+var apmHistograms = &histograms{
+	histograms: make(map[string]*histogram),
+	precision:  metricsHistPrecisionDefault,
+}
 
 // SpanMessage defines a span message
 type SpanMessage interface {
@@ -328,12 +334,6 @@ func (t *TransMap) Overflow() bool {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return t.overflow
-}
-
-// collection of currently stored histograms (flushed on each metrics report cycle)
-var apmHistograms = &histograms{
-	histograms: make(map[string]*histogram),
-	precision:  metricsHistPrecisionDefault,
 }
 
 // TODO: use config package, and add validator (0-5)
