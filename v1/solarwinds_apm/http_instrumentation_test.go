@@ -45,12 +45,7 @@ func handler200(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }
 func handler200CustomTxnName(w http.ResponseWriter, r *http.Request) {
 	checkAPMContextAndSetCustomTxnName(w, r)
 }
-func handlerPanic(w http.ResponseWriter, r *http.Request)    { panic("panicking!") }
-func handlerDelay200(w http.ResponseWriter, r *http.Request) { time.Sleep(httpSpanSleep) }
-func handlerDelay503(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(503)
-	time.Sleep(httpSpanSleep)
-}
+func handlerPanic(w http.ResponseWriter, r *http.Request) { panic("panicking!") }
 
 // checkAPMContext checks if the SolarWinds Observability context is attached
 func checkAPMContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) {
@@ -78,12 +73,6 @@ func checkAPMContextAndSetCustomTxnName(w http.ResponseWriter, r *http.Request) 
 
 	solarwinds_apm.SetTransactionName(r.Context(), "final-"+solarwinds_apm.GetTransactionName(r.Context()))
 	xtrace = t.MetadataString()
-}
-
-func handlerDoubleWrapped(w http.ResponseWriter, r *http.Request) {
-	t, _, _ := solarwinds_apm.TraceFromHTTPRequestResponse("myHandler", w, r)
-	solarwinds_apm.NewContext(context.Background(), t)
-	defer t.End()
 }
 
 func httpTestWithEndpoint(f http.HandlerFunc, ep string, opts ...solarwinds_apm.SpanOpt) *httptest.ResponseRecorder {
@@ -167,8 +156,6 @@ func TestHTTPHandlerNoTrace(t *testing.T) {
 	// tracing disabled, shouldn't report anything
 	assert.Len(t, r.EventBufs, 0)
 }
-
-var httpSpanSleep time.Duration
 
 // testServer tests creating a span/trace from inside an HTTP handler (using solarwinds_apm.TraceFromHTTPRequest)
 func testServer(t *testing.T, list net.Listener) {

@@ -80,14 +80,6 @@ func (sr *serverlessReporter) reportStatus(ctx *oboeContext, e *event) error {
 	return err
 }
 
-// called when a Span message should be reported
-func (sr *serverlessReporter) reportSpan(span metrics.SpanMessage) error {
-	if httpSpan, ok := span.(*metrics.HTTPSpanMessage); ok {
-		sr.span = *httpSpan
-	}
-	return nil
-}
-
 // Shutdown closes the reporter.
 func (sr *serverlessReporter) Shutdown(ctx context.Context) error {
 	return sr.ShutdownNow()

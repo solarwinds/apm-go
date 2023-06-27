@@ -226,9 +226,6 @@ type grpcReporter struct {
 	eventMessages  chan []byte // channel for event messages (sent from agent)
 	statusMessages chan []byte // channel for status messages (sent from agent)
 
-	//httpMetrics   *metrics.Measurements
-	//customMetrics *metrics.Measurements
-
 	// The reporter is considered ready if there is a valid default setting for sampling.
 	// It should be accessed atomically.
 	ready int32
