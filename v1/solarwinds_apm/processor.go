@@ -23,6 +23,8 @@ import (
 
 var _ sdktrace.SpanProcessor = &SolarWindsInboundMetricsSpanProcessor{}
 
+var recordFunc = metrics.RecordSpan
+
 type SolarWindsInboundMetricsSpanProcessor struct{}
 
 func (s *SolarWindsInboundMetricsSpanProcessor) OnStart(parent context.Context, span sdktrace.ReadWriteSpan) {
@@ -33,7 +35,7 @@ func (s *SolarWindsInboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan
 	if parent.IsValid() && !parent.IsRemote() {
 		return
 	}
-	metrics.RecordSpan(span, reporter.IsAppoptics())
+	recordFunc(span, reporter.IsAppoptics())
 }
 
 func (s *SolarWindsInboundMetricsSpanProcessor) Shutdown(ctx context.Context) error {

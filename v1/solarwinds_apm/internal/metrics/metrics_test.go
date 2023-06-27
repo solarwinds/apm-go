@@ -541,7 +541,7 @@ type staticRoSpan struct {
 	endTime    time.Time
 }
 
-var _ roSpan = &staticRoSpan{}
+var _ RoSpan = &staticRoSpan{}
 
 func (s *staticRoSpan) Status() sdktrace.Status          { return s.status }
 func (s *staticRoSpan) Attributes() []attribute.KeyValue { return s.attributes }

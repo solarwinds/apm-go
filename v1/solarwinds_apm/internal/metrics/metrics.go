@@ -998,7 +998,8 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 
 // -- otel --
 
-type roSpan interface {
+// RoSpan Simplified/mockable version of `sdktrace.ReadOnlySpan`
+type RoSpan interface {
 	Status() sdktrace.Status
 	Attributes() []attribute.KeyValue
 	SpanKind() trace.SpanKind
@@ -1007,7 +1008,7 @@ type roSpan interface {
 	EndTime() time.Time
 }
 
-func RecordSpan(span roSpan, isAppoptics bool) {
+func RecordSpan(span RoSpan, isAppoptics bool) {
 	method := ""
 	status := int64(0)
 	isError := span.Status().Code == codes.Error
