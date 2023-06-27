@@ -685,7 +685,7 @@ func GetTransactionFromPath(path string) string {
 	return strings.Join(p[0:lp], "/")
 }
 
-func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
+func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 	var tagsList []map[string]string
 
 	// primary key: TransactionName
@@ -715,11 +715,10 @@ func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
 // transactionName	the transaction name to be used for these measurements
 func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
 	m *Measurements) ([]map[string]string, error) {
-	duration := float64(s.Duration / time.Microsecond)
-
 	if tagsList == nil {
-		tagsList = s.produceTagsList()
+		return nil, errors.New("Tagslist must not be nil")
 	}
+	duration := float64(s.Duration / time.Microsecond)
 
 	err := m.record(metricName, tagsList, duration, 1, true)
 
@@ -1051,6 +1050,7 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		tagsList = []map[string]string{swoTags}
 		metricName = responseTime
 	} else {
+		tagsList = s.appOpticsTagsList()
 		metricName = transactionResponseTime
 	}
 
