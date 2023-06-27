@@ -15,6 +15,7 @@
 package metrics
 
 import (
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
@@ -997,7 +998,16 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 
 // -- otel --
 
-func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
+type roSpan interface {
+	Status() sdktrace.Status
+	Attributes() []attribute.KeyValue
+	SpanKind() trace.SpanKind
+	Name() string
+	StartTime() time.Time
+	EndTime() time.Time
+}
+
+func RecordSpan(span roSpan, isAppoptics bool) {
 	method := ""
 	status := int64(0)
 	isError := span.Status().Code == codes.Error
