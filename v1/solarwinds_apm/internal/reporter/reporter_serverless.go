@@ -137,6 +137,5 @@ func (sr *serverlessReporter) Flush() error {
 func (sr *serverlessReporter) SetServiceKey(string) {}
 
 func (sr *serverlessReporter) IsAppoptics() bool {
-	// TODO determine what we need to do here?
 	return false
 }
