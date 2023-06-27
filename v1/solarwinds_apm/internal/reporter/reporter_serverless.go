@@ -100,18 +100,6 @@ func (sr *serverlessReporter) WaitForReady(context.Context) bool {
 	return true
 }
 
-// CustomSummaryMetric submits a summary type measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (sr *serverlessReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return sr.customMetrics.Summary(name, value, opts)
-}
-
-// CustomIncrementMetric submits a incremental measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (sr *serverlessReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return sr.customMetrics.Increment(name, opts)
-}
-
 func (sr *serverlessReporter) sendServerlessMetrics() {
 	var messages [][]byte
 
@@ -147,3 +135,8 @@ func (sr *serverlessReporter) Flush() error {
 }
 
 func (sr *serverlessReporter) SetServiceKey(string) {}
+
+func (sr *serverlessReporter) IsAppoptics() bool {
+	// TODO determine what we need to do here?
+	return false
+}

@@ -292,3 +292,5 @@ func (r *TestReporter) CustomSummaryMetric(name string, value float64, opts metr
 func (r *TestReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
 	return nil
 }
+
+func (r *TestReporter) IsAppoptics() bool { return false }

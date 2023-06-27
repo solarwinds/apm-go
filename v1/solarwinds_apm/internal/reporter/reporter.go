@@ -48,6 +48,9 @@ type reporter interface {
 	Flush() error
 	// SetServiceKey attaches a service key to the reporter
 	SetServiceKey(key string)
+
+	// IsAppoptics returns `true` if domain connected to contains `appoptics.com`
+	IsAppoptics() bool
 }
 
 // KVs from getSettingsResult arguments
@@ -91,6 +94,7 @@ func (r *nullReporter) CustomIncrementMetric(name string, opts metrics.MetricOpt
 }
 func (r *nullReporter) Flush() error         { return nil }
 func (r *nullReporter) SetServiceKey(string) {}
+func (r *nullReporter) IsAppoptics() bool    { return false }
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
@@ -277,4 +281,8 @@ func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 
 func SetServiceKey(key string) {
 	globalReporter.SetServiceKey(key)
+}
+
+func IsAppoptics() bool {
+	return globalReporter.IsAppoptics()
 }
