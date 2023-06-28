@@ -7,7 +7,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	go.uber.org/atomic v1.11.0
 	google.golang.org/grpc v1.43.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
