@@ -57,7 +57,7 @@ const (
 	OtherTransactionName         = "other"
 	MetricIDSeparator            = "&"
 	TagsKVSeparator              = ":"
-	OtherMetricIDPrefix          = OtherTransactionName + MetricIDSeparator
+	otherTagExistsVal            = TagsKVSeparator + OtherTransactionName + MetricIDSeparator
 	maxPathLenForTransactionName = 3
 )
 
@@ -435,6 +435,7 @@ func (m *Measurements) CopyAndReset(flushInterval int32) *Measurements {
 
 	if len(m.m) == 0 {
 		m.FlushInterval = flushInterval
+		m.transMap.Reset()
 		return nil
 	}
 
@@ -718,18 +719,12 @@ func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
 func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
-	m *Measurements) ([]map[string]string, error) {
+	m *Measurements) error {
 	if tagsList == nil {
-		return nil, errors.New("Tagslist must not be nil")
+		return errors.New("tagsList must not be nil")
 	}
 	duration := float64(s.Duration / time.Microsecond)
-
-	err := m.record(metricName, tagsList, duration, 1, true)
-
-	if err != nil {
-		return tagsList, err
-	}
-	return nil, nil
+	return m.record(metricName, tagsList, duration, 1, true)
 }
 
 func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
@@ -780,7 +775,7 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
 		if me, ok = m.m[id]; !ok {
-			if strings.HasPrefix(id, OtherMetricIDPrefix) ||
+			if strings.Contains(id, otherTagExistsVal) ||
 				m.transMap.IsWithinLimit(id) {
 				me = &Measurement{
 					Name:      name,
@@ -1069,9 +1064,14 @@ func RecordSpan(span RoSpan, isAppoptics bool) {
 	}
 
 	apmHistograms.recordHistogram("", duration)
-	if reusableTags, err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
-		s.Transaction = OtherTransactionName
-		_, err := s.processMeasurements(metricName, reusableTags, ApmMetrics)
+	if err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
+		if isAppoptics {
+			s.Transaction = OtherTransactionName
+			tagsList = s.appOpticsTagsList()
+		} else {
+			tagsList[0]["sw.transaction"] = OtherTransactionName
+		}
+		err := s.processMeasurements(metricName, tagsList, ApmMetrics)
 		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
 		// which is handled above, and the reason we retry here.
 		if err != nil {
