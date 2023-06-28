@@ -176,7 +176,7 @@ func TestGRPCReporter(t *testing.T) {
 
 	assert.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	assert.Equal(t, int32(grpcMetricIntervalDefault), r.collectMetricInterval)
+	assert.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
 	assert.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
 	assert.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
@@ -581,7 +581,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	assert.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	assert.Equal(t, int32(grpcMetricIntervalDefault), r.collectMetricInterval)
+	assert.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
 	assert.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
 	assert.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 

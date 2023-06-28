@@ -47,6 +47,8 @@ const (
 
 	// MaxTagsCount is the maximum number of tags allowed
 	MaxTagsCount = 50
+
+	ReportingIntervalDefault = 60 // default metrics flush interval in seconds
 )
 
 // Special transaction names
@@ -141,9 +143,10 @@ type Measurements struct {
 
 func NewMeasurements(isCustom bool, maxCount int32) *Measurements {
 	return &Measurements{
-		m:        make(map[string]*Measurement),
-		transMap: NewTransMap(maxCount),
-		IsCustom: isCustom,
+		m:             make(map[string]*Measurement),
+		transMap:      NewTransMap(maxCount),
+		IsCustom:      isCustom,
+		FlushInterval: ReportingIntervalDefault,
 	}
 }
 

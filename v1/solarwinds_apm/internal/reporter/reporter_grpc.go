@@ -82,7 +82,6 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	// These are hard-coded parameters for the gRPC reporter. Any of them become
 	// configurable in future versions will be moved to package config.
 	// TODO: use time.Time
-	grpcMetricIntervalDefault               = 60               // default metrics flush interval in seconds
 	grpcGetSettingsIntervalDefault          = 30               // default settings retrieval interval in seconds
 	grpcSettingsTimeoutCheckIntervalDefault = 10               // default check interval for timed out settings in seconds
 	grpcPingIntervalDefault                 = 20               // default interval for keep alive pings in seconds
@@ -294,7 +293,7 @@ func newGRPCReporter() reporter {
 	r := &grpcReporter{
 		conn: grpcConn,
 
-		collectMetricInterval:        grpcMetricIntervalDefault,
+		collectMetricInterval:        metrics.ReportingIntervalDefault,
 		getSettingsInterval:          grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
