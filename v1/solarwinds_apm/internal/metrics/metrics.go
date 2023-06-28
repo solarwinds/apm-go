@@ -775,6 +775,7 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
 		if me, ok = m.m[id]; !ok {
+			// N.B. This overflow logic is a bit cumbersome and is ripe for a rewrite
 			if strings.Contains(id, otherTagExistsVal) ||
 				m.transMap.IsWithinLimit(id) {
 				me = &Measurement{
