@@ -80,12 +80,6 @@ type Span interface {
 
 	BeginSpanWithOverrides(spanName string, opts SpanOptions, overrides Overrides, args ...interface{}) Span
 
-	// BeginProfile starts a new Profile, used to measure a named span
-	// of time spent in this Span.
-	//
-	// Deprecated: BeginProfile exists for historical compatibility and should not be
-	// used, use BeginSpan instead.
-	BeginProfile(profileName string, args ...interface{}) Profile
 	// End ends a Span, optionally reporting KV pairs provided by args.
 	End(args ...interface{})
 
@@ -133,22 +127,8 @@ type Span interface {
 
 	IsReporting() bool
 	addChildEdge(reporter.Context)
-	addProfile(Profile)
 	apmContext() reporter.Context
 	ok() bool
-}
-
-// Profile is used to provide micro-benchmarks of named timings inside a Span.
-//
-// Deprecated: Profile exists for historical compatibility and should not be
-// used, use Span instead.
-type Profile interface {
-	// End ends a Profile, optionally reporting KV pairs provided by args.
-	End(args ...interface{})
-	// Error reports details about an error (along with a stack trace) for this Profile.
-	Error(class, msg string)
-	// Err reports details about error err (along with a stack trace) for this Profile.
-	Err(error)
 }
 
 // SpanOptions defines the options of creating a span
@@ -246,37 +226,10 @@ func (s *layerSpan) BeginSpanWithOverrides(spanName string, opts SpanOptions, ov
 	return nullSpan{}
 }
 
-// BeginProfile begins a profiled block or method and return a context that should be closed with End().
-// You can use defer to profile a function in one line, as below:
-//
-//	func exampleFunc(ctx context.Context) {
-//	    defer solarwinds_apm.BeginProfile(ctx, "exampleFunc").End()
-//	    // ... do something ...
-//	 }
-//
-// Deprecated: BeginProfile exists for historical compatibility and should not be used, use
-// BeginSpan instead.
-func BeginProfile(ctx context.Context, profileName string, args ...interface{}) Profile {
-	s, _ := BeginSpan(ctx, profileName, args)
-	return s
-}
-
-// BeginProfile starts a new Profile, used to measure a named span of time spent in this Span.
-// The returned Profile should be closed with End().
-//
-// Deprecated: BeginProfile exists for historical compatibility and should not be used, use
-// BeginSpan instead.
-func (s *layerSpan) BeginProfile(profileName string, args ...interface{}) Profile {
-	return s.BeginSpan(profileName, args)
-}
-
 func (s *span) End(args ...interface{}) {
 	if s.ok() {
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		for _, prof := range s.childProfiles {
-			prof.End()
-		}
 		args = append(args, s.endArgs...)
 		for _, edge := range s.childEdges { // add Edge KV for each joined child
 			args = append(args, keyEdge, edge)
@@ -297,9 +250,6 @@ func (s *span) EndWithOverrides(overrides Overrides, args ...interface{}) {
 	if s.ok() {
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		for _, prof := range s.childProfiles {
-			prof.End()
-		}
 		args = append(args, s.endArgs...)
 		for _, edge := range s.childEdges { // add Edge KV for each joined child
 			args = append(args, keyEdge, edge)
@@ -431,16 +381,15 @@ func (s *span) Err(err error) {
 // both Span and Profile interfaces.
 type span struct {
 	labeler
-	apmCtx        reporter.Context
-	parent        Span
-	childEdges    []string // for reporting in exit event
-	childProfiles []Profile
-	endArgs       []interface{}
-	ended         bool // has exit event been reported?
-	lock          sync.RWMutex
+	apmCtx     reporter.Context
+	parent     Span
+	childEdges []string // for reporting in exit event
+	endArgs    []interface{}
+	ended      bool // has exit event been reported?
+	lock       sync.RWMutex
 }
 type layerSpan struct{ span } // satisfies Span
-type nullSpan struct{}        // a span that is not tracing; satisfies Span & Profile
+type nullSpan struct{}        // a span that is not tracing; satisfies Span
 type contextSpan struct {
 	nullSpan
 	apmCtx reporter.Context
@@ -454,7 +403,6 @@ func (s nullSpan) BeginSpanWithOverrides(spanName string, opts SpanOptions, over
 	return nullSpan{}
 }
 
-func (s nullSpan) BeginProfile(name string, args ...interface{}) Profile                        { return nullSpan{} }
 func (s nullSpan) End(args ...interface{})                                                      {}
 func (s nullSpan) EndWithOverrides(overrides Overrides, args ...interface{})                    {}
 func (s nullSpan) AddEndArgs(args ...interface{})                                               {}
@@ -465,7 +413,6 @@ func (s nullSpan) InfoWithOptions(opts SpanOptions, args ...interface{})        
 func (s nullSpan) InfoWithOverrides(overrides Overrides, opts SpanOptions, args ...interface{}) {}
 func (s nullSpan) IsReporting() bool                                                            { return false }
 func (s nullSpan) addChildEdge(reporter.Context)                                                {}
-func (s nullSpan) addProfile(Profile)                                                           {}
 func (s nullSpan) ok() bool                                                                     { return false }
 func (s nullSpan) apmContext() reporter.Context                                                 { return reporter.NewNullContext() }
 func (s nullSpan) MetadataString() string                                                       { return "" }
@@ -495,11 +442,6 @@ func (s *span) addChildEdge(ctx reporter.Context) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.childEdges = append(s.childEdges, ctx.MetadataString())
-}
-func (s *span) addProfile(p Profile) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.childProfiles = append([]Profile{p}, s.childProfiles...)
 }
 
 // labelers help spans choose label and layer names.
