@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -36,8 +37,6 @@ type reporter interface {
 	reportEvent(ctx *oboeContext, e *event) error
 	// called when a status (e.g. __Init message) should be reported
 	reportStatus(ctx *oboeContext, e *event) error
-	// called when a Span message should be reported
-	reportSpan(span metrics.SpanMessage) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
 	// ShutdownNow closes the reporter immediately
@@ -46,16 +45,12 @@ type reporter interface {
 	Closed() bool
 	// WaitForReady waits until the reporter becomes ready or the context is canceled.
 	WaitForReady(context.Context) bool
-	// CustomSummaryMetric submits a summary type measurement to the reporter. The measurements
-	// will be collected in the background and reported periodically.
-	CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error
-	// CustomIncrementMetric submits a incremental measurement to the reporter. The measurements
-	// will be collected in the background and reported periodically.
-	CustomIncrementMetric(name string, opts metrics.MetricOptions) error
-	// Flush flush the events buffer to stderr. Currently it's used for AWS Lambda only
 	Flush() error
 	// SetServiceKey attaches a service key to the reporter
 	SetServiceKey(key string)
+
+	// IsAppoptics returns `true` if domain connected to contains `appoptics.com`
+	IsAppoptics() bool
 }
 
 // KVs from getSettingsResult arguments
@@ -91,14 +86,9 @@ func (r *nullReporter) Shutdown(ctx context.Context) error            { return n
 func (r *nullReporter) ShutdownNow() error                            { return nil }
 func (r *nullReporter) Closed() bool                                  { return true }
 func (r *nullReporter) WaitForReady(ctx context.Context) bool         { return true }
-func (r *nullReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return nil
-}
-func (r *nullReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return nil
-}
-func (r *nullReporter) Flush() error         { return nil }
-func (r *nullReporter) SetServiceKey(string) {}
+func (r *nullReporter) Flush() error                                  { return nil }
+func (r *nullReporter) SetServiceKey(string)                          {}
+func (r *nullReporter) IsAppoptics() bool                             { return false }
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
@@ -159,14 +149,6 @@ func Shutdown(ctx context.Context) error {
 // Closed indicates if the reporter has been shutdown
 func Closed() bool {
 	return globalReporter.Closed()
-}
-
-// ReportSpan is called from the app when a span message is available
-// span	span message to be put on the channel
-//
-// returns	error if channel is full
-func ReportSpan(span metrics.SpanMessage) error {
-	return globalReporter.reportSpan(span)
 }
 
 // check if context and event are valid, add general keys like Timestamp, or hostname
@@ -283,18 +265,10 @@ func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 	return args
 }
 
-// SummaryMetric submits a summary type measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func SummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return globalReporter.CustomSummaryMetric(name, value, opts)
-}
-
-// IncrementMetric submits a incremental measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func IncrementMetric(name string, opts metrics.MetricOptions) error {
-	return globalReporter.CustomIncrementMetric(name, opts)
-}
-
 func SetServiceKey(key string) {
 	globalReporter.SetServiceKey(key)
+}
+
+func IsAppoptics() bool {
+	return globalReporter.IsAppoptics()
 }

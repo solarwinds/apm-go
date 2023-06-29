@@ -206,7 +206,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(2)
 	assert.Equal(t, 2, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// Reload config with transaction filtering settings
 	reporter.ReloadURLsConfig([]config.TransactionFilter{
@@ -220,7 +219,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(2)
 	assert.Equal(t, 2, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// 3.1 “disabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -228,7 +226,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 3.2 “disabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -236,7 +233,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 4.incoming sampling xtrace + “disabled” transaction settings not matched
 	r = reporter.SetTestReporter()
@@ -244,7 +240,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(2)
 	assert.Equal(t, 2, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// 5.incoming sampling xtrace + “disabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -252,7 +247,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 6.incoming non-sampling xtrace + “disabled” transaction settings not matched
 	r = reporter.SetTestReporter()
@@ -260,7 +254,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// 7. incoming non-sampling xtrace + “disabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -268,7 +261,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// service level trace mode is disabled
 	reporter.ReloadURLsConfig([]config.TransactionFilter{})
@@ -281,7 +273,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// service level trace mode is disabled
 	reporter.ReloadURLsConfig([]config.TransactionFilter{
@@ -295,7 +286,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 10.“enabled” transaction settings matching
 	r = reporter.SetTestReporter()
@@ -303,7 +293,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(2)
 	assert.Equal(t, 2, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// 11.incoming sampling xtrace + “enabled” transaction settings not matched
 	r = reporter.SetTestReporter()
@@ -311,7 +300,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 12.incoming sampling xtrace + “enabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -319,7 +307,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(2)
 	assert.Equal(t, 2, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// 13.incoming non-sampling xtrace + “enabled” transaction settings not matched
 	r = reporter.SetTestReporter()
@@ -327,7 +314,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 0, len(r.SpanMessages))
 
 	// 14.incoming non-sampling xtrace + “enabled” transaction settings matched
 	r = reporter.SetTestReporter()
@@ -335,7 +321,6 @@ func TestWithTransactionFiltering(t *testing.T) {
 	tr.End()
 	r.Close(0)
 	assert.Equal(t, 0, len(r.EventBufs))
-	assert.Equal(t, 1, len(r.SpanMessages))
 
 	// reset configurations
 	os.Unsetenv("SW_APM_TRACING_MODE")

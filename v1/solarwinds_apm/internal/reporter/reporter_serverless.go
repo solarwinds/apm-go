@@ -34,7 +34,7 @@ type serverlessReporter struct {
 
 func newServerlessReporter(writer io.Writer) reporter {
 	r := &serverlessReporter{
-		customMetrics: metrics.NewMeasurements(true, 0, 500),
+		customMetrics: metrics.NewMeasurements(true, 500),
 	}
 
 	r.logWriter = newLogWriter(false, writer, 260000)
@@ -80,14 +80,6 @@ func (sr *serverlessReporter) reportStatus(ctx *oboeContext, e *event) error {
 	return err
 }
 
-// called when a Span message should be reported
-func (sr *serverlessReporter) reportSpan(span metrics.SpanMessage) error {
-	if httpSpan, ok := span.(*metrics.HTTPSpanMessage); ok {
-		sr.span = *httpSpan
-	}
-	return nil
-}
-
 // Shutdown closes the reporter.
 func (sr *serverlessReporter) Shutdown(ctx context.Context) error {
 	return sr.ShutdownNow()
@@ -106,18 +98,6 @@ func (sr *serverlessReporter) Closed() bool {
 // WaitForReady waits until the reporter becomes ready or the context is canceled.
 func (sr *serverlessReporter) WaitForReady(context.Context) bool {
 	return true
-}
-
-// CustomSummaryMetric submits a summary type measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (sr *serverlessReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return sr.customMetrics.Summary(name, value, opts)
-}
-
-// CustomIncrementMetric submits a incremental measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (sr *serverlessReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return sr.customMetrics.Increment(name, opts)
 }
 
 func (sr *serverlessReporter) sendServerlessMetrics() {
@@ -155,3 +135,7 @@ func (sr *serverlessReporter) Flush() error {
 }
 
 func (sr *serverlessReporter) SetServiceKey(string) {}
+
+func (sr *serverlessReporter) IsAppoptics() bool {
+	return false
+}

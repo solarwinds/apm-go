@@ -16,6 +16,12 @@ package metrics
 
 import (
 	"bytes"
+	"fmt"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
 	"math"
 	"net"
 	"os"
@@ -212,7 +218,7 @@ func TestTransMap(t *testing.T) {
 }
 
 func TestRecordMeasurement(t *testing.T) {
-	var me = NewMeasurements(false, 60, 100)
+	var me = NewMeasurements(false, 100)
 
 	t1 := make(map[string]string)
 	t1["t1"] = "tag1"
@@ -243,15 +249,15 @@ func TestRecordHistogram(t *testing.T) {
 		histograms: make(map[string]*histogram),
 	}
 
-	recordHistogram(hi, "", time.Duration(123))
-	recordHistogram(hi, "", time.Duration(1554))
+	hi.recordHistogram("", time.Duration(123))
+	hi.recordHistogram("", time.Duration(1554))
 	assert.NotNil(t, hi.histograms[""])
 	h := hi.histograms[""]
 	assert.Empty(t, h.tags["TransactionName"])
 	encoded, _ := hdrhist.EncodeCompressed(h.hist)
 	assert.Equal(t, "HISTFAAAACR42pJpmSzMwMDAxIAKGEHEtclLGOw/QASYmAABAAD//1njBIo=", string(encoded))
 
-	recordHistogram(hi, "hist1", time.Duration(453122))
+	hi.recordHistogram("hist1", time.Duration(453122))
 	assert.NotNil(t, hi.histograms["hist1"])
 	h = hi.histograms["hist1"]
 	assert.Equal(t, "hist1", h.tags["TransactionName"])
@@ -260,7 +266,7 @@ func TestRecordHistogram(t *testing.T) {
 
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
-	recordHistogram(hi, "hist2", time.Duration(4531224545454563))
+	hi.recordHistogram("hist2", time.Duration(4531224545454563))
 	log.SetOutput(os.Stderr)
 	assert.Contains(t, buf.String(), "Failed to record histogram: value to large")
 }
@@ -380,7 +386,7 @@ func TestAddHistogramToBSON(t *testing.T) {
 }
 
 func TestGenerateMetricsMessage(t *testing.T) {
-	testMetrics := NewMeasurements(false, 15, metricsTransactionsMaxDefault)
+	testMetrics := NewMeasurements(false, metricsTransactionsMaxDefault)
 	bbuf := bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
 		map[string]*RateCounts{ // requested, sampled, limited, traced, through
 			RCRegular:             {10, 2, 5, 5, 1},
@@ -396,7 +402,6 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, host.Distro(), m["Distro"])
 	assert.True(t, m["Timestamp_u"].(int64) > 1509053785684891)
-	assert.Equal(t, 15, m["MetricsFlushInterval"])
 
 	mts := m["measurements"].([]interface{})
 
@@ -465,7 +470,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 
 	assert.Nil(t, m["TransactionNameOverflow"])
 
-	testMetrics = NewMeasurements(false, 60, metricsTransactionsMaxDefault)
+	testMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
 	for i := 0; i <= metricsTransactionsMaxDefault; i++ {
 		if !testMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
 			break
@@ -527,20 +532,362 @@ func TestRateCounts(t *testing.T) {
 	assert.Equal(t, &RateCounts{}, rc)
 }
 
-func TestHTTPSpanMessageProcess(t *testing.T) {
-	s := HTTPSpanMessage{
-		BaseSpanMessage: BaseSpanMessage{Duration: time.Second, HasError: false},
-		Transaction:     "transaction",
-		Path:            "path",
-		Status:          200,
-		Host:            "host",
-		Method:          "GET",
+type staticRoSpan struct {
+	status     sdktrace.Status
+	attributes []attribute.KeyValue
+	spanKind   trace.SpanKind
+	name       string
+	startTime  time.Time
+	endTime    time.Time
+}
+
+var _ RoSpan = &staticRoSpan{}
+
+func (s *staticRoSpan) Status() sdktrace.Status          { return s.status }
+func (s *staticRoSpan) Attributes() []attribute.KeyValue { return s.attributes }
+func (s *staticRoSpan) SpanKind() trace.SpanKind         { return s.spanKind }
+func (s *staticRoSpan) Name() string                     { return s.name }
+func (s *staticRoSpan) StartTime() time.Time             { return s.startTime }
+func (s *staticRoSpan) EndTime() time.Time               { return s.endTime }
+
+var okStatus = sdktrace.Status{Code: codes.Ok, Description: "OK"}
+
+func resetHistograms() {
+	apmHistograms = &histograms{
+		histograms: make(map[string]*histogram),
+		precision:  metricsHistPrecisionDefault,
+	}
+}
+
+func TestRecordSpan(t *testing.T) {
+	now := time.Now()
+	span := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "foo bar baz",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
 	}
 
-	m := NewMeasurements(false, 60, metricsTransactionsMaxDefault)
-	s.Process(m)
-	measurement, ok := m.m["TransactionResponseTime&true&TransactionName:transaction&"]
-	assert.True(t, ok)
-	assert.NotNil(t, m)
-	assert.EqualValues(t, "TransactionResponseTime", measurement.Name)
+	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
+	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+
+	// This affects global state (ApmMetrics below)
+	RecordSpan(span, false)
+
+	m := ApmMetrics.CopyAndReset(60)
+	assert.NotEmpty(t, m.m)
+	v := m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:my cool route&"]
+	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+	// one second in microseconds
+	assert.Equal(t, float64(1000000), v.Sum)
+	assert.Equal(t, 1, v.Count)
+	assert.Equal(t, map[string]string{
+		"http.method":      "GET",
+		"http.status_code": "200",
+		"sw.is_error":      "false",
+		"sw.transaction":   "my cool route",
+	},
+		v.Tags)
+	assert.Equal(t, responseTime, v.Name)
+
+	h := apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto := h[""]
+	granularHisto := h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	assert.Equal(t, int64(1), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
+
+	// Now test for AO
+	RecordSpan(span, true)
+
+	m = ApmMetrics.CopyAndReset(60)
+	assert.NotEmpty(t, m.m)
+	k1 := "TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&"
+	k2 := "TransactionResponseTime&true&HttpStatus:200&TransactionName:my cool route&"
+	k3 := "TransactionResponseTime&true&TransactionName:my cool route&"
+	for _, key := range []string{k1, k2, k3} {
+		v = m.m[key]
+		assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+		assert.Equal(t, float64(1000000), v.Sum)
+		assert.Equal(t, 1, v.Count)
+		assert.Equal(t, transactionResponseTime, v.Name)
+	}
+	assert.Equal(t,
+		map[string]string{"HttpMethod": "GET", "TransactionName": "my cool route"},
+		m.m[k1].Tags,
+	)
+	assert.Equal(t,
+		map[string]string{"HttpStatus": "200", "TransactionName": "my cool route"},
+		m.m[k2].Tags,
+	)
+	assert.Equal(t,
+		map[string]string{"TransactionName": "my cool route"},
+		m.m[k3].Tags,
+	)
+
+	h = apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto = h[""]
+	granularHisto = h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	assert.Equal(t, int64(1), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
+}
+
+func TestRecordSpanErrorStatus(t *testing.T) {
+	now := time.Now()
+	span := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "foo bar baz",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
+	}
+
+	span.attributes = append(span.attributes, semconv.HTTPStatusCode(500))
+	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+
+	// This affects global state (ApmMetrics below)
+	RecordSpan(span, false)
+
+	m := ApmMetrics.CopyAndReset(60)
+	assert.NotEmpty(t, m.m)
+	v := m.m["ResponseTime&true&http.method:GET&http.status_code:500&sw.is_error:true&sw.transaction:my cool route&"]
+	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+	// one second in microseconds
+	assert.Equal(t, float64(1000000), v.Sum)
+	assert.Equal(t, 1, v.Count)
+	assert.Equal(t, map[string]string{
+		"http.method":      "GET",
+		"http.status_code": "500",
+		"sw.is_error":      "true",
+		"sw.transaction":   "my cool route",
+	},
+		v.Tags)
+	assert.Equal(t, responseTime, v.Name)
+
+	h := apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto := h[""]
+	granularHisto := h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	assert.Equal(t, int64(1), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
+
+	// Now test for AO
+	RecordSpan(span, true)
+
+	m = ApmMetrics.CopyAndReset(60)
+	assert.NotEmpty(t, m.m)
+	k1 := "TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&"
+	k2 := "TransactionResponseTime&true&HttpStatus:500&TransactionName:my cool route&"
+	k3 := "TransactionResponseTime&true&TransactionName:my cool route&"
+	for _, key := range []string{k1, k2, k3} {
+		v = m.m[key]
+		assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+		assert.Equal(t, float64(1000000), v.Sum)
+		assert.Equal(t, 1, v.Count)
+		assert.Equal(t, transactionResponseTime, v.Name)
+	}
+	assert.Equal(t,
+		map[string]string{"HttpMethod": "GET", "TransactionName": "my cool route"},
+		m.m[k1].Tags,
+	)
+	assert.Equal(t,
+		map[string]string{"HttpStatus": "500", "TransactionName": "my cool route"},
+		m.m[k2].Tags,
+	)
+	assert.Equal(t,
+		map[string]string{"TransactionName": "my cool route"},
+		m.m[k3].Tags,
+	)
+	h = apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto = h[""]
+	granularHisto = h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	assert.Equal(t, int64(1), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
+
+}
+
+func TestRecordSpanOverflow(t *testing.T) {
+	now := time.Now()
+	span := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "foo bar baz",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
+	}
+
+	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
+	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+
+	span2 := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "this should overflow",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
+	}
+
+	span2.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
+	span2.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span2.attributes = append(span.attributes, semconv.HTTPRoute("this should overflow"))
+
+	// The cap only takes affect after the following reset
+	ApmMetrics.SetCap(1)
+	ApmMetrics.CopyAndReset(60)
+	assert.Equal(t, int32(1), ApmMetrics.Cap())
+
+	// This affects global state (ApmMetrics below)
+	RecordSpan(span, false)
+	RecordSpan(span2, false)
+
+	m := ApmMetrics.CopyAndReset(60)
+	// We expect to have a record for `my cool route` and one for `other`
+	assert.Equal(t, 2, len(m.m))
+	v := m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:my cool route&"]
+	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+	// one second in microseconds
+	assert.Equal(t, float64(1000000), v.Sum)
+	assert.Equal(t, 1, v.Count)
+	assert.Equal(t, map[string]string{
+		"http.method":      "GET",
+		"http.status_code": "200",
+		"sw.is_error":      "false",
+		"sw.transaction":   "my cool route",
+	},
+		v.Tags)
+	assert.Equal(t, responseTime, v.Name)
+
+	v = m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:other&"]
+	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
+	// one second in microseconds
+	assert.Equal(t, float64(1000000), v.Sum)
+	assert.Equal(t, 1, v.Count)
+	assert.Equal(t, map[string]string{
+		"http.method":      "GET",
+		"http.status_code": "200",
+		"sw.is_error":      "false",
+		"sw.transaction":   "other",
+	},
+		v.Tags)
+	assert.Equal(t, responseTime, v.Name)
+
+	h := apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto := h[""]
+	granularHisto := h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	// `other` will have increased the global histo
+	assert.Equal(t, int64(2), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
+}
+
+func TestRecordSpanOverflowAppoptics(t *testing.T) {
+	now := time.Now()
+	span := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "foo bar baz",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
+	}
+
+	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
+	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+
+	span2 := &staticRoSpan{
+		status:     okStatus,
+		attributes: make([]attribute.KeyValue, 0),
+		spanKind:   trace.SpanKindServer,
+		name:       "this should overflow",
+		startTime:  now.Add(-1 * time.Second),
+		endTime:    now,
+	}
+
+	span2.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
+	span2.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
+	span2.attributes = append(span.attributes, semconv.HTTPRoute("this should overflow"))
+
+	// The cap only takes affect after the following reset
+	// Appoptics-style will generate 3 metrics, so we'll set the cap to that here
+	ApmMetrics.SetCap(3)
+	ApmMetrics.CopyAndReset(60)
+	assert.Equal(t, int32(3), ApmMetrics.Cap())
+
+	// This affects global state (ApmMetrics below)
+	RecordSpan(span, true)
+	RecordSpan(span2, true)
+
+	m := ApmMetrics.CopyAndReset(60)
+	// We expect to have 3 records for `my cool route` and 3 for `other`
+	assert.Equal(t, 6, len(m.m))
+
+	expectedList := []string{
+		"TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&",
+		"TransactionResponseTime&true&HttpMethod:GET&TransactionName:other&",
+		"TransactionResponseTime&true&HttpStatus:200&TransactionName:my cool route&",
+		"TransactionResponseTime&true&HttpStatus:200&TransactionName:other&",
+		"TransactionResponseTime&true&TransactionName:my cool route&",
+		"TransactionResponseTime&true&TransactionName:other&",
+	}
+	for _, exp := range expectedList {
+		v, ok := m.m[exp]
+		assert.True(t, ok)
+		assert.Equal(t, float64(1000000), v.Sum)
+		assert.Equal(t, 1, v.Count)
+	}
+
+	h := apmHistograms.histograms
+	resetHistograms()
+	assert.NotEmpty(t, h)
+	globalHisto := h[""]
+	granularHisto := h["my cool route"]
+	assert.NotNil(t, globalHisto)
+	assert.NotNil(t, granularHisto)
+	// The histo has fuzzy but deterministic values
+	assert.Equal(t, 1.001472e+06, globalHisto.hist.Mean())
+	// `other` will have increased the global histo
+	assert.Equal(t, int64(2), globalHisto.hist.TotalCount())
+	assert.Equal(t, 1.001472e+06, granularHisto.hist.Mean())
+	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
 }

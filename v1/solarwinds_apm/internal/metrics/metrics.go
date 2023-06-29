@@ -11,9 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package metrics
 
 import (
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"runtime"
 	"sort"
@@ -32,14 +38,17 @@ import (
 )
 
 const (
-	metricsTransactionsMaxDefault = 200 // default max amount of transaction names we allow per cycle
-	metricsHistPrecisionDefault   = 2   // default histogram precision
+	metricsTransactionsMaxDefault  = 200 // default max amount of transaction names we allow per cycle
+	metricsCustomMetricsMaxDefault = 500 // default max number of custom metrics
+	metricsHistPrecisionDefault    = 2   // default histogram precision
 
 	metricsTagNameLengthMax  = 64  // max number of characters for tag names
 	metricsTagValueLengthMax = 255 // max number of characters for tag values
 
 	// MaxTagsCount is the maximum number of tags allowed
 	MaxTagsCount = 50
+
+	ReportingIntervalDefault = 60 // default metrics flush interval in seconds
 )
 
 // Special transaction names
@@ -48,7 +57,7 @@ const (
 	OtherTransactionName         = "other"
 	MetricIDSeparator            = "&"
 	TagsKVSeparator              = ":"
-	OtherMetricIDPrefix          = OtherTransactionName + MetricIDSeparator
+	otherTagExistsVal            = TagsKVSeparator + OtherTransactionName + MetricIDSeparator
 	maxPathLenForTransactionName = 3
 )
 
@@ -69,6 +78,12 @@ const (
 	RCStrictTriggerTrace  = "ReqCounterStrictTriggerTrace"
 )
 
+// metric names
+const (
+	transactionResponseTime = "TransactionResponseTime"
+	responseTime            = "ResponseTime"
+)
+
 var (
 	// ErrExceedsMetricsCountLimit indicates there are too many distinct metrics.
 	ErrExceedsMetricsCountLimit = errors.New("exceeds metrics count limit per flush interval")
@@ -77,6 +92,15 @@ var (
 	// ErrMetricsWithNonPositiveCount indicates the count is negative or zero
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
+
+// Package-level state
+
+var ApmMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
+var CustomMetrics = NewMeasurements(true, metricsCustomMetricsMaxDefault)
+var apmHistograms = &histograms{
+	histograms: make(map[string]*histogram),
+	precision:  metricsHistPrecisionDefault,
+}
 
 // SpanMessage defines a span message
 type SpanMessage interface {
@@ -95,7 +119,7 @@ type HTTPSpanMessage struct {
 	Transaction string // transaction name (e.g. controller.action)
 	Path        string // the url path which will be processed and used as transaction (if Transaction is empty)
 	Status      int    // HTTP status code (e.g. 200, 500, ...)
-	Host        string // HTTP-Host
+	Host        string // HTTP-Host // This could be removed (-jared)
 	Method      string // HTTP method (e.g. GET, POST, ...)
 }
 
@@ -117,12 +141,12 @@ type Measurements struct {
 	sync.Mutex    // protect access to this collection
 }
 
-func NewMeasurements(isCustom bool, flushInterval int32, maxCount int32) *Measurements {
+func NewMeasurements(isCustom bool, maxCount int32) *Measurements {
 	return &Measurements{
 		m:             make(map[string]*Measurement),
 		transMap:      NewTransMap(maxCount),
 		IsCustom:      isCustom,
-		FlushInterval: flushInterval,
+		FlushInterval: ReportingIntervalDefault,
 	}
 }
 
@@ -315,12 +339,6 @@ func (t *TransMap) Overflow() bool {
 	return t.overflow
 }
 
-// collection of currently stored histograms (flushed on each metrics report cycle)
-var metricsHTTPHistograms = &histograms{
-	histograms: make(map[string]*histogram),
-	precision:  metricsHistPrecisionDefault,
-}
-
 // TODO: use config package, and add validator (0-5)
 // initialize values according to env variables
 func init() {
@@ -330,7 +348,7 @@ func init() {
 		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
 		if p, err := strconv.Atoi(precision); err == nil {
 			if p >= 0 && p <= 5 {
-				metricsHTTPHistograms.precision = p
+				apmHistograms.precision = p
 			} else {
 				log.Errorf("value of %v must be between 0 and 5: %v", pEnv, precision)
 			}
@@ -417,6 +435,7 @@ func (m *Measurements) CopyAndReset(flushInterval int32) *Measurements {
 
 	if len(m.m) == 0 {
 		m.FlushInterval = flushInterval
+		m.transMap.Reset()
 		return nil
 	}
 
@@ -557,14 +576,14 @@ func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
 	start = bbuf.AppendStartArray("histograms")
 	index = 0
 
-	metricsHTTPHistograms.lock.Lock()
+	apmHistograms.lock.Lock()
 
-	for _, h := range metricsHTTPHistograms.histograms {
+	for _, h := range apmHistograms.histograms {
 		addHistogramToBSON(bbuf, &index, h)
 	}
-	metricsHTTPHistograms.histograms = make(map[string]*histogram) // clear histograms
+	apmHistograms.histograms = make(map[string]*histogram) // clear histograms
 
-	metricsHTTPHistograms.lock.Unlock()
+	apmHistograms.lock.Unlock()
 	bbuf.AppendFinishObject(start)
 	// ==========================================
 
@@ -671,23 +690,7 @@ func GetTransactionFromPath(path string) string {
 	return strings.Join(p[0:lp], "/")
 }
 
-// Process processes an HttpSpanMessage
-func (s *HTTPSpanMessage) Process(m *Measurements) {
-	// always add to overall histogram
-	recordHistogram(metricsHTTPHistograms, "", s.Duration)
-
-	// only record the transaction-specific histogram and measurements if we are still within the limit
-	// otherwise report it as an 'other' measurement
-	if reusableTags, err := s.processMeasurements(nil, m); err == ErrExceedsMetricsCountLimit {
-		s.Transaction = OtherTransactionName
-		s.processMeasurements(reusableTags, m)
-		return
-	}
-
-	recordHistogram(metricsHTTPHistograms, s.Transaction, s.Duration)
-}
-
-func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
+func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 	var tagsList []map[string]string
 
 	// primary key: TransactionName
@@ -715,21 +718,13 @@ func (s *HTTPSpanMessage) produceTagsList() []map[string]string {
 
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
-func (s *HTTPSpanMessage) processMeasurements(tagsList []map[string]string,
-	m *Measurements) ([]map[string]string, error) {
-	name := "TransactionResponseTime"
-	duration := float64(s.Duration / time.Microsecond)
-
+func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
+	m *Measurements) error {
 	if tagsList == nil {
-		tagsList = s.produceTagsList()
+		return errors.New("tagsList must not be nil")
 	}
-
-	err := m.record(name, tagsList, duration, 1, true)
-
-	if err != nil {
-		return tagsList, err
-	}
-	return nil, nil
+	duration := float64(s.Duration / time.Microsecond)
+	return m.record(metricName, tagsList, duration, 1, true)
 }
 
 func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
@@ -780,7 +775,8 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
 		if me, ok = m.m[id]; !ok {
-			if strings.HasPrefix(id, OtherMetricIDPrefix) ||
+			// N.B. This overflow logic is a bit cumbersome and is ripe for a rewrite
+			if strings.Contains(id, otherTagExistsVal) ||
 				m.transMap.IsWithinLimit(id) {
 				me = &Measurement{
 					Name:      name,
@@ -804,7 +800,7 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 // hi		collection of histograms that this histogram should be added to
 // name		key name
 // duration	span duration
-func recordHistogram(hi *histograms, name string, duration time.Duration) {
+func (hi *histograms) recordHistogram(name string, duration time.Duration) {
 	hi.lock.Lock()
 	defer func() {
 		hi.lock.Unlock()
@@ -886,7 +882,7 @@ func addHistogramToBSON(bbuf *bson.Buffer, index *int, h *histogram) {
 
 	start := bbuf.AppendStartObject(strconv.Itoa(*index))
 
-	bbuf.AppendString("name", "TransactionResponseTime")
+	bbuf.AppendString("name", transactionResponseTime)
 	bbuf.AppendString("value", string(data))
 
 	// append tags
@@ -997,4 +993,94 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 
 	bbuf.Finish()
 	return bbuf.GetBuf()
+}
+
+// -- otel --
+
+// RoSpan Simplified/mockable version of `sdktrace.ReadOnlySpan`
+type RoSpan interface {
+	Status() sdktrace.Status
+	Attributes() []attribute.KeyValue
+	SpanKind() trace.SpanKind
+	Name() string
+	StartTime() time.Time
+	EndTime() time.Time
+}
+
+func RecordSpan(span RoSpan, isAppoptics bool) {
+	method := ""
+	status := int64(0)
+	isError := span.Status().Code == codes.Error
+	attrs := span.Attributes()
+	swoTags := make(map[string]string)
+	httpRoute := ""
+	for _, attr := range attrs {
+		if attr.Key == semconv.HTTPMethodKey {
+			method = attr.Value.AsString()
+		} else if attr.Key == semconv.HTTPStatusCodeKey {
+			status = attr.Value.AsInt64()
+		} else if attr.Key == semconv.HTTPRouteKey {
+			httpRoute = attr.Value.AsString()
+		}
+	}
+	isHttp := span.SpanKind() == trace.SpanKindServer && method != ""
+
+	if isHttp {
+		if status > 0 {
+			swoTags["http.status_code"] = strconv.FormatInt(status, 10)
+			if !isError && status/100 == 5 {
+				isError = true
+			}
+		}
+		swoTags["http.method"] = method
+	}
+
+	swoTags["sw.is_error"] = strconv.FormatBool(isError)
+	txnName := ""
+	if httpRoute != "" {
+		txnName = httpRoute
+	} else if span.Name() != "" {
+		txnName = span.Name()
+	}
+	swoTags["sw.transaction"] = txnName
+
+	duration := span.EndTime().Sub(span.StartTime())
+	s := &HTTPSpanMessage{
+		BaseSpanMessage: BaseSpanMessage{Duration: duration, HasError: isError},
+		Transaction:     txnName,
+		Path:            httpRoute,
+		Status:          int(status),
+		Host:            "", // intentionally not set
+		Method:          method,
+	}
+
+	var tagsList []map[string]string = nil
+	var metricName string
+	if !isAppoptics {
+		tagsList = []map[string]string{swoTags}
+		metricName = responseTime
+	} else {
+		tagsList = s.appOpticsTagsList()
+		metricName = transactionResponseTime
+	}
+
+	apmHistograms.recordHistogram("", duration)
+	if err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
+		if isAppoptics {
+			s.Transaction = OtherTransactionName
+			tagsList = s.appOpticsTagsList()
+		} else {
+			tagsList[0]["sw.transaction"] = OtherTransactionName
+		}
+		err := s.processMeasurements(metricName, tagsList, ApmMetrics)
+		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
+		// which is handled above, and the reason we retry here.
+		if err != nil {
+			log.Errorf("Failed to process messages", err)
+		}
+	} else {
+		// We didn't hit ErrExceedsMetricsCountLimit
+		apmHistograms.recordHistogram(txnName, duration)
+	}
+
 }

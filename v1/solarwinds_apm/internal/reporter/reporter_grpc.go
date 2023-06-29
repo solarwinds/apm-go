@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package reporter
 
 import (
@@ -81,7 +82,6 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	// These are hard-coded parameters for the gRPC reporter. Any of them become
 	// configurable in future versions will be moved to package config.
 	// TODO: use time.Time
-	grpcMetricIntervalDefault               = 60               // default metrics flush interval in seconds
 	grpcGetSettingsIntervalDefault          = 30               // default settings retrieval interval in seconds
 	grpcSettingsTimeoutCheckIntervalDefault = 10               // default check interval for timed out settings in seconds
 	grpcPingIntervalDefault                 = 20               // default interval for keep alive pings in seconds
@@ -222,12 +222,8 @@ type grpcReporter struct {
 
 	serviceKey *uatomic.String // service key
 
-	eventMessages  chan []byte              // channel for event messages (sent from agent)
-	spanMessages   chan metrics.SpanMessage // channel for span messages (sent from agent)
-	statusMessages chan []byte              // channel for status messages (sent from agent)
-
-	httpMetrics   *metrics.Measurements
-	customMetrics *metrics.Measurements
+	eventMessages  chan []byte // channel for event messages (sent from agent)
+	statusMessages chan []byte // channel for status messages (sent from agent)
 
 	// The reporter is considered ready if there is a valid default setting for sampling.
 	// It should be accessed atomically.
@@ -297,17 +293,14 @@ func newGRPCReporter() reporter {
 	r := &grpcReporter{
 		conn: grpcConn,
 
-		collectMetricInterval:        grpcMetricIntervalDefault,
+		collectMetricInterval:        metrics.ReportingIntervalDefault,
 		getSettingsInterval:          grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
 		serviceKey: uatomic.NewString(config.GetServiceKey()),
 
 		eventMessages:  make(chan []byte, 10000),
-		spanMessages:   make(chan metrics.SpanMessage, 10000),
 		statusMessages: make(chan []byte, 100),
-		httpMetrics:    metrics.NewMeasurements(false, grpcMetricIntervalDefault, 200),
-		customMetrics:  metrics.NewMeasurements(true, grpcMetricIntervalDefault, 500), // TODO configurable
 
 		cond: sync.NewCond(&sync.Mutex{}),
 		done: make(chan struct{}),
@@ -326,6 +319,10 @@ func (r *grpcReporter) Flush() error {
 
 func (r *grpcReporter) SetServiceKey(key string) {
 	r.serviceKey.Store(key)
+}
+
+func (r *grpcReporter) IsAppoptics() bool {
+	return strings.Contains(r.conn.address, "appoptics.com")
 }
 
 func (r *grpcReporter) isGracefully() bool {
@@ -356,10 +353,6 @@ func (r *grpcReporter) start() {
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
-
-	// start up long-running goroutine spanMessageAggregator() which listens on the span message
-	// channel and processes incoming span messages
-	go r.spanMessageAggregator()
 }
 
 // ShutdownNow stops the reporter immediately.
@@ -802,13 +795,13 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 
 	var messages [][]byte
 	// generate a new metrics message
-	builtin := metrics.BuildBuiltinMetricsMessage(r.httpMetrics.CopyAndReset(i),
+	builtin := metrics.BuildBuiltinMetricsMessage(metrics.ApmMetrics.CopyAndReset(i),
 		r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
 
-	custom := metrics.BuildMessage(r.customMetrics.CopyAndReset(i), false)
+	custom := metrics.BuildMessage(metrics.CustomMetrics.CopyAndReset(i), false)
 	if custom != nil {
 		messages = append(messages, custom)
 	}
@@ -835,18 +828,6 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 	default:
 		log.Warningf("sendMetrics: %s", err)
 	}
-}
-
-// CustomSummaryMetric submits a summary type measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (r *grpcReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return r.customMetrics.Summary(name, value, opts)
-}
-
-// CustomIncrementMetric submits a incremental measurement to the reporter. The measurements
-// will be collected in the background and reported periodically.
-func (r *grpcReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return r.customMetrics.Increment(name, opts)
 }
 
 // ================================ Settings Handling ====================================
@@ -891,11 +872,11 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		o.SetEventFlushInterval(int64(ei))
 
 		// update MaxTransactions
-		mt := parseInt32(s.Arguments, kvMaxTransactions, r.httpMetrics.Cap())
-		r.httpMetrics.SetCap(mt)
+		mt := parseInt32(s.Arguments, kvMaxTransactions, metrics.ApmMetrics.Cap())
+		metrics.ApmMetrics.SetCap(mt)
 
-		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, r.httpMetrics.Cap())
-		r.customMetrics.SetCap(maxCustomMetrics)
+		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, metrics.CustomMetrics.Cap())
+		metrics.CustomMetrics.SetCap(maxCustomMetrics)
 	}
 
 	if !r.isReady() && hasDefaultSetting() {
@@ -981,40 +962,6 @@ func (r *grpcReporter) statusSender() {
 			log.Info(method.CallSummary())
 		default:
 			log.Infof("statusSender: %s", err)
-		}
-	}
-}
-
-// ========================= Span Message Handling =============================
-
-// puts the given span messages on the channel so it can be consumed by the spanMessageAggregator()
-// goroutine
-// span		span message to be put on the channel
-//
-// returns	error if channel is full
-func (r *grpcReporter) reportSpan(span metrics.SpanMessage) error {
-	if r.Closed() {
-		return ErrReporterIsClosed
-	}
-
-	select {
-	case r.spanMessages <- span:
-		return nil
-	default:
-		return errors.New("span message queue is full")
-	}
-}
-
-// long-running goroutine that listens on the span message channel and processes (aggregates)
-// incoming span messages
-func (r *grpcReporter) spanMessageAggregator() {
-	defer log.Info("spanMessageAggregator goroutine exiting.")
-	for {
-		select {
-		case span := <-r.spanMessages:
-			span.Process(r.httpMetrics)
-		case <-r.done:
-			return
 		}
 	}
 }
