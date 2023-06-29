@@ -11,20 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package host
 
 import (
 	"runtime"
-	"runtime/debug"
 )
 
 // Mem returns the current memory statistics. Don't call this function too often
 // as it stops the world while gathering the information.
 func Mem(m *runtime.MemStats) {
 	runtime.ReadMemStats(m)
-}
-
-// GC collects current statistics of garbage collector
-func GC(stats *debug.GCStats) {
-	debug.ReadGCStats(stats)
 }
