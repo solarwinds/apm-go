@@ -21,8 +21,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 )
 
 // TestReporter appends reported events to Bufs if ShouldTrace is true.
@@ -283,14 +281,6 @@ func (r *TestReporter) updateSetting() {
 	default:
 		panic("No such setting type.")
 	}
-}
-
-func (r *TestReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return nil
-}
-
-func (r *TestReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return nil
 }
 
 func (r *TestReporter) IsAppoptics() bool { return false }

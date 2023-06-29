@@ -86,15 +86,9 @@ func (r *nullReporter) Shutdown(ctx context.Context) error            { return n
 func (r *nullReporter) ShutdownNow() error                            { return nil }
 func (r *nullReporter) Closed() bool                                  { return true }
 func (r *nullReporter) WaitForReady(ctx context.Context) bool         { return true }
-func (r *nullReporter) CustomSummaryMetric(name string, value float64, opts metrics.MetricOptions) error {
-	return nil
-}
-func (r *nullReporter) CustomIncrementMetric(name string, opts metrics.MetricOptions) error {
-	return nil
-}
-func (r *nullReporter) Flush() error         { return nil }
-func (r *nullReporter) SetServiceKey(string) {}
-func (r *nullReporter) IsAppoptics() bool    { return false }
+func (r *nullReporter) Flush() error                                  { return nil }
+func (r *nullReporter) SetServiceKey(string)                          {}
+func (r *nullReporter) IsAppoptics() bool                             { return false }
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
