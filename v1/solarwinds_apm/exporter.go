@@ -11,117 +11,36 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package solarwinds_apm //
+
+package solarwinds_apm
 
 import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"strings"
-	"time"
-
-	"go.opentelemetry.io/otel/attribute"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"strings"
 )
 
-type Exporter struct {
-	shutdownDelay int // number of seconds to sleep when Shutdown is called, to allow spans to send before short test script exits.
+type exporter struct {
 }
 
 const (
 	xtraceVersionHeader = "2B"
 	sampledFlags        = "01"
-	otEventNameKey      = "ot.event_name"
-	otStatusCodeKey     = "ot.span_status.code"
-	otSpanStatusDescKey = "ot.span_status.description"
 )
-
-func fromAttributeValue(attributeValue attribute.Value) interface{} {
-	switch attributeValue.Type() {
-	case attribute.STRING:
-		return attributeValue.AsString()
-	case attribute.INT64:
-		return attributeValue.AsInt64()
-	case attribute.FLOAT64:
-		return attributeValue.AsFloat64()
-	case attribute.BOOL:
-		return attributeValue.AsBool()
-	case attribute.STRINGSLICE:
-		return attributeValue.AsStringSlice()
-	case attribute.INT64SLICE:
-		return attributeValue.AsInt64Slice()
-	case attribute.FLOAT64SLICE:
-		return attributeValue.AsFloat64Slice()
-	case attribute.BOOLSLICE:
-		return attributeValue.AsBoolSlice()
-	default:
-		return nil
-	}
-}
-
-var wsKeyMap = map[string]string{
-	"http.method":      "HTTPMethod",
-	"http.url":         "URL",
-	"http.status_code": "Status",
-}
-var queryKeyMap = map[string]string{
-	"db.connection_string": "RemoteHost",
-	"db.name":              "Database",
-	"db.statement":         "Query",
-	"db.system":            "Flavor",
-}
-
-func extractWebserverKvs(span sdktrace.ReadOnlySpan) []interface{} {
-	return extractSpecKvs(span, wsKeyMap, "ws")
-}
-
-func extractQueryKvs(span sdktrace.ReadOnlySpan) []interface{} {
-	return extractSpecKvs(span, queryKeyMap, "query")
-}
-
-func extractSpecKvs(span sdktrace.ReadOnlySpan, lookup map[string]string, specValue string) []interface{} {
-	attrMap := span.Attributes()
-	result := []interface{}{}
-	for otKey, apmKey := range lookup {
-		for _, attr := range attrMap {
-			if string(attr.Key) == otKey {
-				result = append(result, apmKey)
-				result = append(result, fromAttributeValue(attr.Value))
-			}
-		}
-	}
-	if len(result) > 0 {
-		result = append(result, "Spec")
-		result = append(result, specValue)
-	}
-	return result
-}
 
 func extractKvs(span sdktrace.ReadOnlySpan) []interface{} {
 	var kvs []interface{}
 	for _, attributeValue := range span.Attributes() {
-		if _, ok := wsKeyMap[string(attributeValue.Key)]; ok { // in wsKeyMap, skip it and handle later
-			continue
-		}
-		if _, ok := queryKeyMap[string(attributeValue.Key)]; ok { // in queryKeyMap, skip it and handle later
-			continue
-		}
-		// all other keys
-		kvs = append(kvs, string(attributeValue.Key))
-		kvs = append(kvs, fromAttributeValue(attributeValue.Value))
+		kvs = append(kvs, string(attributeValue.Key), attributeValue.Value.AsInterface())
 	}
 
-	spanStatus := span.Status()
-	kvs = append(kvs, otStatusCodeKey)
-	kvs = append(kvs, uint32(spanStatus.Code))
-	if spanStatus.Code == 1 { // if the span status code is an error, send the description. otel will ignore the description on any other status code
-		kvs = append(kvs, otSpanStatusDescKey)
-		kvs = append(kvs, spanStatus.Description)
+	if !span.Parent().IsValid() || span.Parent().IsRemote() {
+		// root span only
+		kvs = append(kvs, "TransactionName", utils.GetTransactionName(span.Name(), span.Attributes()))
 	}
-	if !span.Parent().IsValid() { // root span, attempt to extract webserver KVs
-		kvs = append(kvs, extractWebserverKvs(span)...)
-	}
-	kvs = append(kvs, extractQueryKvs(span)...)
 
 	return kvs
 }
@@ -132,11 +51,8 @@ func extractInfoEvents(span sdktrace.ReadOnlySpan) [][]interface{} {
 
 	for i, event := range events {
 		kvs[i] = make([]interface{}, 0)
-		kvs[i] = append(kvs[i], otEventNameKey)
-		kvs[i] = append(kvs[i], string(event.Name))
 		for _, attr := range event.Attributes {
-			kvs[i] = append(kvs[i], string(attr.Key))
-			kvs[i] = append(kvs[i], fromAttributeValue(attr.Value))
+			kvs[i] = append(kvs[i], string(attr.Key), attr.Value.AsInterface())
 		}
 	}
 
@@ -177,7 +93,6 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 		for _, infoEventKvs := range infoEvents {
 			apmSpan.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
 		}
-
 		apmSpan.EndWithOverrides(endOverrides, kvs...)
 	} else { // no parent means this is the beginning of the trace (root span)
 		trace := NewTraceWithOverrides(s.Name(), startOverrides, nil)
@@ -191,7 +106,7 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 	}
 }
 
-func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	WaitForReady(ctx)
 	for _, s := range spans {
 		exportSpan(ctx, s)
@@ -199,17 +114,11 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 	return nil
 }
 
-func (e *Exporter) Shutdown(ctx context.Context) error {
-	// Most applications should never set this value, it is only useful for testing short running (cli) scripts.
-	if e.shutdownDelay != 0 {
-		time.Sleep(time.Duration(e.shutdownDelay) * time.Second)
-	}
-
+func (e *exporter) Shutdown(ctx context.Context) error {
 	Shutdown(ctx)
 	return nil
 }
 
-// NewExporter creates an instance of the SolarWinds Observability exporter for OTEL traces.
-func NewExporter(shutdownDelay int) *Exporter {
-	return &Exporter{shutdownDelay: shutdownDelay}
+func NewExporter() sdktrace.SpanExporter {
+	return &exporter{}
 }
