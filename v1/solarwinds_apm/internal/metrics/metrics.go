@@ -1036,12 +1036,7 @@ func RecordSpan(span RoSpan, isAppoptics bool) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := ""
-	if httpRoute != "" {
-		txnName = httpRoute
-	} else if span.Name() != "" {
-		txnName = span.Name()
-	}
+	txnName := utils.GetTransactionName(span.Name(), span.Attributes())
 	swoTags["sw.transaction"] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())
