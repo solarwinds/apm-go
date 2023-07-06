@@ -10,14 +10,14 @@ import (
 )
 
 type recordMock struct {
-	span        metrics.RoSpan
+	span        sdktrace.ReadOnlySpan
 	isAppoptics bool
 	called      bool
 }
 
 func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span metrics.RoSpan, isAppoptics bool) {
+	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span
 		mock.isAppoptics = isAppoptics
 		mock.called = true
@@ -38,7 +38,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 
 func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span metrics.RoSpan, isAppoptics bool) {
+	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span
 		mock.isAppoptics = isAppoptics
 		mock.called = true
@@ -59,7 +59,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T)
 
 func TestSolarWindsInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span metrics.RoSpan, isAppoptics bool) {
+	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span
 		mock.isAppoptics = isAppoptics
 		mock.called = true
