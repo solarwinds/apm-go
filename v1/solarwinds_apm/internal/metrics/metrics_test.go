@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
-	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
@@ -532,8 +531,6 @@ func TestRateCounts(t *testing.T) {
 	assert.Equal(t, original, *cp)
 	assert.Equal(t, &RateCounts{}, rc)
 }
-
-var okStatus = sdktrace.Status{Code: codes.Ok, Description: "OK"}
 
 func resetHistograms() {
 	apmHistograms = &histograms{
