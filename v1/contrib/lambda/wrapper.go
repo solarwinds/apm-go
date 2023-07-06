@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/pkg/errors"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 )
 
 const (

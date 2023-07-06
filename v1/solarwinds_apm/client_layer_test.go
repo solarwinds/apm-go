@@ -20,7 +20,7 @@ import (
 
 	"context"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/stretchr/testify/assert"

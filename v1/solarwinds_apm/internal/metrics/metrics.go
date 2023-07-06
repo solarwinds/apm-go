@@ -966,7 +966,7 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 		ttTraced += strict.Traced()
 	}
 
-	var i int = 0
+	var i = 0
 	if sampled != 0 {
 		bbuf.AppendString(strconv.Itoa(i), "Sample")
 		i++

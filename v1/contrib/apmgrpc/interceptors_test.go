@@ -18,7 +18,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/contrib/apmgrpc/mocks"
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/stretchr/testify/assert"
 )
 

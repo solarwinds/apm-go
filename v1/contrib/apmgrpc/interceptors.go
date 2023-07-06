@@ -23,7 +23,7 @@ import (
 
 	"context"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
