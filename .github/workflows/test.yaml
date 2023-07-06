@@ -70,3 +70,4 @@ jobs:
         with:
           install-go: false
           cache-key: ${{ matrix.goversion }}
+      - uses: Jerome1337/gofmt-action@v1.0.5
