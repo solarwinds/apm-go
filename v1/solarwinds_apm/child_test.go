@@ -19,7 +19,7 @@ import (
 
 	"context"
 
-	solarwinds_apm "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	g "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/graphtest"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -40,8 +40,6 @@ func childExample(ctx context.Context) {
 
 	// test attempting to start a profile from a span that has ended
 	// similarly we don't allow this, so nothing should be reported
-	p1 := l1.BeginProfile("f2")
-	p1.End()
 
 	// end the trace
 	solarwinds_apm.EndTrace(ctx)

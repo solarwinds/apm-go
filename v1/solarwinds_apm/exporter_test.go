@@ -16,13 +16,12 @@ package solarwinds_apm
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	"go.opentelemetry.io/otel/codes"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	ot "go.opentelemetry.io/otel/trace"
@@ -30,53 +29,8 @@ import (
 
 var tnNameKey = attribute.Key("TransactionName")
 
-func setup() (ot.Tracer, func()) {
-	tp := trace.NewTracerProvider(
-		trace.WithBatcher(NewDummyExporter()),
-		trace.WithSampler(NewDummySampler()),
-	)
-	otel.SetTracerProvider(tp)
-	tr := otel.Tracer("foo123", ot.WithInstrumentationVersion("123"), ot.WithSchemaURL("https://www.schema.url/foo123"))
-
-	return tr, func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			fmt.Println(err)
-		}
-	}
-}
-
-type DummySampler struct{}
-
-func (ds *DummySampler) ShouldSample(parameters trace.SamplingParameters) trace.SamplingResult {
-	return trace.SamplingResult{
-		Decision: trace.RecordAndSample,
-	}
-}
-
-func (ds *DummySampler) Description() string {
-	return "Dummy Sampler"
-}
-
-func NewDummySampler() trace.Sampler {
-	return &DummySampler{}
-}
-
-type DummyExporter struct{}
-
-func NewDummyExporter() *DummyExporter {
-	return &DummyExporter{}
-}
-
-func (de *DummyExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
-	return nil
-}
-
-func (de *DummyExporter) Shutdown(ctx context.Context) error {
-	return nil
-}
-
 func Test_extractKvs_Basic(t *testing.T) {
-	tr, teardown := setup()
+	tr, teardown := testutils.TracerSetup()
 	defer teardown()
 	_, sp := tr.Start(context.Background(), "ROOT SPAN NAME aaaa")
 	spanName := "span name"
@@ -101,7 +55,7 @@ func Test_extractKvs_Basic(t *testing.T) {
 }
 
 func Test_extractKvs_Empty(t *testing.T) {
-	tr, teardown := setup()
+	tr, teardown := testutils.TracerSetup()
 	defer teardown()
 	_, sp := tr.Start(context.Background(), "ROOT SPAN NAME aaaa")
 	spanName := "span name"
@@ -118,7 +72,7 @@ func Test_extractKvs_Empty(t *testing.T) {
 }
 
 func Test_extractInfoEvents(t *testing.T) {
-	tr, teardown := setup()
+	tr, teardown := testutils.TracerSetup()
 	defer teardown()
 	_, sp := tr.Start(context.Background(), "ROOT SPAN NAME aaaa")
 	sp.SetName("span name")

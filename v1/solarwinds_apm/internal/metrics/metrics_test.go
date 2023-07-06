@@ -16,9 +16,9 @@ package metrics
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
@@ -532,26 +532,6 @@ func TestRateCounts(t *testing.T) {
 	assert.Equal(t, &RateCounts{}, rc)
 }
 
-type staticRoSpan struct {
-	status     sdktrace.Status
-	attributes []attribute.KeyValue
-	spanKind   trace.SpanKind
-	name       string
-	startTime  time.Time
-	endTime    time.Time
-}
-
-var _ RoSpan = &staticRoSpan{}
-
-func (s *staticRoSpan) Status() sdktrace.Status          { return s.status }
-func (s *staticRoSpan) Attributes() []attribute.KeyValue { return s.attributes }
-func (s *staticRoSpan) SpanKind() trace.SpanKind         { return s.spanKind }
-func (s *staticRoSpan) Name() string                     { return s.name }
-func (s *staticRoSpan) StartTime() time.Time             { return s.startTime }
-func (s *staticRoSpan) EndTime() time.Time               { return s.endTime }
-
-var okStatus = sdktrace.Status{Code: codes.Ok, Description: "OK"}
-
 func resetHistograms() {
 	apmHistograms = &histograms{
 		histograms: make(map[string]*histogram),
@@ -560,22 +540,24 @@ func resetHistograms() {
 }
 
 func TestRecordSpan(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
 	now := time.Now()
-	span := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "foo bar baz",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
-
-	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
-	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+	_, span := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(200),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("my cool route"),
+		),
+	)
+	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
 	// This affects global state (ApmMetrics below)
-	RecordSpan(span, false)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
 
 	m := ApmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
@@ -607,7 +589,7 @@ func TestRecordSpan(t *testing.T) {
 	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
 
 	// Now test for AO
-	RecordSpan(span, true)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
 
 	m = ApmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
@@ -649,22 +631,24 @@ func TestRecordSpan(t *testing.T) {
 }
 
 func TestRecordSpanErrorStatus(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
 	now := time.Now()
-	span := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "foo bar baz",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
-
-	span.attributes = append(span.attributes, semconv.HTTPStatusCode(500))
-	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
+	_, span := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(500),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("my cool route"),
+		),
+	)
+	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
 	// This affects global state (ApmMetrics below)
-	RecordSpan(span, false)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
 
 	m := ApmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
@@ -696,7 +680,7 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
 
 	// Now test for AO
-	RecordSpan(span, true)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
 
 	m = ApmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
@@ -738,32 +722,34 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 }
 
 func TestRecordSpanOverflow(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
 	now := time.Now()
-	span := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "foo bar baz",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
+	_, span := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(200),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("my cool route"),
+		),
+	)
+	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
-	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
-	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
-
-	span2 := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "this should overflow",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
-
-	span2.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
-	span2.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span2.attributes = append(span.attributes, semconv.HTTPRoute("this should overflow"))
+	_, span2 := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(200),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("this should overflow"),
+		),
+	)
+	span2.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
 	// The cap only takes affect after the following reset
 	ApmMetrics.SetCap(1)
@@ -771,8 +757,8 @@ func TestRecordSpanOverflow(t *testing.T) {
 	assert.Equal(t, int32(1), ApmMetrics.Cap())
 
 	// This affects global state (ApmMetrics below)
-	RecordSpan(span, false)
-	RecordSpan(span2, false)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
+	RecordSpan(span2.(sdktrace.ReadOnlySpan), false)
 
 	m := ApmMetrics.CopyAndReset(60)
 	// We expect to have a record for `my cool route` and one for `other`
@@ -821,32 +807,34 @@ func TestRecordSpanOverflow(t *testing.T) {
 }
 
 func TestRecordSpanOverflowAppoptics(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
 	now := time.Now()
-	span := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "foo bar baz",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
+	_, span := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(200),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("my cool route"),
+		),
+	)
+	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
-	span.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
-	span.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span.attributes = append(span.attributes, semconv.HTTPRoute("my cool route"))
-
-	span2 := &staticRoSpan{
-		status:     okStatus,
-		attributes: make([]attribute.KeyValue, 0),
-		spanKind:   trace.SpanKindServer,
-		name:       "this should overflow",
-		startTime:  now.Add(-1 * time.Second),
-		endTime:    now,
-	}
-
-	span2.attributes = append(span.attributes, semconv.HTTPStatusCode(200))
-	span2.attributes = append(span.attributes, semconv.HTTPMethod("GET"))
-	span2.attributes = append(span.attributes, semconv.HTTPRoute("this should overflow"))
+	_, span2 := tr.Start(
+		context.Background(),
+		"span name",
+		trace.WithTimestamp(now),
+		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(
+			semconv.HTTPStatusCode(200),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPRoute("this should overflow"),
+		),
+	)
+	span2.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
 	// The cap only takes affect after the following reset
 	// Appoptics-style will generate 3 metrics, so we'll set the cap to that here
@@ -855,8 +843,8 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 	assert.Equal(t, int32(3), ApmMetrics.Cap())
 
 	// This affects global state (ApmMetrics below)
-	RecordSpan(span, true)
-	RecordSpan(span2, true)
+	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
+	RecordSpan(span2.(sdktrace.ReadOnlySpan), true)
 
 	m := ApmMetrics.CopyAndReset(60)
 	// We expect to have 3 records for `my cool route` and 3 for `other`
