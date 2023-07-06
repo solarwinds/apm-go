@@ -75,8 +75,6 @@ func TestBeginSpan(t *testing.T) {
 
 	s.End()
 
-	BeginProfile(ctx, "testProfile").End()
-
 	EndTrace(ctx)
 
 	r.Close(10)

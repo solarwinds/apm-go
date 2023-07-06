@@ -99,9 +99,6 @@ func TestNullSpan(t *testing.T) {
 	assert.False(t, l1.IsReporting())
 	assert.Empty(t, l1.MetadataString())
 
-	p1 := l1.BeginProfile("P2") // try to start profile after end: no effect
-	p1.End()
-
 	c1 := l1.BeginSpan("C1") // child after parent ended
 	assert.IsType(t, c1, nullSpan{})
 	assert.False(t, c1.IsReporting())
@@ -109,7 +106,6 @@ func TestNullSpan(t *testing.T) {
 	assert.False(t, c1.ok())
 	assert.Empty(t, c1.MetadataString())
 	c1.addChildEdge(l1.apmContext())
-	c1.addProfile(p1)
 
 	nctx := c1.apmContext()
 	assert.Equal(t, reflect.TypeOf(nctx).Elem().Name(), "nullContext")
