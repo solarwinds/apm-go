@@ -206,6 +206,10 @@ func (r *TestReporter) report(ctx *oboeContext, e *event) error {
 	return nil
 }
 
+func (r *TestReporter) enqueueEvent(e *event) error {
+	return errors.New("TestReporter.enqueueEvent not implemented")
+}
+
 func (r *TestReporter) reportEvent(ctx *oboeContext, e *event) error {
 	return r.report(ctx, e)
 }

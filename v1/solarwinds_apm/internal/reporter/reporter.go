@@ -35,6 +35,8 @@ import (
 type reporter interface {
 	// called when an event should be reported
 	reportEvent(ctx *oboeContext, e *event) error
+
+	enqueueEvent(e *event) error
 	// called when a status (e.g. __Init message) should be reported
 	reportStatus(ctx *oboeContext, e *event) error
 	// Shutdown closes the reporter.
@@ -80,6 +82,7 @@ type nullReporter struct{}
 
 func newNullReporter() *nullReporter                                  { return &nullReporter{} }
 func (r *nullReporter) reportEvent(ctx *oboeContext, e *event) error  { return nil }
+func (r *nullReporter) enqueueEvent(e *event) error                   { return nil }
 func (r *nullReporter) reportStatus(ctx *oboeContext, e *event) error { return nil }
 func (r *nullReporter) reportSpan(span metrics.SpanMessage) error     { return nil }
 func (r *nullReporter) Shutdown(ctx context.Context) error            { return nil }
