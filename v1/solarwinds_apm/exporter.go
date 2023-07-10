@@ -93,7 +93,7 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 	}
 
 	for _, kv := range s.Attributes() {
-		err := evt.AddKV(string(kv.Key), kv.Value)
+		err := evt.AddKV(string(kv.Key), kv.Value.AsInterface())
 		if err != nil {
 			log.Warning("could not add KV", kv, err)
 			// Continue so we don't completely abandon the event
