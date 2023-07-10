@@ -13,6 +13,7 @@
 // limitations under the License.
 // Package reporter provides a low-level API for creating and reporting events for
 // distributed tracing with SolarWinds Observability.
+
 package reporter
 
 import (
@@ -20,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"math"
 	"strconv"
@@ -233,33 +235,53 @@ func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
 	return md
 }
 
-func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (*event, error) {
+func CreateEvent(ctx trace.SpanContext, t time.Time, label Label, opt OpIDOption) (*event, error) {
 	md := metaFromSpanContext(ctx)
 	evt := &event{}
-	if err := oboeEventInit(evt, md, UseMDOpID); err != nil {
+	if err := oboeEventInit(evt, md, opt); err != nil {
+		return nil, err
+	}
+	evt.AddString("Label", string(label))
+	evt.AddInt64("Timestamp_u", t.UnixMicro())
+	return evt, nil
+}
+
+func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (*event, error) {
+	evt, err := CreateEvent(ctx, t, LabelEntry, UseMDOpID)
+	if err != nil {
 		return nil, err
 	}
 	if parent.IsValid() {
 		evt.AddEdgeFromParent(parent)
 	}
-	evt.AddString("Label", LabelEntry)
-	evt.AddInt64("Timestamp_u", t.UnixMicro())
 	return evt, nil
 }
 
-// TODO: DRY this up with the above
-
-func CreateExit(ctx trace.SpanContext, t time.Time) (*event, error) {
-	md := metaFromSpanContext(ctx)
-	evt := &event{}
-	// We initialize the event with a random OpID; the "parent" is the entry event
-	if err := oboeEventInit(evt, md, RandomOpID); err != nil {
+func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (*event, error) {
+	evt, err := CreateEvent(ctx, t, label, RandomOpID)
+	if err != nil {
 		return nil, err
 	}
 	evt.AddEdgeFromParent(ctx)
-	evt.AddString("Label", LabelExit)
-	evt.AddInt64("Timestamp_u", t.UnixMicro())
 	return evt, nil
+}
+
+func CreateExit(ctx trace.SpanContext, t time.Time) (*event, error) {
+	return createNonEntryEvent(ctx, t, LabelExit)
+}
+
+func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (*event, error) {
+	return createNonEntryEvent(ctx, t, LabelInfo)
+}
+
+func (e *event) AddAttributes(attrs []attribute.KeyValue) {
+	for _, kv := range attrs {
+		err := e.AddKV(string(kv.Key), kv.Value.AsInterface())
+		if err != nil {
+			log.Warning("could not add KV", kv, err)
+			// Continue so we don't completely abandon the event
+		}
+	}
 }
 
 func (e *event) addLabelLayer(label Label, layer string) {
