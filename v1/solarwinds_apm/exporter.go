@@ -75,7 +75,6 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 	//                else:
 	//                    self._report_info_event(event)
 	//
-	// TODO add txn name
 	// TODO add instrumentation scope
 	// TODO add instrumented framework?
 	evt, err := reporter.CreateEntry(s.SpanContext(), s.StartTime(), s.Parent())
@@ -88,6 +87,10 @@ func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
 	evt.AddString("sw.span_name", s.Name())
 	evt.AddString("sw.span_kind", s.SpanKind().String())
 	evt.AddString("Language", "Go")
+	if !s.Parent().IsValid() || s.Parent().IsRemote() {
+		// root span only
+		evt.AddString("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes()))
+	}
 
 	for _, kv := range s.Attributes() {
 		err := evt.AddKV(string(kv.Key), kv.Value)
