@@ -652,7 +652,7 @@ func (r *grpcReporter) enqueueStatus(e *event) error {
 		return nil
 	default:
 		r.conn.queueStats.NumOverflowedAdd(int64(1))
-		return errors.New("event message queue is full")
+		return errors.New("status message queue is full")
 	}
 }
 
