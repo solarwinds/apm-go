@@ -61,9 +61,9 @@ type sampleSource int
 
 // tracing modes
 const (
-	TRACE_DISABLED tracingMode = iota // disable tracing, will neither start nor continue traces
-	TRACE_ENABLED                     // perform sampling every inbound request for tracing
-	TRACE_UNKNOWN                     // for cache purpose only
+	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
+	TraceEnabled                     // perform sampling every inbound request for tracing
+	TraceUnknown                     // for cache purpose only
 )
 
 // setting types
@@ -133,23 +133,23 @@ func (st settingType) toSampleSource() sampleSource {
 func newTracingMode(mode config.TracingMode) tracingMode {
 	switch mode {
 	case config.DisabledTracingMode:
-		return TRACE_DISABLED
+		return TraceDisabled
 	case config.EnabledTracingMode:
-		return TRACE_ENABLED
+		return TraceEnabled
 	default:
 	}
-	return TRACE_UNKNOWN
+	return TraceUnknown
 }
 
 func (tm tracingMode) isUnknown() bool {
-	return tm == TRACE_UNKNOWN
+	return tm == TraceUnknown
 }
 
 func (tm tracingMode) toFlags() settingFlag {
 	switch tm {
-	case TRACE_ENABLED:
+	case TraceEnabled:
 		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
-	case TRACE_DISABLED:
+	case TraceDisabled:
 	default:
 	}
 	return FLAG_OK
@@ -157,9 +157,9 @@ func (tm tracingMode) toFlags() settingFlag {
 
 func (tm tracingMode) ToString() string {
 	switch tm {
-	case TRACE_ENABLED:
+	case TraceEnabled:
 		return string(config.EnabledTracingMode)
-	case TRACE_DISABLED:
+	case TraceDisabled:
 		return string(config.DisabledTracingMode)
 	default:
 		return string(config.UnknownTracingMode)

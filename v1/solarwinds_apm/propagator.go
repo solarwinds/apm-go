@@ -65,12 +65,12 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 
 // TODO (NH-5731) test
 func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
-	xtraceOptionsHeader := carrier.Get(xtrace.XTraceOptionsHeaderName)
+	xtraceOptionsHeader := carrier.Get(xtrace.OptionsHeaderName)
 	if xtraceOptionsHeader != "" {
 		ctx = context.WithValue(ctx, xtrace.OptionsKey, xtraceOptionsHeader)
 	}
 
-	xtraceSig := carrier.Get(xtrace.XTraceOptionsSigHeaderName)
+	xtraceSig := carrier.Get(xtrace.OptionsSigHeaderName)
 	if xtraceSig != "" {
 		ctx = context.WithValue(ctx, xtrace.SignatureKey, xtraceSig)
 	}
