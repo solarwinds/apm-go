@@ -457,18 +457,33 @@ func (e *event) AddKV(key, value interface{}) error {
 	return nil
 }
 
-func ReportStatus(e *event) error {
+type evType int
+
+const (
+	evTypeEvent = iota
+	evTypeStatus
+)
+
+func report(e *event, typ evType) error {
+	if typ != evTypeEvent && typ != evTypeStatus {
+		return errors.New("invalid evType")
+	}
+
 	e.AddString("Hostname", host.Hostname())
 	e.AddInt("PID", host.PID())
 
 	e.bbuf.Finish()
-	return globalReporter.enqueueStatus(e)
+	if typ == evTypeEvent {
+		return globalReporter.enqueueEvent(e)
+	} else {
+		return globalReporter.enqueueStatus(e)
+	}
+}
+
+func ReportStatus(e *event) error {
+	return report(e, evTypeStatus)
 }
 
 func ReportEvent(e *event) error {
-	e.AddString("Hostname", host.Hostname())
-	e.AddInt("PID", host.PID())
-
-	e.bbuf.Finish()
-	return globalReporter.enqueueEvent(e)
+	return report(e, evTypeEvent)
 }
