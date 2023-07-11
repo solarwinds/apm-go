@@ -111,17 +111,15 @@ func (md *oboeMetadata) SetRandomOpID() error {
 	return err
 }
 
-/*
- * Pack a metadata struct into a buffer.
- *
- * md       - pointer to the metadata struct
- * task_len - the task_id length to take
- * op_len   - the op_id length to take
- * buf      - the buffer to pack the metadata into
- * buf_len  - the space available in the buffer
- *
- * returns the length of the packed metadata, in terms of uint8_ts.
- */
+// Pack a metadata struct into a buffer.
+//
+//	md       - pointer to the metadata struct
+//	task_len - the task_id length to take
+//	op_len   - the op_id length to take
+//	buf      - the buffer to pack the metadata into
+//	buf_len  - the space available in the buffer
+//
+//	returns the length of the packed metadata, in terms of uint8_ts.
 func (md *oboeMetadata) Pack(buf []byte) (int, error) {
 	if md == nil {
 		return 0, errors.New("md.Pack: nil md")
