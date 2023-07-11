@@ -228,6 +228,9 @@ func newEvent(md *oboeMetadata, label Label, layer string, explicitXTraceID stri
 func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
 	md := &oboeMetadata{}
 	md.Init()
+	if ctx.IsSampled() {
+		md.flags |= XTR_FLAGS_SAMPLED
+	}
 	traceID := ctx.TraceID()
 	spanID := ctx.SpanID()
 	copy(md.ids.taskID, traceID[:])
