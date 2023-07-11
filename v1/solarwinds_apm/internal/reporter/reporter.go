@@ -21,7 +21,6 @@ import (
 	"errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 
@@ -120,14 +119,10 @@ func setGlobalReporter(reporterType string) {
 	}
 
 	switch strings.ToLower(reporterType) {
-	case "ssl":
-		fallthrough // using fallthrough since the SSL reporter (gRPC) is our default reporter
-	default:
-		globalReporter = newGRPCReporter()
 	case "none":
 		globalReporter = newNullReporter()
-	case "serverless":
-		globalReporter = newServerlessReporter(os.Stderr)
+	default:
+		globalReporter = newGRPCReporter()
 	}
 }
 
