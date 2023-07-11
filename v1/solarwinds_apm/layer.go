@@ -15,7 +15,6 @@
 package solarwinds_apm
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"runtime/debug"
@@ -72,8 +71,6 @@ const (
 // Span is used to measure a span of time associated with an activity
 // such as an RPC call, DB query, or method invocation.
 type Span interface {
-	// BeginSpan starts a new Span, returning a child of this Span.
-	BeginSpan(spanName string, args ...interface{}) Span
 
 	// BeginSpanWithOptions starts a new child span with provided options
 	BeginSpanWithOptions(spanName string, opts SpanOptions, args ...interface{}) Span
@@ -146,12 +143,6 @@ type SpanOptions struct {
 // SpanOpt defines the function type that changes the SpanOptions
 type SpanOpt func(*SpanOptions)
 
-// BeginSpan starts a new Span, provided a parent context and name. It returns a Span
-// and context bound to the new child Span.
-func BeginSpan(ctx context.Context, spanName string, args ...interface{}) (Span, context.Context) {
-	return BeginSpanWithOptions(ctx, spanName, SpanOptions{}, args...)
-}
-
 // addKVsFromOpts adds the KVs correspond to the options to the args
 func addKVsFromOpts(opts SpanOptions, args ...interface{}) []interface{} {
 	kvs := args
@@ -186,21 +177,6 @@ func fromKVs(kvs ...interface{}) KVMap {
 	return m
 }
 
-// BeginSpanWithOptions starts a span with provided options
-func BeginSpanWithOptions(ctx context.Context, spanName string, opts SpanOptions, args ...interface{}) (Span, context.Context) {
-	return BeginSpanWithOverrides(ctx, spanName, opts, Overrides{}, args...)
-}
-
-func BeginSpanWithOverrides(ctx context.Context, spanName string, opts SpanOptions, overrides Overrides, args ...interface{}) (Span, context.Context) {
-	kvs := addKVsFromOpts(opts, args...)
-	if parent, ok := fromContext(ctx); ok && parent.ok() { // report span entry from parent context
-		l := newSpan(parent.apmContext().Copy(), spanName, parent, overrides, kvs...)
-		return l, newSpanContext(ctx, l)
-	}
-	return nullSpan{}, ctx
-}
-
-// BeginSpan starts a new Span, returning a child of this Span.
 func (s *layerSpan) BeginSpan(spanName string, args ...interface{}) Span {
 	return s.BeginSpanWithOptions(spanName, SpanOptions{}, args...)
 }

@@ -24,11 +24,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 )
 
-const (
-	// LoggableTraceID is used as the key for log injection.
-	LoggableTraceID = "solarwinds_apm.traceId"
-)
-
 // Trace represents the root span of a distributed trace for this request that reports
 // events to SolarWinds Observability. The Trace interface extends the Span interface with additional
 // methods that can be used to help categorize a service's inbound requests on the
@@ -153,34 +148,11 @@ func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 	return t
 }
 
-// NewTraceFromID creates a new Trace for reporting to SolarWinds Observability, provided an
-// incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
-// If callback is provided & trace is sampled, cb will be called for entry event KVs
-func NewTraceFromID(spanName, mdStr string, cb func() KVMap) Trace {
-	return NewTraceFromIDForURL(spanName, mdStr, "", cb)
-}
-
-// NewTraceFromIDForURL creates a new Trace for the provided URL to report to SolarWinds Observability,
-// provided an incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
-// If callback is provided & trace is sampled, cb will be called for entry event KVs
-func NewTraceFromIDForURL(spanName, mdStr string, url string, cb func() KVMap) Trace {
-	return NewTraceWithOptions(spanName, SpanOptions{
-		WithBackTrace: false,
-		ContextOptions: ContextOptions{
-			MdStr: mdStr,
-			URL:   url,
-			CB:    cb,
-		},
-	})
-}
-
 // End reports the exit event for the span name that was used when calling NewTrace().
 // No more events should be reported from this trace.
 func (t *apmTrace) End(args ...interface{}) {
 	if t.ok() {
 		t.AddEndArgs(args...)
-		t.reportExit()
-		flushAgent()
 	}
 }
 
@@ -188,8 +160,6 @@ func (t *apmTrace) EndWithOverrides(overrides Overrides, args ...interface{}) {
 	if t.ok() {
 		t.overrides = overrides
 		t.AddEndArgs(args...)
-		t.reportExit()
-		flushAgent()
 	}
 }
 
@@ -203,8 +173,6 @@ func (t *apmTrace) EndCallback(cb func() KVMap) {
 			}
 			t.AddEndArgs(args...)
 		}
-		t.reportExit()
-		flushAgent()
 	}
 }
 
