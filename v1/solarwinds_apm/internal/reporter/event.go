@@ -23,7 +23,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -269,7 +268,7 @@ func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (*event, error) {
 
 func (e *event) AddAttributes(attrs []attribute.KeyValue) {
 	for _, kv := range attrs {
-		err := e.AddKV(string(kv.Key), kv.Value.AsInterface())
+		err := e.AddKV(kv)
 		if err != nil {
 			log.Warning("could not add KV", kv, err)
 			// Continue so we don't completely abandon the event
@@ -341,112 +340,31 @@ func (e *event) AddEdgeFromParent(parent trace.SpanContext) {
 	e.bbuf.AppendString("sw.parent_span_id", spanIDHex)
 }
 
-// Add any key/value to event. May not add KV if key or value is invalid. Used to facilitate
-// reporting variadic args.
-func (e *event) AddKV(key, value interface{}) error {
-	// load key name
-	k, isStr := key.(string)
-	if !isStr {
-		return fmt.Errorf("key %v (type %T) not a string", k, k)
-	}
-	// load value and add KV to event
-	switch v := value.(type) {
-	case string:
-		e.AddString(k, v)
-	case []byte:
-		e.AddBinary(k, v)
-	case int:
-		e.AddInt(k, v)
-	case int64:
-		e.AddInt64(k, v)
-	case int32:
-		e.AddInt32(k, v)
-	case uint:
-		if v <= math.MaxInt64 {
-			e.AddInt64(k, int64(v))
-		}
-	case uint64:
-		if v <= math.MaxInt64 {
-			e.AddInt64(k, int64(v))
-		}
-	case uint32:
-		e.AddInt64(k, int64(v))
-	case float32:
-		e.AddFloat32(k, v)
-	case float64:
-		e.AddFloat64(k, v)
-	case bool:
-		e.AddBool(k, v)
-	case sampleSource:
-		e.AddInt(k, int(v))
+func (e *event) AddKV(kv attribute.KeyValue) error {
+	key := string(kv.Key)
+	value := kv.Value
 
-	// allow reporting of pointers to basic types as well (for delayed evaluation)
-	case *string:
-		if v != nil {
-			e.AddString(k, *v)
-		}
-	case *[]byte:
-		if v != nil {
-			e.AddBinary(k, *v)
-		}
-	case *int:
-		if v != nil {
-			e.AddInt(k, *v)
-		}
-	case *int64:
-		if v != nil {
-			e.AddInt64(k, *v)
-		}
-	case *int32:
-		if v != nil {
-			e.AddInt32(k, *v)
-		}
-	case *uint:
-		if v != nil {
-			if *v <= math.MaxInt64 {
-				e.AddInt64(k, int64(*v))
-			}
-		}
-	case *uint64:
-		if v != nil {
-			if *v <= math.MaxInt64 {
-				e.AddInt64(k, int64(*v))
-			}
-		}
-	case *uint32:
-		if v != nil {
-			e.AddInt64(k, int64(*v))
-		}
-	case *float32:
-		if v != nil {
-			e.AddFloat32(k, *v)
-		}
-	case *float64:
-		if v != nil {
-			e.AddFloat64(k, *v)
-		}
-	case *bool:
-		if v != nil {
-			e.AddBool(k, *v)
-		}
-	case []int64:
-		if v != nil {
-			e.AddInt64Slice(k, v)
-		}
-	case []string:
-		if v != nil {
-			e.AddStringSlice(k, v)
-		}
-	case []float64:
-		if v != nil {
-			e.AddFloat64Slice(k, v)
-		}
-	case []bool:
-		if v != nil {
-			e.AddBoolSlice(k, v)
-		}
+	switch value.Type() {
+	case attribute.BOOL:
+		e.AddBool(key, value.AsBool())
+	case attribute.BOOLSLICE:
+		e.AddBoolSlice(key, value.AsBoolSlice())
+	case attribute.FLOAT64:
+		e.AddFloat64(key, value.AsFloat64())
+	case attribute.FLOAT64SLICE:
+		e.AddFloat64Slice(key, value.AsFloat64Slice())
+	case attribute.INT64:
+		e.AddInt64(key, value.AsInt64())
+	case attribute.INT64SLICE:
+		e.AddInt64Slice(key, value.AsInt64Slice())
+	case attribute.INVALID:
+		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
+	case attribute.STRING:
+		e.AddString(key, value.AsString())
+	case attribute.STRINGSLICE:
+		e.AddStringSlice(key, value.AsStringSlice())
 	default:
-		log.Debugf("Ignoring unrecognized Event key %v val %v valType %T", k, v, v)
+		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
 	}
 	return nil
 }
