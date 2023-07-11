@@ -13,14 +13,20 @@
 // limitations under the License.
 // Package reporter provides a low-level API for creating and reporting events for
 // distributed tracing with SolarWinds Observability.
+
 package reporter
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"math"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
@@ -162,7 +168,14 @@ func (tm tracingMode) ToString() string {
 	}
 }
 
-func oboeEventInit(evt *event, md *oboeMetadata, explicitXTraceId string) error {
+type OpIDOption int
+
+const (
+	RandomOpID OpIDOption = iota
+	UseMDOpID
+)
+
+func oboeEventInit(evt *event, md *oboeMetadata, opt OpIDOption) error {
 	if evt == nil || md == nil {
 		return errors.New("oboeEventInit got nil args")
 	}
@@ -170,17 +183,20 @@ func oboeEventInit(evt *event, md *oboeMetadata, explicitXTraceId string) error 
 	// Metadata initialization
 	evt.metadata.Init()
 
-	if explicitXTraceId == "" {
-		evt.metadata.taskLen = md.taskLen
-		evt.metadata.opLen = md.opLen
+	evt.metadata.taskLen = md.taskLen
+	evt.metadata.opLen = md.opLen
+	switch opt {
+	case UseMDOpID:
+		copy(evt.metadata.ids.opID, md.ids.opID)
+	case RandomOpID:
 		if err := evt.metadata.SetRandomOpID(); err != nil {
 			return err
 		}
-		copy(evt.metadata.ids.taskID, md.ids.taskID)
-		evt.metadata.flags = md.flags
-	} else {
-		evt.metadata.FromString(explicitXTraceId)
+	default:
+		return errors.New("invalid OpIDOption")
 	}
+	copy(evt.metadata.ids.taskID, md.ids.taskID)
+	evt.metadata.flags = md.flags
 
 	// Buffer initialization
 	evt.bbuf = bson.NewBuffer()
@@ -188,6 +204,9 @@ func oboeEventInit(evt *event, md *oboeMetadata, explicitXTraceId string) error 
 	// Copy header to buffer
 	evt.bbuf.AppendString("_V", eventHeader)
 
+	// For now the version and flags are always 00 and 01, respectively
+	swTraceContext := fmt.Sprintf("00-%x-%x-01", evt.metadata.ids.taskID[:16], evt.metadata.ids.opID[:8])
+	evt.bbuf.AppendString("sw.trace_context", swTraceContext)
 	// Pack metadata
 	mdStr, err := evt.metadata.ToString()
 	if err != nil {
@@ -199,11 +218,73 @@ func oboeEventInit(evt *event, md *oboeMetadata, explicitXTraceId string) error 
 
 func newEvent(md *oboeMetadata, label Label, layer string, explicitXTraceID string) (*event, error) {
 	e := &event{}
-	if err := oboeEventInit(e, md, explicitXTraceID); err != nil {
+	if err := oboeEventInit(e, md, RandomOpID); err != nil {
 		return nil, err
 	}
 	e.addLabelLayer(label, layer)
 	return e, nil
+}
+
+func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
+	md := &oboeMetadata{}
+	md.Init()
+	if ctx.IsSampled() {
+		md.flags |= XTR_FLAGS_SAMPLED
+	}
+	traceID := ctx.TraceID()
+	spanID := ctx.SpanID()
+	copy(md.ids.taskID, traceID[:])
+	copy(md.ids.opID, spanID[:])
+	return md
+}
+
+func CreateEvent(ctx trace.SpanContext, t time.Time, label Label, opt OpIDOption) (*event, error) {
+	md := metaFromSpanContext(ctx)
+	evt := &event{}
+	if err := oboeEventInit(evt, md, opt); err != nil {
+		return nil, err
+	}
+	evt.AddString("Label", string(label))
+	evt.AddInt64("Timestamp_u", t.UnixMicro())
+	return evt, nil
+}
+
+func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (*event, error) {
+	evt, err := CreateEvent(ctx, t, LabelEntry, UseMDOpID)
+	if err != nil {
+		return nil, err
+	}
+	if parent.IsValid() {
+		evt.AddEdgeFromParent(parent)
+	}
+	return evt, nil
+}
+
+func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (*event, error) {
+	evt, err := CreateEvent(ctx, t, label, RandomOpID)
+	if err != nil {
+		return nil, err
+	}
+	evt.AddEdgeFromParent(ctx)
+	return evt, nil
+}
+
+func CreateExit(ctx trace.SpanContext, t time.Time) (*event, error) {
+	return createNonEntryEvent(ctx, t, LabelExit)
+}
+
+func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (*event, error) {
+	return createNonEntryEvent(ctx, t, LabelInfo)
+}
+
+func (e *event) AddAttributes(attrs []attribute.KeyValue) {
+	for _, kv := range attrs {
+		err := e.AddKV(string(kv.Key), kv.Value.AsInterface())
+		if err != nil {
+			log.Warning("could not add KV", kv, err)
+			// Continue so we don't completely abandon the event
+		}
+	}
 }
 
 func (e *event) addLabelLayer(label Label, layer string) {
@@ -284,6 +365,12 @@ func (e *event) AddEdgeFromMetadataString(mdstr string) {
 	if err == nil && bytes.Equal(e.metadata.ids.taskID, md.ids.taskID) {
 		e.bbuf.AppendString(EdgeKey, md.opString())
 	}
+}
+
+func (e *event) AddEdgeFromParent(parent trace.SpanContext) {
+	spanIDHex := parent.SpanID().String()
+	e.bbuf.AppendString(EdgeKey, strings.ToUpper(spanIDHex))
+	e.bbuf.AppendString("sw.parent_span_id", spanIDHex)
 }
 
 // Add any key/value to event. May not add KV if key or value is invalid. Used to facilitate
@@ -434,3 +521,11 @@ func (e *event) ReportContext(c Context, addCtxEdge bool, args ...interface{}) e
 
 // Returns Metadata string (X-Trace header)
 func (e *event) MetadataString() string { return e.metadata.String() }
+
+func SendReport(e *event) error {
+	e.AddString("Hostname", host.Hostname())
+	e.AddInt("PID", host.PID())
+
+	e.bbuf.Finish()
+	return globalReporter.enqueueEvent(e)
+}

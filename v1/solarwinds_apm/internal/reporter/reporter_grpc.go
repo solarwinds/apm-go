@@ -650,7 +650,13 @@ func (r *grpcReporter) reportEvent(ctx *oboeContext, e *event) error {
 		// don't continue if preparation failed
 		return err
 	}
+	return r.enqueueEvent(e)
+}
 
+func (r *grpcReporter) enqueueEvent(e *event) error {
+	if e == nil {
+		return errors.New("cannot enqueue nil event")
+	}
 	select {
 	case r.eventMessages <- (*e).bbuf.GetBuf():
 		r.conn.queueStats.TotalEventsAdd(int64(1))

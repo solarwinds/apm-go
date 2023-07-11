@@ -16,6 +16,7 @@ package reporter
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
@@ -67,6 +68,10 @@ func (sr *serverlessReporter) reportEvent(ctx *oboeContext, e *event) error {
 
 	_, err := sr.logWriter.Write(EventWT, (*e).bbuf.GetBuf())
 	return err
+}
+
+func (sr *serverlessReporter) enqueueEvent(*event) error {
+	return errors.New("serverlessReporter.enqueueEvent not implemented")
 }
 
 // called when a status (e.g. __Init message) should be reported

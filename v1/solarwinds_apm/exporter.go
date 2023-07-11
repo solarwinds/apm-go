@@ -16,94 +16,67 @@ package solarwinds_apm
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"strings"
 )
 
 type exporter struct {
 }
 
-const (
-	xtraceVersionHeader = "2B"
-	sampledFlags        = "01"
-)
-
-func extractKvs(span sdktrace.ReadOnlySpan) []interface{} {
-	var kvs []interface{}
-	for _, attributeValue := range span.Attributes() {
-		kvs = append(kvs, string(attributeValue.Key), attributeValue.Value.AsInterface())
+func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
+	evt, err := reporter.CreateEntry(s.SpanContext(), s.StartTime(), s.Parent())
+	if err != nil {
+		log.Warning("could not create entry event", err)
+		return
 	}
-
-	if !span.Parent().IsValid() || span.Parent().IsRemote() {
+	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
+	evt.AddString("Layer", layer)
+	evt.AddString("sw.span_name", s.Name())
+	evt.AddString("sw.span_kind", s.SpanKind().String())
+	evt.AddString("Language", "Go")
+	evt.AddString("otel.scope.name", s.InstrumentationScope().Name)
+	evt.AddString("otel.scope.version", s.InstrumentationScope().Version)
+	if !s.Parent().IsValid() || s.Parent().IsRemote() {
 		// root span only
-		kvs = append(kvs, "TransactionName", utils.GetTransactionName(span.Name(), span.Attributes()))
+		evt.AddString("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes()))
+	}
+	evt.AddAttributes(s.Attributes())
+
+	err = reporter.SendReport(evt)
+	if err != nil {
+		log.Warning("cannot send entry event", err)
+		return
 	}
 
-	return kvs
-}
-
-func extractInfoEvents(span sdktrace.ReadOnlySpan) [][]interface{} {
-	events := span.Events()
-	kvs := make([][]interface{}, len(events))
-
-	for i, event := range events {
-		kvs[i] = make([]interface{}, 0)
-		for _, attr := range event.Attributes {
-			kvs[i] = append(kvs[i], string(attr.Key), attr.Value.AsInterface())
+	for _, otEvt := range s.Events() {
+		evt, err = reporter.CreateInfoEvent(s.SpanContext(), otEvt.Time)
+		if err != nil {
+			log.Warning("could not create info event", err)
+			continue
+		}
+		evt.AddAttributes(otEvt.Attributes)
+		err = reporter.SendReport(evt)
+		if err != nil {
+			log.Warning("could not send info event", err)
+			continue
 		}
 	}
 
-	return kvs
-}
-
-func getXTraceID(traceID []byte, spanID []byte) string {
-	taskId := strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%0-40v", hex.EncodeToString(traceID)), " ", "0"))
-	opId := strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%0-16v", hex.EncodeToString(spanID)), " ", "0"))
-	return xtraceVersionHeader + taskId + opId + sampledFlags
-}
-
-func exportSpan(ctx context.Context, s sdktrace.ReadOnlySpan) {
-	traceID := s.SpanContext().TraceID()
-	spanID := s.SpanContext().SpanID()
-	xTraceID := getXTraceID(traceID[:], spanID[:])
-
-	startOverrides := Overrides{
-		ExplicitTS:    s.StartTime(),
-		ExplicitMdStr: xTraceID,
+	evt, err = reporter.CreateExit(s.SpanContext(), s.EndTime())
+	if err != nil {
+		log.Warning("could not create exit event", err)
+		return
+	}
+	evt.AddString("Layer", layer)
+	err = reporter.SendReport(evt)
+	if err != nil {
+		log.Warning("cannot send exit event", err)
+		return
 	}
 
-	endOverrides := Overrides{
-		ExplicitTS: s.EndTime(),
-	}
-
-	kvs := extractKvs(s)
-
-	infoEvents := extractInfoEvents(s)
-
-	if s.Parent().IsValid() { // this is a child span, not a start of a trace but rather a continuation of an existing one
-		parentSpanID := s.Parent().SpanID()
-		parentXTraceID := getXTraceID(traceID[:], parentSpanID[:])
-		traceContext := FromXTraceIDContext(ctx, parentXTraceID)
-		apmSpan, _ := BeginSpanWithOverrides(traceContext, s.Name(), SpanOptions{}, startOverrides)
-
-		// report otel Span Events as SolarWinds Observability Info KVs
-		for _, infoEventKvs := range infoEvents {
-			apmSpan.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
-		}
-		apmSpan.EndWithOverrides(endOverrides, kvs...)
-	} else { // no parent means this is the beginning of the trace (root span)
-		trace := NewTraceWithOverrides(s.Name(), startOverrides, nil)
-		trace.SetStartTime(s.StartTime()) //this is for histogram only
-
-		// report otel Span Events as SolarWinds Observability Info KVs
-		for _, infoEventKvs := range infoEvents {
-			trace.InfoWithOverrides(Overrides{ExplicitTS: s.StartTime()}, SpanOptions{}, infoEventKvs...)
-		}
-		trace.EndWithOverrides(endOverrides, kvs...)
-	}
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
