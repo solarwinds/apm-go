@@ -159,23 +159,27 @@ func sendInitMessage() {
 	e := &event{}
 	md := &oboeMetadata{}
 	md.Init()
-	md.SetRandom()
-	oboeEventInit(e, md, UseMDOpID)
-	// TODO
+	if err := md.SetRandom(); err != nil {
+		log.Error("could not specify random task and op IDs", err)
+		return
+	}
+	if err := oboeEventInit(e, md, UseMDOpID); err != nil {
+		log.Error("could not initialize oboe event", err)
+		return
+	}
 	e.AddString("Label", "single")
 	e.AddString("Layer", "go")
 
-	// we choose to ignore the errors
-	_ = e.AddKV("__Init", 1)
-	_ = e.AddKV("Go.Version", utils.GoVersion())
-	_ = e.AddKV("Go.SolarWindsAPM.Version", utils.Version())
-	_ = e.AddKV("Go.InstallDirectory", utils.InstallDir())
-	_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
-	_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())
+	e.AddInt("__Init", 1)
+	e.AddString("Go.Version", utils.GoVersion())
+	e.AddString("Go.SolarWindsAPM.Version", utils.Version())
+	e.AddString("Go.InstallDirectory", utils.InstallDir())
+	e.AddInt64("Go.InstallTimestamp", utils.InstallTsInSec())
+	e.AddInt64("Go.LastRestart", utils.LastRestartInUSec())
 
-	ReportStatus(e)
-
-	// TODO _ = e.ReportStatus(c)
+	if err := ReportStatus(e); err != nil {
+		log.Error("could not send init message", err)
+	}
 }
 
 func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
