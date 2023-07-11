@@ -117,13 +117,6 @@ type apmTrace struct {
 
 func (t *apmTrace) apmContext() reporter.Context { return t.apmCtx }
 
-// NewTrace creates a new Trace for reporting to SolarWinds Observability and immediately records
-// the beginning of a root span named spanName. If this trace is sampled, it may report
-// event data to SolarWinds Observability; otherwise event reporting will be a no-op.
-func NewTrace(spanName string) Trace {
-	return NewTraceFromID(spanName, "", nil)
-}
-
 // NewTraceWithOptions creates a new trace with the provided options
 func NewTraceWithOptions(spanName string, opts SpanOptions) Trace {
 	if Closed() || spanName == "" {
