@@ -73,7 +73,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	evt.AddString("Layer", layer)
 	err = reporter.SendReport(evt)
 	if err != nil {
-		log.Warning("cannot sent exit event", err)
+		log.Warning("cannot send exit event", err)
 		return
 	}
 
