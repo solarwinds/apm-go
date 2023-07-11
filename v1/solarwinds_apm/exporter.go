@@ -37,7 +37,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	evt.AddString(constants.Layer, layer)
 	evt.AddString("sw.span_name", s.Name())
 	evt.AddString("sw.span_kind", s.SpanKind().String())
-	evt.AddString("Language", "Go")
+	evt.AddString("Language", constants.Go)
 	evt.AddString("otel.scope.name", s.InstrumentationScope().Name)
 	evt.AddString("otel.scope.version", s.InstrumentationScope().Version)
 	if !s.Parent().IsValid() || s.Parent().IsRemote() {

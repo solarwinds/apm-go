@@ -163,7 +163,7 @@ func sendInitMessage() {
 		return
 	}
 	e.AddString(constants.Label, "single")
-	e.AddString(constants.Layer, "Go")
+	e.AddString(constants.Layer, constants.Go)
 
 	e.AddInt("__Init", 1)
 	e.AddString("Go.Version", utils.GoVersion())
