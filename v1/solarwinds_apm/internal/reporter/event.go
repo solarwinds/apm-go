@@ -17,7 +17,6 @@
 package reporter
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
@@ -215,15 +214,6 @@ func oboeEventInit(evt *event, md *oboeMetadata, opt OpIDOption) error {
 	return nil
 }
 
-func newEvent(md *oboeMetadata, label Label, layer string, explicitXTraceID string) (*event, error) {
-	e := &event{}
-	if err := oboeEventInit(e, md, RandomOpID); err != nil {
-		return nil, err
-	}
-	e.addLabelLayer(label, layer)
-	return e, nil
-}
-
 func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
 	md := &oboeMetadata{}
 	md.Init()
@@ -351,16 +341,6 @@ func (e *event) AddBoolSlice(key string, values []bool) {
 	e.bbuf.AppendFinishObject(start)
 }
 
-func (e *event) AddEdgeFromMetadataString(mdstr string) {
-	var md oboeMetadata
-	md.Init()
-	err := md.FromString(mdstr)
-	// only add Edge if metadata references same trace as ours
-	if err == nil && bytes.Equal(e.metadata.ids.taskID, md.ids.taskID) {
-		e.bbuf.AppendString(EdgeKey, md.opString())
-	}
-}
-
 func (e *event) AddEdgeFromParent(parent trace.SpanContext) {
 	spanIDHex := parent.SpanID().String()
 	e.bbuf.AppendString(EdgeKey, strings.ToUpper(spanIDHex))
@@ -378,11 +358,7 @@ func (e *event) AddKV(key, value interface{}) error {
 	// load value and add KV to event
 	switch v := value.(type) {
 	case string:
-		if k == EdgeKey {
-			e.AddEdgeFromMetadataString(v)
-		} else {
-			e.AddString(k, v)
-		}
+		e.AddString(k, v)
 	case []byte:
 		e.AddBinary(k, v)
 	case int:
@@ -413,11 +389,7 @@ func (e *event) AddKV(key, value interface{}) error {
 	// allow reporting of pointers to basic types as well (for delayed evaluation)
 	case *string:
 		if v != nil {
-			if k == EdgeKey {
-				e.AddEdgeFromMetadataString(*v)
-			} else {
-				e.AddString(k, *v)
-			}
+			e.AddString(k, *v)
 		}
 	case *[]byte:
 		if v != nil {

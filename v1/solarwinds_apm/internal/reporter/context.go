@@ -74,13 +74,6 @@ type oboeMetadata struct {
 	flags   uint8
 }
 
-type KVMap map[string]interface{}
-
-type Overrides struct {
-	ExplicitTS    time.Time
-	ExplicitMdStr string
-}
-
 func (md *oboeMetadata) Init() {
 	if md == nil {
 		return
@@ -288,16 +281,6 @@ func (md *oboeMetadata) opString() string {
 
 func (md *oboeMetadata) isSampled() bool {
 	return md.flags&XTR_FLAGS_SAMPLED != 0
-}
-
-// A Context is an oboe context that may or not be tracing.
-type Context interface {
-}
-
-// A Event is an event that may or may not be tracing, created by a Context.
-type Event interface {
-	ReportContext(c Context, addCtxEdge bool, args ...interface{}) error
-	MetadataString() string
 }
 
 // Trigger trace signature authentication errors
