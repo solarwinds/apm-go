@@ -218,7 +218,7 @@ func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
 	md := &oboeMetadata{}
 	md.Init()
 	if ctx.IsSampled() {
-		md.flags |= XTR_FLAGS_SAMPLED
+		md.flags |= 0x01
 	}
 	traceID := ctx.TraceID()
 	spanID := ctx.SpanID()

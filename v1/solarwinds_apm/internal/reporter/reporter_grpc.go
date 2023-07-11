@@ -94,14 +94,6 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	grpcMaxRetries                          = 20               // The message will be dropped after this number of retries
 )
 
-type reporterChannel int
-
-// a channel the reporter is listening on for messages from the agent
-const (
-	EVENTS reporterChannel = iota
-	METRICS
-)
-
 // everything needed for a GRPC connection
 type grpcConnection struct {
 	name           string                         // connection name

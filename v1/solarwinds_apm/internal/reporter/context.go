@@ -30,22 +30,9 @@ import (
 )
 
 const (
-	oboeMetadataStringLen = 60
-	maskTaskIDLen         = 0x03
-	maskOpIDLen           = 0x08
-	maskHasOptions        = 0x04
-	maskVersion           = 0xF0
-
-	xtrCurrentVersion      = 2
-	oboeMaxTaskIDLen       = 20
-	oboeMaxOpIDLen         = 8
-	oboeMaxMetadataPackLen = 512
-)
-
-// x-trace flags
-const (
-	XTR_FLAGS_NONE    = 0x0
-	XTR_FLAGS_SAMPLED = 0x1
+	xtrCurrentVersion = 2
+	oboeMaxTaskIDLen  = 20
+	oboeMaxOpIDLen    = 8
 )
 
 var (
@@ -196,16 +183,6 @@ func (md *oboeMetadata) ToString() (string, error) {
 	enc := make([]byte, 2*result)
 	l := hex.Encode(enc, buf[:result])
 	return strings.ToUpper(string(enc[:l])), nil
-}
-
-func (md *oboeMetadata) opString() string {
-	enc := make([]byte, 2*md.opLen)
-	l := hex.Encode(enc, md.ids.opID[:md.opLen])
-	return strings.ToUpper(string(enc[:l]))
-}
-
-func (md *oboeMetadata) isSampled() bool {
-	return md.flags&XTR_FLAGS_SAMPLED != 0
 }
 
 // Trigger trace signature authentication errors
