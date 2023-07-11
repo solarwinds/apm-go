@@ -124,10 +124,6 @@ func (md *oboeMetadata) SetRandomOpID() error {
 	return err
 }
 
-func (ids *oboeIDs) setOpID(opID []byte) {
-	copy(ids.opID, opID)
-}
-
 /*
  * Pack a metadata struct into a buffer.
  *
@@ -185,77 +181,6 @@ func (md *oboeMetadata) Pack(buf []byte) (int, error) {
 	buf[1+md.taskLen+md.opLen] = md.flags
 
 	return reqLen, nil
-}
-
-func (md *oboeMetadata) Unpack(data []byte) error {
-	if md == nil {
-		return errors.New("md.Unpack: nil md")
-	}
-
-	if len(data) == 0 { // no header to read
-		return errors.New("md.Unpack: empty buf")
-	}
-
-	flag := data[0]
-	var taskLen, opLen int
-	var version uint8
-
-	/* don't recognize this? */
-	if (flag&maskVersion)>>4 != xtrCurrentVersion {
-		return errors.New("md.Unpack: unrecognized X-Trace version")
-	}
-	version = (flag & maskVersion) >> 4
-
-	taskLen = (int(flag&maskTaskIDLen) + 1) << 2
-	if taskLen == 16 {
-		taskLen = 20
-	}
-	opLen = ((int(flag&maskOpIDLen) >> 3) + 1) << 2
-
-	/* do header lengths describe reality? */
-	if (taskLen + opLen + 2) > len(data) {
-		return errors.New("md.Unpack: wrong header length")
-	}
-
-	md.version = version
-	md.taskLen = taskLen
-	md.opLen = opLen
-
-	md.ids.taskID = data[1 : 1+taskLen]
-	md.ids.opID = data[1+taskLen : 1+taskLen+opLen]
-	md.flags = data[1+taskLen+opLen]
-
-	return nil
-}
-
-func (md *oboeMetadata) FromString(buf string) error {
-	if md == nil {
-		return errors.New("md.FromString: nil md")
-	}
-
-	ubuf := make([]byte, oboeMaxMetadataPackLen)
-
-	// a hex string's length would be an even number
-	if len(buf)%2 == 1 {
-		return errors.New("md.FromString: hex not even")
-	}
-
-	// check if there are more hex bytes than we want
-	if len(buf)/2 > oboeMaxMetadataPackLen {
-		return errors.New("md.FromString: too many hex bytes")
-	}
-
-	// invalid hex?
-	ret, err := hex.Decode(ubuf, []byte(buf))
-	if ret != len(buf)/2 || err != nil {
-		return errors.New("md.FromString: hex not valid")
-	}
-	ubuf = ubuf[:ret] // truncate buffer to fit decoded bytes
-	err = md.Unpack(ubuf)
-	if err != nil {
-		return err
-	}
-	return md.ids.validate()
 }
 
 func (md *oboeMetadata) ToString() (string, error) {
