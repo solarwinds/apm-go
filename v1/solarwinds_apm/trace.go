@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"context"
-
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
@@ -169,10 +167,6 @@ func NewTraceFromID(spanName, mdStr string, cb func() KVMap) Trace {
 	return NewTraceFromIDForURL(spanName, mdStr, "", cb)
 }
 
-func NewTraceWithOverrides(spanName string, overrides Overrides, cb func() KVMap) Trace {
-	return NewTraceFromIDForURLWithOverrides(spanName, "", "", overrides, cb)
-}
-
 // NewTraceFromIDForURL creates a new Trace for the provided URL to report to SolarWinds Observability,
 // provided an incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
 // If callback is provided & trace is sampled, cb will be called for entry event KVs
@@ -185,35 +179,6 @@ func NewTraceFromIDForURL(spanName, mdStr string, url string, cb func() KVMap) T
 			CB:    cb,
 		},
 	})
-}
-
-// NewTraceFromIDForURLWithOverrides creates a new Trace for the provided URL to report to SolarWinds Observability,
-// provided an incoming trace ID (e.g. from a incoming RPC or service call's "X-Trace" header).
-// Adds ability to provide overrides.
-// If callback is provided & trace is sampled, cb will be called for entry event KVs
-func NewTraceFromIDForURLWithOverrides(spanName, mdStr string, url string, overrides Overrides, cb func() KVMap) Trace {
-	return NewTraceWithOptions(spanName, SpanOptions{
-		WithBackTrace: false,
-		ContextOptions: ContextOptions{
-			MdStr: mdStr,
-			URL:   url,
-			Overrides: reporter.Overrides{
-				ExplicitTS:    overrides.ExplicitTS,
-				ExplicitMdStr: overrides.ExplicitMdStr,
-			},
-			CB: cb,
-		},
-	})
-}
-
-// SetTransactionName can be called inside a http handler to set the custom transaction name.
-func SetTransactionName(ctx context.Context, name string) error {
-	return TraceFromContext(ctx).SetTransactionName(name)
-}
-
-// GetTransactionName fetches the current transaction name from the context
-func GetTransactionName(ctx context.Context) string {
-	return TraceFromContext(ctx).GetTransactionName()
 }
 
 // End reports the exit event for the span name that was used when calling NewTrace().
