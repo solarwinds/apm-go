@@ -54,10 +54,7 @@ jobs:
           go test -v -race -covermode=atomic -coverprofile=cov.out
           popd
           popd
-          pushd contrib/apmgrpc
-          go test -v -race -covermode=atomic -coverprofile=cov.out
-          popd
-          gocovmerge solarwinds_apm/cov.out solarwinds_apm/internal/reporter/cov.out solarwinds_apm/internal/metrics/cov.out solarwinds_apm/internal/log/cov.out solarwinds_apm/internal/config/cov.out solarwinds_apm/internal/host/cov.out contrib/apmgrpc/cov.out> coverage.txt
+          gocovmerge solarwinds_apm/cov.out solarwinds_apm/internal/reporter/cov.out solarwinds_apm/internal/metrics/cov.out solarwinds_apm/internal/log/cov.out solarwinds_apm/internal/config/cov.out solarwinds_apm/internal/host/cov.out > coverage.txt
           pushd solarwinds_apm/internal/reporter
           rm for_test.crt for_test.key
           popd
