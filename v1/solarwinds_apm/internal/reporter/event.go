@@ -457,7 +457,15 @@ func (e *event) AddKV(key, value interface{}) error {
 	return nil
 }
 
-func SendReport(e *event) error {
+func ReportStatus(e *event) error {
+	e.AddString("Hostname", host.Hostname())
+	e.AddInt("PID", host.PID())
+
+	e.bbuf.Finish()
+	return globalReporter.enqueueStatus(e)
+}
+
+func ReportEvent(e *event) error {
 	e.AddString("Hostname", host.Hostname())
 	e.AddInt("PID", host.PID())
 

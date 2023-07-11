@@ -173,6 +173,8 @@ func sendInitMessage() {
 	_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
 	_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())
 
+	ReportStatus(e)
+
 	// TODO _ = e.ReportStatus(c)
 }
 

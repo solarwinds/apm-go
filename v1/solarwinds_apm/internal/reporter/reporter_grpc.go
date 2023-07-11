@@ -642,6 +642,20 @@ func (r *grpcReporter) enqueueEvent(e *event) error {
 	}
 }
 
+func (r *grpcReporter) enqueueStatus(e *event) error {
+	if e == nil {
+		return errors.New("cannot enqueue nil event")
+	}
+	select {
+	case r.statusMessages <- (*e).bbuf.GetBuf():
+		r.conn.queueStats.TotalEventsAdd(int64(1))
+		return nil
+	default:
+		r.conn.queueStats.NumOverflowedAdd(int64(1))
+		return errors.New("event message queue is full")
+	}
+}
+
 // eventSender is a long-running goroutine that listens on the events message
 // channel, collects all messages on that channel and attempts to send them to
 // the collector using the gRPC method PostEvents()

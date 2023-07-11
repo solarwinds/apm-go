@@ -45,7 +45,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 	evt.AddAttributes(s.Attributes())
 
-	err = reporter.SendReport(evt)
+	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send entry event", err)
 		return
@@ -58,7 +58,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			continue
 		}
 		evt.AddAttributes(otEvt.Attributes)
-		err = reporter.SendReport(evt)
+		err = reporter.ReportEvent(evt)
 		if err != nil {
 			log.Warning("could not send info event", err)
 			continue
@@ -71,7 +71,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		return
 	}
 	evt.AddString("Layer", layer)
-	err = reporter.SendReport(evt)
+	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send exit event", err)
 		return

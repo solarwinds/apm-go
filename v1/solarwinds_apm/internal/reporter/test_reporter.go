@@ -194,6 +194,10 @@ func (r *TestReporter) enqueueEvent(e *event) error {
 	return errors.New("TestReporter.enqueueEvent not implemented")
 }
 
+func (r *TestReporter) enqueueStatus(e *event) error {
+	return errors.New("TestReporter.enqueueStatus not implemented")
+}
+
 func (r *TestReporter) addDefaultSetting() {
 	// add default setting with 100% sampling
 	updateSetting(int32(TYPE_DEFAULT), "",
