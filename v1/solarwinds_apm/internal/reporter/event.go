@@ -19,6 +19,7 @@ package reporter
 import (
 	"errors"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -233,7 +234,7 @@ func CreateEvent(ctx trace.SpanContext, t time.Time, label Label, opt OpIDOption
 	if err := oboeEventInit(evt, md, opt); err != nil {
 		return nil, err
 	}
-	evt.AddString("Label", string(label))
+	evt.AddString(constants.Label, string(label))
 	evt.AddInt64("Timestamp_u", t.UnixMicro())
 	return evt, nil
 }

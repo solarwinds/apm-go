@@ -21,5 +21,7 @@ const (
 
 	// Other
 
+	Label      = "Label"
+	Layer      = "Layer"
 	TraceState = "tracestate"
 )

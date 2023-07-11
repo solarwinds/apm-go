@@ -17,6 +17,7 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
@@ -33,7 +34,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		return
 	}
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
-	evt.AddString("Layer", layer)
+	evt.AddString(constants.Layer, layer)
 	evt.AddString("sw.span_name", s.Name())
 	evt.AddString("sw.span_kind", s.SpanKind().String())
 	evt.AddString("Language", "Go")
@@ -70,7 +71,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		log.Warning("could not create exit event", err)
 		return
 	}
-	evt.AddString("Layer", layer)
+	evt.AddString(constants.Layer, layer)
 	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send exit event", err)

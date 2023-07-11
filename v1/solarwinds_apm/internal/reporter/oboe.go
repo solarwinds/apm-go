@@ -17,6 +17,7 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
 	"math/rand"
@@ -161,8 +162,8 @@ func sendInitMessage() {
 		log.Error("could not initialize oboe event", err)
 		return
 	}
-	e.AddString("Label", "single")
-	e.AddString("Layer", "go")
+	e.AddString(constants.Label, "single")
+	e.AddString(constants.Layer, "Go")
 
 	e.AddInt("__Init", 1)
 	e.AddString("Go.Version", utils.GoVersion())
