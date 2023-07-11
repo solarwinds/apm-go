@@ -320,11 +320,6 @@ func (e *event) AddFloat64(key string, value float64) { e.bbuf.AppendFloat64(key
 // Adds float key/value to event
 func (e *event) AddBool(key string, value bool) { e.bbuf.AppendBool(key, value) }
 
-// Adds edge (reference to previous event) to event
-func (e *event) AddEdge(ctx *oboeContext) {
-	e.bbuf.AppendString(EdgeKey, ctx.metadata.opString())
-}
-
 func (e *event) AddInt64Slice(key string, values []int64) {
 	start := e.bbuf.AppendStartArray(key)
 	for i, value := range values {
@@ -413,10 +408,6 @@ func (e *event) AddKV(key, value interface{}) error {
 		e.AddFloat64(k, v)
 	case bool:
 		e.AddBool(k, v)
-	case *oboeContext:
-		if k == EdgeKey {
-			e.AddEdge(v)
-		}
 	case sampleSource:
 		e.AddInt(k, int(v))
 
@@ -494,33 +485,6 @@ func (e *event) AddKV(key, value interface{}) error {
 	}
 	return nil
 }
-
-// Reports event using specified Reporter
-func (e *event) ReportUsing(c *oboeContext, r reporter, channel reporterChannel) error {
-	if channel == EVENTS {
-		if e.metadata.isSampled() {
-			return r.reportEvent(c, e)
-		}
-	} else if channel == METRICS {
-		return r.reportStatus(c, e)
-	}
-	return nil
-}
-
-// Reports event using default Reporter
-func (e *event) Report(c *oboeContext) error       { return e.ReportUsing(c, globalReporter, EVENTS) }
-func (e *event) ReportStatus(c *oboeContext) error { return e.ReportUsing(c, globalReporter, METRICS) }
-
-// Report event using Context interface
-func (e *event) ReportContext(c Context, addCtxEdge bool, args ...interface{}) error {
-	if ctx, ok := c.(*oboeContext); ok {
-		return ctx.report(e, addCtxEdge, Overrides{}, args...)
-	}
-	return nil
-}
-
-// Returns Metadata string (X-Trace header)
-func (e *event) MetadataString() string { return e.metadata.String() }
 
 func SendReport(e *event) error {
 	e.AddString("Hostname", host.Hostname())
