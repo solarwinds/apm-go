@@ -47,7 +47,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 
 	err = reporter.SendReport(evt)
 	if err != nil {
-		log.Warning("cannot sent entry event", err)
+		log.Warning("cannot send entry event", err)
 		return
 	}
 
