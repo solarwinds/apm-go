@@ -24,7 +24,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -75,38 +74,11 @@ type oboeMetadata struct {
 	flags   uint8
 }
 
-type oboeContext struct {
-	metadata oboeMetadata
-	txCtx    *transactionContext
-}
-
-type transactionContext struct {
-	name string
-	// if the trace/transaction is enabled (defined by per-URL transaction filtering)
-	enabled bool
-	sync.RWMutex
-}
-
 type KVMap map[string]interface{}
 
 type Overrides struct {
 	ExplicitTS    time.Time
 	ExplicitMdStr string
-}
-
-// ContextOptions defines the options of creating a context.
-type ContextOptions struct {
-	// MdStr is the string representation of the X-Trace ID.
-	MdStr string
-	// URL is used to do the URL-based transaction filtering.
-	URL string
-	// XTraceOptions represents the X-Trace-Options header.
-	XTraceOptions string
-	// CB is the callback function to produce the KVs.
-	// XTraceOptionsSignature represents the X-Trace-Options-Signature header.
-	XTraceOptionsSignature string
-	Overrides              Overrides
-	CB                     func() KVMap
 }
 
 func (md *oboeMetadata) Init() {

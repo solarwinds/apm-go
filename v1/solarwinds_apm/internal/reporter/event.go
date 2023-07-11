@@ -34,9 +34,8 @@ import (
 )
 
 type event struct {
-	metadata  oboeMetadata
-	overrides Overrides
-	bbuf      *bson.Buffer
+	metadata oboeMetadata
+	bbuf     *bson.Buffer
 }
 
 // Label is a required event attribute.
