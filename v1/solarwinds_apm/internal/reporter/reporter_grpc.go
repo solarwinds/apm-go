@@ -648,10 +648,8 @@ func (r *grpcReporter) enqueueStatus(e *event) error {
 	}
 	select {
 	case r.statusMessages <- (*e).bbuf.GetBuf():
-		r.conn.queueStats.TotalEventsAdd(int64(1))
 		return nil
 	default:
-		r.conn.queueStats.NumOverflowedAdd(int64(1))
 		return errors.New("status message queue is full")
 	}
 }
