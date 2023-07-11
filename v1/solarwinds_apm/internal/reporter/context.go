@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 )
 
 const (
@@ -49,10 +48,6 @@ const (
 	XTR_FLAGS_NONE    = 0x0
 	XTR_FLAGS_SAMPLED = 0x1
 )
-
-const HTTPHeaderXTraceOptions = "X-Trace-Options"
-const HTTPHeaderXTraceOptionsSignature = "X-Trace-Options-Signature"
-const HTTPHeaderXTraceOptionsResponse = "X-Trace-Options-Response"
 
 var (
 	errInvalidTaskID = errors.New("invalid task id")
@@ -112,16 +107,6 @@ type ContextOptions struct {
 	XTraceOptionsSignature string
 	Overrides              Overrides
 	CB                     func() KVMap
-}
-
-// ValidMetadata checks if a metadata string is valid.
-func ValidMetadata(mdStr string) bool {
-	md := &oboeMetadata{}
-	md.Init()
-	if err := md.FromString(mdStr); err != nil {
-		return false
-	}
-	return true
 }
 
 func (md *oboeMetadata) Init() {
@@ -335,164 +320,12 @@ func (md *oboeMetadata) isSampled() bool {
 
 // A Context is an oboe context that may or not be tracing.
 type Context interface {
-	ReportEvent(label Label, layer string, args ...interface{}) error
-	ReportEventWithOverrides(label Label, layer string, overrides Overrides, args ...interface{}) error
-	ReportEventMap(label Label, layer string, keys map[string]interface{}) error
-	Copy() Context
-	IsSampled() bool
-	SetSampled(trace bool)
-	SetEnabled(enabled bool)
-	GetEnabled() bool
-	SetTransactionName(name string)
-	GetTransactionName() string
-	MetadataString() string
-	NewEvent(label Label, layer string, addCtxEdge bool) Event
-	GetVersion() uint8
 }
 
 // A Event is an event that may or may not be tracing, created by a Context.
 type Event interface {
 	ReportContext(c Context, addCtxEdge bool, args ...interface{}) error
 	MetadataString() string
-}
-
-// A nullContext is not tracing.
-type nullContext struct{}
-type nullEvent struct{}
-
-func (e *nullContext) ReportEvent(label Label, layer string, args ...interface{}) error {
-	return nil
-}
-
-func (e *nullContext) ReportEventWithOverrides(label Label, layer string, overrides Overrides, args ...interface{}) error {
-	return nil
-}
-
-func (e *nullContext) ReportEventMap(label Label, layer string, keys map[string]interface{}) error {
-	return nil
-}
-func (e *nullContext) Copy() Context                                         { return &nullContext{} }
-func (e *nullContext) IsSampled() bool                                       { return false }
-func (e *nullContext) SetSampled(trace bool)                                 {}
-func (e *nullContext) SetEnabled(enabled bool)                               {}
-func (e *nullContext) GetEnabled() bool                                      { return true }
-func (e *nullContext) SetTransactionName(name string)                        {}
-func (e *nullContext) GetTransactionName() string                            { return "" }
-func (e *nullContext) MetadataString() string                                { return "" }
-func (e *nullContext) NewEvent(l Label, y string, g bool) Event              { return &nullEvent{} }
-func (e *nullContext) GetVersion() uint8                                     { return 0 }
-func (e *nullEvent) ReportContext(c Context, g bool, a ...interface{}) error { return nil }
-func (e *nullEvent) MetadataString() string                                  { return "" }
-
-// NewNullContext returns a context that is not tracing.
-func NewNullContext() Context { return &nullContext{} }
-
-// newContext allocates a context with random metadata (for a new trace).
-func newContext(sampled bool) Context {
-	ctx := &oboeContext{txCtx: &transactionContext{enabled: true}}
-	ctx.metadata.Init()
-	if err := ctx.metadata.SetRandom(); err != nil {
-		log.Infof("SolarWinds Observability rand.Read error: %v", err)
-		return &nullContext{}
-	}
-	ctx.SetSampled(sampled)
-	return ctx
-}
-
-func NewContextFromMetadataString(mdstr string) (*oboeContext, error) {
-	ctx := &oboeContext{txCtx: &transactionContext{enabled: true}}
-	ctx.metadata.Init()
-	err := ctx.metadata.FromString(mdstr)
-	return ctx, err
-}
-
-func parseTriggerTraceFlag(opts, sig string) (TriggerTraceMode, map[string]string, []string, error) {
-	if opts == "" {
-		return ModeTriggerTraceNotPresent, nil, nil, nil
-	}
-
-	mode := ModeInvalidTriggerTrace
-	kvs := make(map[string]string)
-	var ignored []string
-	var ts string
-
-	optsSlice := strings.Split(opts, ";")
-	// for deduplication
-	kMap := make(map[string]struct{})
-
-	for _, opt := range optsSlice {
-		kvSlice := strings.SplitN(opt, "=", 2)
-		var k, v string
-		k = strings.TrimSpace(kvSlice[0])
-
-		if len(kvSlice) == 2 {
-			v = strings.TrimSpace(kvSlice[1])
-		} else if kvSlice[0] != "trigger-trace" {
-			log.Debugf("Dangling key found: %s", kvSlice[0])
-			ignored = append(ignored, k)
-			continue
-		}
-
-		// ascii spaces only
-		if strings.ContainsAny(k, " \t\n\v\f\r") {
-			ignored = append(ignored, k)
-			continue
-		}
-
-		if !(strings.HasPrefix(k, "custom-") ||
-			k == "pd-keys" ||
-			k == "trigger-trace" ||
-			k == "ts") {
-			ignored = append(ignored, k)
-			continue
-		}
-
-		if k == "pd-keys" {
-			k = "PDKeys"
-		}
-
-		if _, ok := kMap[k]; ok {
-			log.Debugf("Duplicate key found: %s", k)
-			continue
-		}
-		kMap[k] = struct{}{}
-
-		if k != "ts" {
-			kvs[k] = v
-		} else {
-			ts = v
-		}
-	}
-	val, ok := kvs["trigger-trace"]
-	if !ok {
-		return ModeTriggerTraceNotPresent, kvs, ignored, nil
-	}
-
-	if val != "" {
-		log.Debug("trigger-trace should not contain any value.")
-		ignored = append(ignored, "trigger-trace")
-		return ModeTriggerTraceNotPresent, kvs, ignored, nil
-	}
-	delete(kvs, "trigger-trace")
-
-	var authErr error
-	if sig != "" {
-		authErr = ValidateXTraceOptionsSignature(sig, ts, opts)
-		if authErr == nil {
-			mode = ModeRelaxedTriggerTrace
-		} else {
-			mode = ModeInvalidTriggerTrace
-		}
-	} else {
-		mode = ModeStrictTriggerTrace
-	}
-
-	// ignore KVs if the signature is invalid
-	if mode == ModeInvalidTriggerTrace {
-		kvs = nil
-		ignored = nil
-	}
-	return mode, kvs, ignored, authErr
 }
 
 // Trigger trace signature authentication errors
@@ -563,216 +396,8 @@ func tsInScope(tsStr string) (string, error) {
 	return strconv.FormatInt(ts, 10), nil
 }
 
-// NewContext starts a trace for the provided URL, possibly continuing one, if
-// mdStr is provided. Setting reportEntry will report an entry event before this
-// function returns, calling cb if provided for additional KV pairs.
-func NewContext(layer string, reportEntry bool, opts ContextOptions,
-	cb func() KVMap) (ctx Context, ok bool, headers map[string]string) {
-
-	traced := false
-	addCtxEdge := false
-	explicitTraceDecision := false
-
-	tMode, tKVs, tIgnoredKeys, authErr := parseTriggerTraceFlag(opts.XTraceOptions, opts.XTraceOptionsSignature)
-
-	var SetHeaders = func(tt string) {
-		// Only set response headers when X-Trace-Options is present
-		if opts.XTraceOptions == "" {
-			return
-		}
-
-		if headers == nil {
-			headers = make(map[string]string)
-		}
-		var v []string
-		if tt != "" {
-			v = append(v, "trigger-trace="+tt)
-		}
-		if tMode == ModeRelaxedTriggerTrace {
-			v = append(v, "auth=ok")
-		} else if authErr != nil {
-			v = append(v, "auth="+authErr.Error())
-		}
-		headers[HTTPHeaderXTraceOptionsResponse] = strings.Join(v, ";")
-	}
-
-	defer func() {
-		if len(tIgnoredKeys) != 0 {
-			xTraceOptsRsp, ok := headers[HTTPHeaderXTraceOptionsResponse]
-			ignored := "ignored=" + strings.Join(tIgnoredKeys, ",")
-			if ok && xTraceOptsRsp != "" {
-				xTraceOptsRsp = xTraceOptsRsp + ";" + ignored
-			} else {
-				xTraceOptsRsp = ignored
-			}
-			headers[HTTPHeaderXTraceOptionsResponse] = xTraceOptsRsp
-		}
-	}()
-
-	continuedTrace := false
-
-	if opts.MdStr != "" {
-		var err error
-		if ctx, err = NewContextFromMetadataString(opts.MdStr); err != nil {
-			log.Info("passed in x-trace seems invalid, ignoring")
-		} else if ctx.GetVersion() != xtrCurrentVersion {
-			log.Info("passed in x-trace has wrong version, ignoring")
-		} else if ctx.IsSampled() {
-			ctx.MetadataString()
-			log.Info("passed in x-trace is sampled")
-			traced = true
-			addCtxEdge = true
-			continuedTrace = true
-		} else {
-			setting, has := getSetting(layer)
-			if !has {
-				SetHeaders(ttSettingsNotAvailable)
-				return ctx, false, headers
-			}
-
-			_, flags, _ := mergeURLSetting(setting, opts.URL)
-			ctx.SetEnabled(flags.Enabled())
-
-			if tMode.Requested() {
-				SetHeaders(ttIgnored)
-			} else {
-				SetHeaders(ttNotRequested)
-			}
-
-			return ctx, true, headers
-		}
-	} else if opts.Overrides.ExplicitMdStr != "" {
-		var err error
-		//take note that the ctx here will be the same as the entry event
-		//we might consider randomizing the opID or the set it to zero in the future
-		//for now we will just disable the opID check in reporter.prepareEvent as the Op ID will be the same
-		//for context and entry event
-		if ctx, err = NewContextFromMetadataString(opts.Overrides.ExplicitMdStr); err != nil {
-			log.Info("passed in x-trace seems invalid, ignoring")
-		} else if ctx.GetVersion() != xtrCurrentVersion {
-			log.Info("passed in x-trace has wrong version, ignoring")
-		} else if ctx.IsSampled() {
-			traced = true
-			explicitTraceDecision = true
-		} else {
-			return ctx, true, headers
-		}
-	}
-
-	if !traced {
-		ctx = newContext(true)
-	}
-
-	var decision SampleDecision
-	if explicitTraceDecision {
-		decision = SampleDecision{trace: true}
-	} else {
-		decision = shouldTraceRequestWithURL(layer, traced, opts.URL, tMode, nil)
-	}
-	ctx.SetEnabled(decision.enabled)
-
-	if decision.trace {
-		if reportEntry {
-			var kvs map[string]interface{}
-			if cb != nil {
-				kvs = cb()
-			}
-			if len(kvs) == 0 {
-				kvs = make(map[string]interface{})
-			}
-
-			for k, v := range tKVs {
-				kvs[k] = v
-			}
-
-			if !continuedTrace {
-				kvs["SampleRate"] = decision.rate
-				kvs["SampleSource"] = decision.source
-				kvs["BucketCapacity"] = fmt.Sprintf("%f", decision.bucketCap)
-				kvs["BucketRate"] = fmt.Sprintf("%f", decision.bucketRate)
-			}
-
-			if tMode.Enabled() && !traced {
-				kvs["TriggeredTrace"] = true
-			}
-			if _, ok = ctx.(*oboeContext); !ok {
-				return &nullContext{}, false, headers
-			}
-			if err := ctx.(*oboeContext).reportEventMapWithOverrides(LabelEntry, layer, addCtxEdge, opts.Overrides, kvs); err != nil {
-				return &nullContext{}, false, headers
-			}
-		}
-		SetHeaders(decision.xTraceOptsRsp)
-
-		return ctx, true, headers
-	}
-
-	ctx.SetSampled(false)
-	SetHeaders(decision.xTraceOptsRsp)
-
-	return ctx, true, headers
-
-}
-
-func (ctx *oboeContext) Copy() Context {
-	md := oboeMetadata{}
-	md.Init()
-	copy(md.ids.taskID, ctx.metadata.ids.taskID)
-	copy(md.ids.opID, ctx.metadata.ids.opID)
-	md.flags = ctx.metadata.flags
-	return &oboeContext{metadata: md, txCtx: ctx.txCtx}
-}
-func (ctx *oboeContext) IsSampled() bool { return ctx.metadata.isSampled() }
-
-func (ctx *oboeContext) SetSampled(trace bool) {
-	if trace {
-		ctx.metadata.flags |= XTR_FLAGS_SAMPLED // set sampled bit
-	} else {
-		ctx.metadata.flags ^= XTR_FLAGS_SAMPLED // clear sampled bit
-	}
-}
-
-func (ctx *oboeContext) SetEnabled(enabled bool) {
-	ctx.txCtx.enabled = enabled
-}
-
-func (ctx *oboeContext) GetEnabled() bool {
-	return ctx.txCtx.enabled
-}
-
-func (ctx *oboeContext) SetTransactionName(name string) {
-	ctx.txCtx.Lock()
-	defer ctx.txCtx.Unlock()
-	ctx.txCtx.name = name
-}
-
-func (ctx *oboeContext) GetTransactionName() string {
-	ctx.txCtx.RLock()
-	defer ctx.txCtx.RUnlock()
-	return ctx.txCtx.name
-}
-
-func (ctx *oboeContext) newEvent(label Label, layer string) (*event, error) {
-	return newEvent(&ctx.metadata, label, layer, "")
-}
-
 func (ctx *oboeContext) newEventWithExplicitID(label Label, layer string, xTraceID string) (*event, error) {
 	return newEvent(&ctx.metadata, label, layer, xTraceID)
-}
-
-func (ctx *oboeContext) NewEvent(label Label, layer string, addCtxEdge bool) Event {
-	e, err := newEvent(&ctx.metadata, label, layer, "")
-	if err != nil {
-		return &nullEvent{}
-	}
-	if addCtxEdge {
-		e.AddEdge(ctx)
-	}
-	return e
-}
-
-func (ctx *oboeContext) GetVersion() uint8 {
-	return ctx.metadata.version
 }
 
 // Create and report and event using a map of KVs

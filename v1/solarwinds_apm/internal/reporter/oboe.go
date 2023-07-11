@@ -156,25 +156,24 @@ func sendInitMessage() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
 	}
-	ctx := newContext(true)
-	if c, ok := ctx.(*oboeContext); ok {
-		// create new event from context
-		e, err := c.newEvent("single", "go")
-		if err != nil {
-			log.Warningf("Error while creating the init message: %v", err)
-			return
-		}
+	e := &event{}
+	md := &oboeMetadata{}
+	md.Init()
+	md.SetRandom()
+	oboeEventInit(e, md, UseMDOpID)
+	// TODO
+	e.AddString("Label", "single")
+	e.AddString("Layer", "go")
 
-		// we choose to ignore the errors
-		_ = e.AddKV("__Init", 1)
-		_ = e.AddKV("Go.Version", utils.GoVersion())
-		_ = e.AddKV("Go.SolarWindsAPM.Version", utils.Version())
-		_ = e.AddKV("Go.InstallDirectory", utils.InstallDir())
-		_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
-		_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())
+	// we choose to ignore the errors
+	_ = e.AddKV("__Init", 1)
+	_ = e.AddKV("Go.Version", utils.GoVersion())
+	_ = e.AddKV("Go.SolarWindsAPM.Version", utils.Version())
+	_ = e.AddKV("Go.InstallDirectory", utils.InstallDir())
+	_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
+	_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())
 
-		_ = e.ReportStatus(c)
-	}
+	// TODO _ = e.ReportStatus(c)
 }
 
 func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
