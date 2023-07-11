@@ -113,12 +113,6 @@ func (b *tokenBucket) setRateCap(rate, cap float64) {
 	}
 }
 
-func (b *tokenBucket) avail() float64 {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	return b.available
-}
-
 // The identifying keys for a setting
 type oboeSettingKey struct {
 	sType settingType
@@ -618,18 +612,6 @@ func getSetting(layer string) (*oboeSettings, bool) {
 	}
 
 	return nil, false
-}
-
-func removeSetting(layer string) {
-	globalSettingsCfg.lock.Lock()
-	defer globalSettingsCfg.lock.Unlock()
-
-	key := oboeSettingKey{
-		sType: TYPE_DEFAULT,
-		layer: "",
-	}
-
-	delete(globalSettingsCfg.settings, key)
 }
 
 func hasDefaultSetting() bool {

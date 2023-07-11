@@ -19,7 +19,6 @@ import (
 	"encoding/binary"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
 	"strings"
@@ -70,17 +69,16 @@ var (
 // a noop reporter
 type nullReporter struct{}
 
-func newNullReporter() *nullReporter                              { return &nullReporter{} }
-func (r *nullReporter) enqueueEvent(e *event) error               { return nil }
-func (r *nullReporter) enqueueStatus(e *event) error              { return nil }
-func (r *nullReporter) reportSpan(span metrics.SpanMessage) error { return nil }
-func (r *nullReporter) Shutdown(ctx context.Context) error        { return nil }
-func (r *nullReporter) ShutdownNow() error                        { return nil }
-func (r *nullReporter) Closed() bool                              { return true }
-func (r *nullReporter) WaitForReady(ctx context.Context) bool     { return true }
-func (r *nullReporter) Flush() error                              { return nil }
-func (r *nullReporter) SetServiceKey(string)                      {}
-func (r *nullReporter) IsAppoptics() bool                         { return false }
+func newNullReporter() *nullReporter                          { return &nullReporter{} }
+func (r *nullReporter) enqueueEvent(e *event) error           { return nil }
+func (r *nullReporter) enqueueStatus(e *event) error          { return nil }
+func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
+func (r *nullReporter) ShutdownNow() error                    { return nil }
+func (r *nullReporter) Closed() bool                          { return true }
+func (r *nullReporter) WaitForReady(ctx context.Context) bool { return true }
+func (r *nullReporter) Flush() error                          { return nil }
+func (r *nullReporter) SetServiceKey(string)                  {}
+func (r *nullReporter) IsAppoptics() bool                     { return false }
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but

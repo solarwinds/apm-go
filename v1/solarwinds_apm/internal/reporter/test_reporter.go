@@ -31,7 +31,6 @@ type TestReporter struct {
 	SettingType    int
 	CaptureMetrics bool
 	ErrorEvents    map[int]bool // whether to drop an event
-	eventCount     int64
 	done           chan int
 	wg             sync.WaitGroup
 	eventChan      chan []byte

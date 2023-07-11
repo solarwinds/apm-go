@@ -276,13 +276,6 @@ func (e *event) AddAttributes(attrs []attribute.KeyValue) {
 	}
 }
 
-func (e *event) addLabelLayer(label Label, layer string) {
-	e.AddString("Label", string(label))
-	if layer != "" {
-		e.AddString("Layer", layer)
-	}
-}
-
 // Adds string key/value to event. BSON strings are assumed to be Unicode.
 func (e *event) AddString(key, value string) { e.bbuf.AppendString(key, value) }
 
