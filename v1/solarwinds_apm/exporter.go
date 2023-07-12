@@ -17,6 +17,7 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
@@ -33,10 +34,10 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		return
 	}
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
-	evt.AddString("Layer", layer)
+	evt.AddString(constants.Layer, layer)
 	evt.AddString("sw.span_name", s.Name())
 	evt.AddString("sw.span_kind", s.SpanKind().String())
-	evt.AddString("Language", "Go")
+	evt.AddString("Language", constants.Go)
 	evt.AddString("otel.scope.name", s.InstrumentationScope().Name)
 	evt.AddString("otel.scope.version", s.InstrumentationScope().Version)
 	if !s.Parent().IsValid() || s.Parent().IsRemote() {
@@ -45,7 +46,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 	evt.AddAttributes(s.Attributes())
 
-	err = reporter.SendReport(evt)
+	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send entry event", err)
 		return
@@ -58,7 +59,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			continue
 		}
 		evt.AddAttributes(otEvt.Attributes)
-		err = reporter.SendReport(evt)
+		err = reporter.ReportEvent(evt)
 		if err != nil {
 			log.Warning("could not send info event", err)
 			continue
@@ -70,8 +71,8 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		log.Warning("could not create exit event", err)
 		return
 	}
-	evt.AddString("Layer", layer)
-	err = reporter.SendReport(evt)
+	evt.AddString(constants.Layer, layer)
+	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send exit event", err)
 		return

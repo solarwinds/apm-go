@@ -55,7 +55,7 @@ func (c *urlCache) setURLTrace(url string, trace tracingMode) {
 func (c *urlCache) getURLTrace(url string) (tracingMode, error) {
 	traceStr, err := c.Get([]byte(url))
 	if err != nil {
-		return TRACE_UNKNOWN, err
+		return TraceUnknown, err
 	}
 
 	return newTracingMode(config.TracingMode(string(traceStr))), nil
@@ -152,11 +152,11 @@ func (f *urlFilters) loadConfig(filters []config.TransactionFilter) {
 	}
 }
 
-// getTracingMode checks if the URL should be traced or not. It returns TRACE_UNKNOWN
+// getTracingMode checks if the URL should be traced or not. It returns TraceUnknown
 // if the url is not found.
 func (f *urlFilters) getTracingMode(url string) tracingMode {
 	if len(f.filters) == 0 || url == "" {
-		return TRACE_UNKNOWN
+		return TraceUnknown
 	}
 
 	trace, err := f.cache.getURLTrace(url)
@@ -176,5 +176,5 @@ func (f *urlFilters) lookupTracingMode(url string) tracingMode {
 			return filter.tracingMode()
 		}
 	}
-	return TRACE_UNKNOWN
+	return TraceUnknown
 }

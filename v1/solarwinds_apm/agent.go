@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
@@ -37,10 +38,6 @@ func WaitForReady(ctx context.Context) bool {
 		return false
 	}
 	return reporter.WaitForReady(ctx)
-}
-
-func flushAgent() error {
-	return reporter.Flush()
 }
 
 // Shutdown flush the metrics and stops the agent. The call will block until the agent

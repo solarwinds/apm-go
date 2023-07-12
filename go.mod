@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/coocood/freecache v1.2.3
 	github.com/golang/protobuf v1.5.3
-	github.com/hashicorp/go-version v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/atomic v1.11.0

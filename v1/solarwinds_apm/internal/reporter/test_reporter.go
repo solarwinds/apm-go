@@ -19,7 +19,6 @@ import (
 	"errors"
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -32,7 +31,6 @@ type TestReporter struct {
 	SettingType    int
 	CaptureMetrics bool
 	ErrorEvents    map[int]bool // whether to drop an event
-	eventCount     int64
 	done           chan int
 	wg             sync.WaitGroup
 	eventChan      chan []byte
@@ -191,31 +189,12 @@ func (r *TestReporter) WaitForReady(ctx context.Context) bool {
 	return true
 }
 
-func (r *TestReporter) report(ctx *oboeContext, e *event) error {
-	if err := prepareEvent(ctx, e); err != nil {
-		// don't continue if preparation failed
-		return err
-	}
-
-	atomic.AddInt64(&r.eventCount, 1)
-	if r.ShouldError || // error all events
-		(r.ErrorEvents != nil && r.ErrorEvents[(int(r.eventCount)-1)]) { // error certain specified events
-		return errors.New("TestReporter error")
-	}
-	r.eventChan <- (*e).bbuf.GetBuf() // a send to a closed channel panics.
-	return nil
-}
-
 func (r *TestReporter) enqueueEvent(e *event) error {
 	return errors.New("TestReporter.enqueueEvent not implemented")
 }
 
-func (r *TestReporter) reportEvent(ctx *oboeContext, e *event) error {
-	return r.report(ctx, e)
-}
-
-func (r *TestReporter) reportStatus(ctx *oboeContext, e *event) error {
-	return r.report(ctx, e)
+func (r *TestReporter) enqueueStatus(e *event) error {
+	return errors.New("TestReporter.enqueueStatus not implemented")
 }
 
 func (r *TestReporter) addDefaultSetting() {

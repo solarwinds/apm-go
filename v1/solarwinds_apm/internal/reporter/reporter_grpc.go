@@ -94,14 +94,6 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	grpcMaxRetries                          = 20               // The message will be dropped after this number of retries
 )
 
-type reporterChannel int
-
-// a channel the reporter is listening on for messages from the agent
-const (
-	EVENTS reporterChannel = iota
-	METRICS
-)
-
 // everything needed for a GRPC connection
 type grpcConnection struct {
 	name           string                         // connection name
@@ -636,23 +628,6 @@ func DefaultBackoff(retries int, wait func(d time.Duration)) error {
 
 // ================================ Event Handling ====================================
 
-// prepares the given event and puts it on the channel so it can be consumed by the
-// eventSender() goroutine
-// ctx		oboe context
-// e		event to be put on the channel
-//
-// returns	error if something goes wrong during preparation or if channel is full
-func (r *grpcReporter) reportEvent(ctx *oboeContext, e *event) error {
-	if r.Closed() {
-		return ErrReporterIsClosed
-	}
-	if err := prepareEvent(ctx, e); err != nil {
-		// don't continue if preparation failed
-		return err
-	}
-	return r.enqueueEvent(e)
-}
-
 func (r *grpcReporter) enqueueEvent(e *event) error {
 	if e == nil {
 		return errors.New("cannot enqueue nil event")
@@ -664,6 +639,18 @@ func (r *grpcReporter) enqueueEvent(e *event) error {
 	default:
 		r.conn.queueStats.NumOverflowedAdd(int64(1))
 		return errors.New("event message queue is full")
+	}
+}
+
+func (r *grpcReporter) enqueueStatus(e *event) error {
+	if e == nil {
+		return errors.New("cannot enqueue nil event")
+	}
+	select {
+	case r.statusMessages <- (*e).bbuf.GetBuf():
+		return nil
+	default:
+		return errors.New("status message queue is full")
 	}
 }
 
@@ -909,29 +896,24 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 
 // ========================= Status Message Handling =============================
 
-// prepares the given event and puts it on the channel so it can be consumed by the
-// statusSender() goroutine
-// ctx		oboe context
-// e		event to be put on the channel
+// TODO use something similar for init message
+//func (r *grpcReporter) reportStatus(ctx *oboeContext, e *event) error {
+//	if r.Closed() {
+//		return ErrReporterIsClosed
+//	}
+//	if err := prepareEvent(ctx, e); err != nil {
+//		// don't continue if preparation failed
+//		return err
+//	}
 //
-// returns	error if something goes wrong during preparation or if channel is full
-func (r *grpcReporter) reportStatus(ctx *oboeContext, e *event) error {
-	if r.Closed() {
-		return ErrReporterIsClosed
-	}
-	if err := prepareEvent(ctx, e); err != nil {
-		// don't continue if preparation failed
-		return err
-	}
-
-	select {
-	case r.statusMessages <- (*e).bbuf.GetBuf():
-		return nil
-	default:
-		return errors.New("status message queue is full")
-	}
-
-}
+//	select {
+//	case r.statusMessages <- (*e).bbuf.GetBuf():
+//		return nil
+//	default:
+//		return errors.New("status message queue is full")
+//	}
+//
+//}
 
 // long-running goroutine that listens on the status message channel, collects all messages
 // on that channel and attempts to send them to the collector using the GRPC method PostStatus()

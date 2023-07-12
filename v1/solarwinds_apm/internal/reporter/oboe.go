@@ -17,6 +17,7 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
 	"math/rand"
@@ -113,12 +114,6 @@ func (b *tokenBucket) setRateCap(rate, cap float64) {
 	}
 }
 
-func (b *tokenBucket) avail() float64 {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	return b.available
-}
-
 // The identifying keys for a setting
 type oboeSettingKey struct {
 	sType settingType
@@ -156,24 +151,29 @@ func sendInitMessage() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
 	}
-	ctx := newContext(true)
-	if c, ok := ctx.(*oboeContext); ok {
-		// create new event from context
-		e, err := c.newEvent("single", "go")
-		if err != nil {
-			log.Warningf("Error while creating the init message: %v", err)
-			return
-		}
+	e := &event{}
+	md := &oboeMetadata{}
+	md.Init()
+	if err := md.SetRandom(); err != nil {
+		log.Error("could not specify random task and op IDs", err)
+		return
+	}
+	if err := oboeEventInit(e, md, UseMDOpID); err != nil {
+		log.Error("could not initialize oboe event", err)
+		return
+	}
+	e.AddString(constants.Label, "single")
+	e.AddString(constants.Layer, constants.Go)
 
-		// we choose to ignore the errors
-		_ = e.AddKV("__Init", 1)
-		_ = e.AddKV("Go.Version", utils.GoVersion())
-		_ = e.AddKV("Go.SolarWindsAPM.Version", utils.Version())
-		_ = e.AddKV("Go.InstallDirectory", utils.InstallDir())
-		_ = e.AddKV("Go.InstallTimestamp", utils.InstallTsInSec())
-		_ = e.AddKV("Go.LastRestart", utils.LastRestartInUSec())
+	e.AddInt("__Init", 1)
+	e.AddString("Go.Version", utils.GoVersion())
+	e.AddString("Go.SolarWindsAPM.Version", utils.Version())
+	e.AddString("Go.InstallDirectory", utils.InstallDir())
+	e.AddInt64("Go.InstallTimestamp", utils.InstallTsInSec())
+	e.AddInt64("Go.LastRestart", utils.LastRestartInUSec())
 
-		_ = e.ReportStatus(c)
+	if err := ReportStatus(e); err != nil {
+		log.Error("could not send init message", err)
 	}
 }
 
@@ -613,18 +613,6 @@ func getSetting(layer string) (*oboeSettings, bool) {
 	}
 
 	return nil, false
-}
-
-func removeSetting(layer string) {
-	globalSettingsCfg.lock.Lock()
-	defer globalSettingsCfg.lock.Unlock()
-
-	key := oboeSettingKey{
-		sType: TYPE_DEFAULT,
-		layer: "",
-	}
-
-	delete(globalSettingsCfg.settings, key)
 }
 
 func hasDefaultSetting() bool {

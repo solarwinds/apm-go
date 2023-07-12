@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	XTraceOptionsHeaderName    = "x-trace-options"
-	XTraceOptionsSigHeaderName = "x-trace-options-signature"
+	OptionsHeaderName    = "x-trace-options"
+	OptionsSigHeaderName = "x-trace-options-signature"
 )
 
 type CtxKey int

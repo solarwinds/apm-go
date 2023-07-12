@@ -17,13 +17,12 @@
 package reporter
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -34,9 +33,8 @@ import (
 )
 
 type event struct {
-	metadata  oboeMetadata
-	overrides Overrides
-	bbuf      *bson.Buffer
+	metadata oboeMetadata
+	bbuf     *bson.Buffer
 }
 
 // Label is a required event attribute.
@@ -63,9 +61,9 @@ type sampleSource int
 
 // tracing modes
 const (
-	TRACE_DISABLED tracingMode = iota // disable tracing, will neither start nor continue traces
-	TRACE_ENABLED                     // perform sampling every inbound request for tracing
-	TRACE_UNKNOWN                     // for cache purpose only
+	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
+	TraceEnabled                     // perform sampling every inbound request for tracing
+	TraceUnknown                     // for cache purpose only
 )
 
 // setting types
@@ -135,23 +133,23 @@ func (st settingType) toSampleSource() sampleSource {
 func newTracingMode(mode config.TracingMode) tracingMode {
 	switch mode {
 	case config.DisabledTracingMode:
-		return TRACE_DISABLED
+		return TraceDisabled
 	case config.EnabledTracingMode:
-		return TRACE_ENABLED
+		return TraceEnabled
 	default:
 	}
-	return TRACE_UNKNOWN
+	return TraceUnknown
 }
 
 func (tm tracingMode) isUnknown() bool {
-	return tm == TRACE_UNKNOWN
+	return tm == TraceUnknown
 }
 
 func (tm tracingMode) toFlags() settingFlag {
 	switch tm {
-	case TRACE_ENABLED:
+	case TraceEnabled:
 		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
-	case TRACE_DISABLED:
+	case TraceDisabled:
 	default:
 	}
 	return FLAG_OK
@@ -159,9 +157,9 @@ func (tm tracingMode) toFlags() settingFlag {
 
 func (tm tracingMode) ToString() string {
 	switch tm {
-	case TRACE_ENABLED:
+	case TraceEnabled:
 		return string(config.EnabledTracingMode)
-	case TRACE_DISABLED:
+	case TraceDisabled:
 		return string(config.DisabledTracingMode)
 	default:
 		return string(config.UnknownTracingMode)
@@ -216,20 +214,11 @@ func oboeEventInit(evt *event, md *oboeMetadata, opt OpIDOption) error {
 	return nil
 }
 
-func newEvent(md *oboeMetadata, label Label, layer string, explicitXTraceID string) (*event, error) {
-	e := &event{}
-	if err := oboeEventInit(e, md, RandomOpID); err != nil {
-		return nil, err
-	}
-	e.addLabelLayer(label, layer)
-	return e, nil
-}
-
 func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
 	md := &oboeMetadata{}
 	md.Init()
 	if ctx.IsSampled() {
-		md.flags |= XTR_FLAGS_SAMPLED
+		md.flags |= 0x01
 	}
 	traceID := ctx.TraceID()
 	spanID := ctx.SpanID()
@@ -244,7 +233,7 @@ func CreateEvent(ctx trace.SpanContext, t time.Time, label Label, opt OpIDOption
 	if err := oboeEventInit(evt, md, opt); err != nil {
 		return nil, err
 	}
-	evt.AddString("Label", string(label))
+	evt.AddString(constants.Label, string(label))
 	evt.AddInt64("Timestamp_u", t.UnixMicro())
 	return evt, nil
 }
@@ -279,18 +268,11 @@ func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (*event, error) {
 
 func (e *event) AddAttributes(attrs []attribute.KeyValue) {
 	for _, kv := range attrs {
-		err := e.AddKV(string(kv.Key), kv.Value.AsInterface())
+		err := e.AddKV(kv)
 		if err != nil {
 			log.Warning("could not add KV", kv, err)
 			// Continue so we don't completely abandon the event
 		}
-	}
-}
-
-func (e *event) addLabelLayer(label Label, layer string) {
-	e.AddString("Label", string(label))
-	if layer != "" {
-		e.AddString("Layer", layer)
 	}
 }
 
@@ -319,11 +301,6 @@ func (e *event) AddFloat64(key string, value float64) { e.bbuf.AppendFloat64(key
 
 // Adds float key/value to event
 func (e *event) AddBool(key string, value bool) { e.bbuf.AppendBool(key, value) }
-
-// Adds edge (reference to previous event) to event
-func (e *event) AddEdge(ctx *oboeContext) {
-	e.bbuf.AppendString(EdgeKey, ctx.metadata.opString())
-}
 
 func (e *event) AddInt64Slice(key string, values []int64) {
 	start := e.bbuf.AppendStartArray(key)
@@ -357,175 +334,68 @@ func (e *event) AddBoolSlice(key string, values []bool) {
 	e.bbuf.AppendFinishObject(start)
 }
 
-func (e *event) AddEdgeFromMetadataString(mdstr string) {
-	var md oboeMetadata
-	md.Init()
-	err := md.FromString(mdstr)
-	// only add Edge if metadata references same trace as ours
-	if err == nil && bytes.Equal(e.metadata.ids.taskID, md.ids.taskID) {
-		e.bbuf.AppendString(EdgeKey, md.opString())
-	}
-}
-
 func (e *event) AddEdgeFromParent(parent trace.SpanContext) {
 	spanIDHex := parent.SpanID().String()
 	e.bbuf.AppendString(EdgeKey, strings.ToUpper(spanIDHex))
 	e.bbuf.AppendString("sw.parent_span_id", spanIDHex)
 }
 
-// Add any key/value to event. May not add KV if key or value is invalid. Used to facilitate
-// reporting variadic args.
-func (e *event) AddKV(key, value interface{}) error {
-	// load key name
-	k, isStr := key.(string)
-	if !isStr {
-		return fmt.Errorf("key %v (type %T) not a string", k, k)
-	}
-	// load value and add KV to event
-	switch v := value.(type) {
-	case string:
-		if k == EdgeKey {
-			e.AddEdgeFromMetadataString(v)
-		} else {
-			e.AddString(k, v)
-		}
-	case []byte:
-		e.AddBinary(k, v)
-	case int:
-		e.AddInt(k, v)
-	case int64:
-		e.AddInt64(k, v)
-	case int32:
-		e.AddInt32(k, v)
-	case uint:
-		if v <= math.MaxInt64 {
-			e.AddInt64(k, int64(v))
-		}
-	case uint64:
-		if v <= math.MaxInt64 {
-			e.AddInt64(k, int64(v))
-		}
-	case uint32:
-		e.AddInt64(k, int64(v))
-	case float32:
-		e.AddFloat32(k, v)
-	case float64:
-		e.AddFloat64(k, v)
-	case bool:
-		e.AddBool(k, v)
-	case *oboeContext:
-		if k == EdgeKey {
-			e.AddEdge(v)
-		}
-	case sampleSource:
-		e.AddInt(k, int(v))
+func (e *event) AddKV(kv attribute.KeyValue) error {
+	key := string(kv.Key)
+	value := kv.Value
 
-	// allow reporting of pointers to basic types as well (for delayed evaluation)
-	case *string:
-		if v != nil {
-			if k == EdgeKey {
-				e.AddEdgeFromMetadataString(*v)
-			} else {
-				e.AddString(k, *v)
-			}
-		}
-	case *[]byte:
-		if v != nil {
-			e.AddBinary(k, *v)
-		}
-	case *int:
-		if v != nil {
-			e.AddInt(k, *v)
-		}
-	case *int64:
-		if v != nil {
-			e.AddInt64(k, *v)
-		}
-	case *int32:
-		if v != nil {
-			e.AddInt32(k, *v)
-		}
-	case *uint:
-		if v != nil {
-			if *v <= math.MaxInt64 {
-				e.AddInt64(k, int64(*v))
-			}
-		}
-	case *uint64:
-		if v != nil {
-			if *v <= math.MaxInt64 {
-				e.AddInt64(k, int64(*v))
-			}
-		}
-	case *uint32:
-		if v != nil {
-			e.AddInt64(k, int64(*v))
-		}
-	case *float32:
-		if v != nil {
-			e.AddFloat32(k, *v)
-		}
-	case *float64:
-		if v != nil {
-			e.AddFloat64(k, *v)
-		}
-	case *bool:
-		if v != nil {
-			e.AddBool(k, *v)
-		}
-	case []int64:
-		if v != nil {
-			e.AddInt64Slice(k, v)
-		}
-	case []string:
-		if v != nil {
-			e.AddStringSlice(k, v)
-		}
-	case []float64:
-		if v != nil {
-			e.AddFloat64Slice(k, v)
-		}
-	case []bool:
-		if v != nil {
-			e.AddBoolSlice(k, v)
-		}
+	switch value.Type() {
+	case attribute.BOOL:
+		e.AddBool(key, value.AsBool())
+	case attribute.BOOLSLICE:
+		e.AddBoolSlice(key, value.AsBoolSlice())
+	case attribute.FLOAT64:
+		e.AddFloat64(key, value.AsFloat64())
+	case attribute.FLOAT64SLICE:
+		e.AddFloat64Slice(key, value.AsFloat64Slice())
+	case attribute.INT64:
+		e.AddInt64(key, value.AsInt64())
+	case attribute.INT64SLICE:
+		e.AddInt64Slice(key, value.AsInt64Slice())
+	case attribute.INVALID:
+		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
+	case attribute.STRING:
+		e.AddString(key, value.AsString())
+	case attribute.STRINGSLICE:
+		e.AddStringSlice(key, value.AsStringSlice())
 	default:
-		log.Debugf("Ignoring unrecognized Event key %v val %v valType %T", k, v, v)
+		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
 	}
 	return nil
 }
 
-// Reports event using specified Reporter
-func (e *event) ReportUsing(c *oboeContext, r reporter, channel reporterChannel) error {
-	if channel == EVENTS {
-		if e.metadata.isSampled() {
-			return r.reportEvent(c, e)
-		}
-	} else if channel == METRICS {
-		return r.reportStatus(c, e)
+type evType int
+
+const (
+	evTypeEvent = iota
+	evTypeStatus
+)
+
+func report(e *event, typ evType) error {
+	if typ != evTypeEvent && typ != evTypeStatus {
+		return errors.New("invalid evType")
 	}
-	return nil
-}
 
-// Reports event using default Reporter
-func (e *event) Report(c *oboeContext) error       { return e.ReportUsing(c, globalReporter, EVENTS) }
-func (e *event) ReportStatus(c *oboeContext) error { return e.ReportUsing(c, globalReporter, METRICS) }
-
-// Report event using Context interface
-func (e *event) ReportContext(c Context, addCtxEdge bool, args ...interface{}) error {
-	if ctx, ok := c.(*oboeContext); ok {
-		return ctx.report(e, addCtxEdge, Overrides{}, args...)
-	}
-	return nil
-}
-
-// Returns Metadata string (X-Trace header)
-func (e *event) MetadataString() string { return e.metadata.String() }
-
-func SendReport(e *event) error {
 	e.AddString("Hostname", host.Hostname())
 	e.AddInt("PID", host.PID())
 
 	e.bbuf.Finish()
-	return globalReporter.enqueueEvent(e)
+	if typ == evTypeEvent {
+		return globalReporter.enqueueEvent(e)
+	} else {
+		return globalReporter.enqueueStatus(e)
+	}
+}
+
+func ReportStatus(e *event) error {
+	return report(e, evTypeStatus)
+}
+
+func ReportEvent(e *event) error {
+	return report(e, evTypeEvent)
 }

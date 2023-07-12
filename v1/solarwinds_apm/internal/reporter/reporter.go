@@ -15,30 +15,19 @@
 package reporter
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"errors"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"math"
-	"os"
 	"strings"
-	"time"
-
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 )
 
 // defines what methods a reporter should offer (internal to reporter package)
 type reporter interface {
-	// called when an event should be reported
-	reportEvent(ctx *oboeContext, e *event) error
-
 	enqueueEvent(e *event) error
-	// called when a status (e.g. __Init message) should be reported
-	reportStatus(ctx *oboeContext, e *event) error
+	enqueueStatus(e *event) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
 	// ShutdownNow closes the reporter immediately
@@ -80,18 +69,16 @@ var (
 // a noop reporter
 type nullReporter struct{}
 
-func newNullReporter() *nullReporter                                  { return &nullReporter{} }
-func (r *nullReporter) reportEvent(ctx *oboeContext, e *event) error  { return nil }
-func (r *nullReporter) enqueueEvent(e *event) error                   { return nil }
-func (r *nullReporter) reportStatus(ctx *oboeContext, e *event) error { return nil }
-func (r *nullReporter) reportSpan(span metrics.SpanMessage) error     { return nil }
-func (r *nullReporter) Shutdown(ctx context.Context) error            { return nil }
-func (r *nullReporter) ShutdownNow() error                            { return nil }
-func (r *nullReporter) Closed() bool                                  { return true }
-func (r *nullReporter) WaitForReady(ctx context.Context) bool         { return true }
-func (r *nullReporter) Flush() error                                  { return nil }
-func (r *nullReporter) SetServiceKey(string)                          {}
-func (r *nullReporter) IsAppoptics() bool                             { return false }
+func newNullReporter() *nullReporter                          { return &nullReporter{} }
+func (r *nullReporter) enqueueEvent(e *event) error           { return nil }
+func (r *nullReporter) enqueueStatus(e *event) error          { return nil }
+func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
+func (r *nullReporter) ShutdownNow() error                    { return nil }
+func (r *nullReporter) Closed() bool                          { return true }
+func (r *nullReporter) WaitForReady(ctx context.Context) bool { return true }
+func (r *nullReporter) Flush() error                          { return nil }
+func (r *nullReporter) SetServiceKey(string)                  {}
+func (r *nullReporter) IsAppoptics() bool                     { return false }
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
@@ -120,14 +107,10 @@ func setGlobalReporter(reporterType string) {
 	}
 
 	switch strings.ToLower(reporterType) {
-	case "ssl":
-		fallthrough // using fallthrough since the SSL reporter (gRPC) is our default reporter
-	default:
-		globalReporter = newGRPCReporter()
 	case "none":
 		globalReporter = newNullReporter()
-	case "serverless":
-		globalReporter = newServerlessReporter(os.Stderr)
+	default:
+		globalReporter = newGRPCReporter()
 	}
 }
 
@@ -154,62 +137,12 @@ func Closed() bool {
 	return globalReporter.Closed()
 }
 
-// check if context and event are valid, add general keys like Timestamp, or hostname
-// ctx		oboe context
-// e		event to be prepared for sending
-//
-// returns	error if invalid context or event
-func prepareEvent(ctx *oboeContext, e *event) error {
-	if ctx == nil || e == nil {
-		return errors.New("invalid context, event")
-	}
-
-	// For now, disable the check if the entry event is using an explicit x-trace ID
-	// as the current logic in context.NewContext would use the same x-trace ID for
-	// context as the entry event. Therefore the opID is the same.
-	if e.overrides.ExplicitMdStr == "" {
-		// The context metadata must have the same task_id as the event.
-		if !bytes.Equal(ctx.metadata.ids.taskID, e.metadata.ids.taskID) {
-			return errors.New("invalid event, different task_id from context")
-		}
-
-		// The context metadata must have a different op_id than the event.
-		if bytes.Equal(ctx.metadata.ids.opID, e.metadata.ids.opID) {
-			return errors.New("invalid event, same as context")
-		}
-	}
-
-	var us int64
-	if e.overrides.ExplicitTS.IsZero() {
-		us = time.Now().UnixNano() / 1000
-	} else {
-		us = e.overrides.ExplicitTS.UnixNano() / 1000
-	}
-
-	e.AddInt64("Timestamp_u", us)
-
-	e.AddString("Hostname", host.Hostname())
-	e.AddInt("PID", host.PID())
-
-	// Update the context's op_id to that of the event
-	ctx.metadata.ids.setOpID(e.metadata.ids.opID)
-
-	e.bbuf.Finish()
-	return nil
-}
-
 func ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode TriggerTraceMode, swState *w3cfmt.SwTraceState) SampleDecision {
 	return shouldTraceRequestWithURL(layer, traced, url, ttMode, swState)
 }
 
 func shouldTraceRequestWithURL(layer string, traced bool, url string, triggerTrace TriggerTraceMode, swState *w3cfmt.SwTraceState) SampleDecision {
 	return oboeSampleRequest(layer, traced, url, triggerTrace, swState)
-}
-
-// Determines if request should be traced, based on sample rate settings.
-func shouldTraceRequest(layer string, traced bool) (bool, int, sampleSource, bool) {
-	d := shouldTraceRequestWithURL(layer, traced, "", ModeTriggerTraceNotPresent, nil)
-	return d.trace, d.rate, d.source, d.enabled
 }
 
 func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
