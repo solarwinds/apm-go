@@ -23,15 +23,13 @@ import (
 // LoggableTrace Returns a loggable trace ID from the given
 // context.Context for log injection
 func LoggableTrace(ctx context.Context) string {
-	sc := trace.SpanContextFromContext(ctx)
-	return LoggableTraceFromSpanContext(sc)
+	return LoggableTraceFromSpanContext(trace.SpanContextFromContext(ctx))
 }
 
 func LoggableTraceFromSpanContext(ctx trace.SpanContext) string {
-	tid := ctx.TraceID().String()
 	sampled := "0"
 	if ctx.IsSampled() {
 		sampled = "1"
 	}
-	return fmt.Sprintf("%s-%s", tid, sampled)
+	return fmt.Sprintf("%s-%s", ctx.TraceID().String(), sampled)
 }
