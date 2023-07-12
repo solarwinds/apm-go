@@ -157,7 +157,7 @@ func (e *event) ToBson() []byte {
 	return buf.GetBuf()
 }
 
-func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (Event, error) {
+func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (Event, error) {
 	evt, err := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (Event
 	return evt, nil
 }
 
-func CreateExit(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateExitEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelExit)
 }
 

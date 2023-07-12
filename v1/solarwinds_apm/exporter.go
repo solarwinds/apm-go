@@ -29,7 +29,7 @@ type exporter struct {
 }
 
 func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
-	evt, err := reporter.CreateEntry(s.SpanContext(), s.StartTime(), s.Parent())
+	evt, err := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
 	if err != nil {
 		log.Warning("could not create entry event", err)
 		return
@@ -69,7 +69,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		}
 	}
 
-	evt, err = reporter.CreateExit(s.SpanContext(), s.EndTime())
+	evt, err = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
 	if err != nil {
 		log.Warning("could not create exit event", err)
 		return
