@@ -14,6 +14,8 @@
 package bson
 
 import (
+	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"math"
 	"strconv"
 )
@@ -197,4 +199,32 @@ func (b *Buffer) AppendStringSlice(key string, values []string) {
 		b.AppendString(strconv.Itoa(i), value)
 	}
 	b.AppendFinishObject(start)
+}
+func (b *Buffer) AddKV(kv attribute.KeyValue) error {
+	key := string(kv.Key)
+	value := kv.Value
+
+	switch value.Type() {
+	case attribute.BOOL:
+		b.AppendBool(key, value.AsBool())
+	case attribute.BOOLSLICE:
+		b.AppendBoolSlice(key, value.AsBoolSlice())
+	case attribute.FLOAT64:
+		b.AppendFloat64(key, value.AsFloat64())
+	case attribute.FLOAT64SLICE:
+		b.AppendFloat64Slice(key, value.AsFloat64Slice())
+	case attribute.INT64:
+		b.AppendInt64(key, value.AsInt64())
+	case attribute.INT64SLICE:
+		b.AppendInt64Slice(key, value.AsInt64Slice())
+	case attribute.INVALID:
+		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
+	case attribute.STRING:
+		b.AppendString(key, value.AsString())
+	case attribute.STRINGSLICE:
+		b.AppendStringSlice(key, value.AsStringSlice())
+	default:
+		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
+	}
+	return nil
 }

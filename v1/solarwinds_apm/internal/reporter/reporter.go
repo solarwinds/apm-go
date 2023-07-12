@@ -17,6 +17,7 @@ package reporter
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
@@ -207,4 +208,31 @@ func SetServiceKey(key string) {
 
 func IsAppoptics() bool {
 	return globalReporter.IsAppoptics()
+}
+
+type evType int
+
+const (
+	evTypeEvent = iota
+	evTypeStatus
+)
+
+func report(e Event, typ evType) error {
+	if typ != evTypeEvent && typ != evTypeStatus {
+		return errors.New("invalid evType")
+	}
+
+	if typ == evTypeEvent {
+		return globalReporter.enqueueEvent(e)
+	} else {
+		return globalReporter.enqueueStatus(e)
+	}
+}
+
+func ReportStatus(e Event) error {
+	return report(e, evTypeStatus)
+}
+
+func ReportEvent(e Event) error {
+	return report(e, evTypeEvent)
 }

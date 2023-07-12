@@ -19,7 +19,6 @@ package reporter
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
@@ -49,17 +48,17 @@ const (
 func (l Label) AsString() string {
 	switch l {
 	case LabelEntry:
-		return "entry"
+		return constants.EntryLabel
 	case LabelError:
-		return "error"
+		return constants.ErrorLabel
 	case LabelExit:
-		return "exit"
+		return constants.ExitLabel
 	case LabelInfo:
-		return "info"
+		return constants.InfoLabel
 	case LabelSingle:
-		return "single"
+		return constants.SingleLabel
 	}
-	return "UNKNOWN"
+	return constants.UnknownLabel
 }
 
 type Event interface {
@@ -122,7 +121,7 @@ func (e *event) AddKVs(kvs []attribute.KeyValue) {
 
 func (e *event) getSwTraceContext() string {
 	// For now the version and flags are always 00 and 01, respectively
-	return fmt.Sprintf("00-%x-%x-01", e.taskID, e.opID)
+	return fmt.Sprintf("00-%s-%s-01", e.taskID.String(), hex.EncodeToString(e.opID[:]))
 }
 
 func (e *event) getXTrace() string {
@@ -150,7 +149,7 @@ func (e *event) ToBson() []byte {
 	}
 
 	for _, kv := range e.kvs {
-		if err := AddKV(buf, kv); err != nil {
+		if err := buf.AddKV(kv); err != nil {
 			log.Warningf("could not add kv", kv, err)
 		}
 	}
@@ -186,60 +185,4 @@ func CreateExit(ctx trace.SpanContext, t time.Time) (Event, error) {
 
 func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelInfo)
-}
-
-func AddKV(buf *bson.Buffer, kv attribute.KeyValue) error {
-	key := string(kv.Key)
-	value := kv.Value
-
-	switch value.Type() {
-	case attribute.BOOL:
-		buf.AppendBool(key, value.AsBool())
-	case attribute.BOOLSLICE:
-		buf.AppendBoolSlice(key, value.AsBoolSlice())
-	case attribute.FLOAT64:
-		buf.AppendFloat64(key, value.AsFloat64())
-	case attribute.FLOAT64SLICE:
-		buf.AppendFloat64Slice(key, value.AsFloat64Slice())
-	case attribute.INT64:
-		buf.AppendInt64(key, value.AsInt64())
-	case attribute.INT64SLICE:
-		buf.AppendInt64Slice(key, value.AsInt64Slice())
-	case attribute.INVALID:
-		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
-	case attribute.STRING:
-		buf.AppendString(key, value.AsString())
-	case attribute.STRINGSLICE:
-		buf.AppendStringSlice(key, value.AsStringSlice())
-	default:
-		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
-	}
-	return nil
-}
-
-type evType int
-
-const (
-	evTypeEvent = iota
-	evTypeStatus
-)
-
-func report(e Event, typ evType) error {
-	if typ != evTypeEvent && typ != evTypeStatus {
-		return errors.New("invalid evType")
-	}
-
-	if typ == evTypeEvent {
-		return globalReporter.enqueueEvent(e)
-	} else {
-		return globalReporter.enqueueStatus(e)
-	}
-}
-
-func ReportStatus(e Event) error {
-	return report(e, evTypeStatus)
-}
-
-func ReportEvent(e Event) error {
-	return report(e, evTypeEvent)
 }

@@ -26,4 +26,13 @@ const (
 	Label      = "Label"
 	Layer      = "Layer"
 	TraceState = "tracestate"
+
+	// Label strings
+
+	EntryLabel   = "entry"
+	ErrorLabel   = "error"
+	ExitLabel    = "exit"
+	InfoLabel    = "info"
+	SingleLabel  = "single"
+	UnknownLabel = "UNKNOWN"
 )
