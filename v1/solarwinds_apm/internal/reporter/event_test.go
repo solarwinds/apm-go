@@ -198,10 +198,6 @@ func TestEventXTraceAndSwTraceCtx(t *testing.T) {
 	require.Equal(t, "00-aabbccdd000000000000000000000000-ffeeddcc00000000-01", s)
 }
 
-func TestEventSwTraceContext(t *testing.T) {
-	// TODO
-}
-
 func TestLabelAsString(t *testing.T) {
 	require.Equal(t, constants.EntryLabel, LabelEntry.AsString())
 	require.Equal(t, constants.ErrorLabel, LabelError.AsString())
