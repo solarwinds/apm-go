@@ -29,9 +29,6 @@ func LoggableTraceIDFromContext(ctx context.Context) string {
 }
 
 func LoggableTraceIDFromSpanContext(ctx trace.SpanContext) string {
-	if !ctx.IsValid() {
-		return ""
-	}
 	tid := ctx.TraceID().String()
 	sampled := "0"
 	if ctx.IsSampled() {

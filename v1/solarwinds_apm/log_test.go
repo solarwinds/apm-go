@@ -23,7 +23,7 @@ import (
 
 func TestLoggableTraceIDFromContext(t *testing.T) {
 	ctx := context.Background()
-	require.Equal(t, "", LoggableTraceIDFromContext(ctx))
+	require.Equal(t, "00000000000000000000000000000000-0", LoggableTraceIDFromContext(ctx))
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x22},
 		SpanID:  trace.SpanID{0x11},
