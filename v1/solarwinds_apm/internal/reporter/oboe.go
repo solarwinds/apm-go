@@ -32,6 +32,10 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 )
 
+const (
+	maxSamplingRate = config.MaxSampleRate
+)
+
 // enums used by sampling and tracing settings
 type sampleSource int
 

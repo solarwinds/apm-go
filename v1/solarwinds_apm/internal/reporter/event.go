@@ -53,10 +53,6 @@ const (
 	eventHeader = "1"
 )
 
-const (
-	maxSamplingRate = config.MaxSampleRate
-)
-
 type OpIDOption int
 
 const (
