@@ -19,11 +19,9 @@ func LoggableTraceIDFromSpanContext(ctx trace.SpanContext) string {
 		return ""
 	}
 	tid := ctx.TraceID().String()
-	var sampled string
+	sampled := "0"
 	if ctx.IsSampled() {
 		sampled = "1"
-	} else {
-		sampled = "0"
 	}
 	return fmt.Sprintf("%s-%s", tid, sampled)
 }
