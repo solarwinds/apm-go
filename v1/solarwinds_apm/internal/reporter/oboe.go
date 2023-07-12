@@ -32,6 +32,18 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 )
 
+// enums used by sampling and tracing settings
+type sampleSource int
+
+// source of the sample value
+const (
+	SAMPLE_SOURCE_UNSET sampleSource = iota - 1
+	SAMPLE_SOURCE_NONE
+	SAMPLE_SOURCE_FILE
+	SAMPLE_SOURCE_DEFAULT
+	SAMPLE_SOURCE_LAYER
+)
+
 // Current settings configuration
 type oboeSettingsCfg struct {
 	settings map[oboeSettingKey]*oboeSettings
@@ -228,7 +240,7 @@ func (b *tokenBucket) update(now time.Time) {
 type SampleDecision struct {
 	trace  bool
 	rate   int
-	source sampleSource
+	source sampleSource // TODO: This is unused. Remove?
 	// if the request is disabled from tracing in a per-transaction level or for
 	// the entire service.
 	enabled       bool
@@ -647,4 +659,51 @@ func flagStringToBin(flagString string) settingFlag {
 		}
 	}
 	return flags
+}
+
+// tracing mode
+type tracingMode int
+
+// tracing modes
+const (
+	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
+	TraceEnabled                     // perform sampling every inbound request for tracing
+	TraceUnknown                     // for cache purpose only
+)
+
+// newTracingMode creates a tracing mode object from a string
+func newTracingMode(mode config.TracingMode) tracingMode {
+	switch mode {
+	case config.DisabledTracingMode:
+		return TraceDisabled
+	case config.EnabledTracingMode:
+		return TraceEnabled
+	default:
+	}
+	return TraceUnknown
+}
+
+func (tm tracingMode) isUnknown() bool {
+	return tm == TraceUnknown
+}
+
+func (tm tracingMode) toFlags() settingFlag {
+	switch tm {
+	case TraceEnabled:
+		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
+	case TraceDisabled:
+	default:
+	}
+	return FLAG_OK
+}
+
+func (tm tracingMode) ToString() string {
+	switch tm {
+	case TraceEnabled:
+		return string(config.EnabledTracingMode)
+	case TraceDisabled:
+		return string(config.DisabledTracingMode)
+	default:
+		return string(config.UnknownTracingMode)
+	}
 }
