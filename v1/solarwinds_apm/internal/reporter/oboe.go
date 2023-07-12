@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"math"
 	"math/rand"
 	"strings"
@@ -167,28 +169,29 @@ func sendInitMessage() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
 	}
-	e := &event{}
-	md := &oboeMetadata{}
-	md.Init()
-	if err := md.SetRandom(); err != nil {
-		log.Error("could not specify random task and op IDs", err)
+	tid := trace.TraceID{0}
+	if _, err := randReader.Read(tid[:]); err != nil {
+		log.Error("could not generate random task id for init message", err)
 		return
 	}
-	if err := oboeEventInit(e, md, UseMDOpID); err != nil {
-		log.Error("could not initialize oboe event", err)
+	evt, err := NewEventWithRandomOpID(tid, time.Now())
+	if err != nil {
+		log.Error("could not create new event", err)
 		return
 	}
-	e.AddString(constants.Label, "single")
-	e.AddString(constants.Layer, constants.Go)
+	evt.WithLabel(LabelSingle)
+	evt.WithLayer(constants.Go)
 
-	e.AddInt("__Init", 1)
-	e.AddString("Go.Version", utils.GoVersion())
-	e.AddString("Go.SolarWindsAPM.Version", utils.Version())
-	e.AddString("Go.InstallDirectory", utils.InstallDir())
-	e.AddInt64("Go.InstallTimestamp", utils.InstallTsInSec())
-	e.AddInt64("Go.LastRestart", utils.LastRestartInUSec())
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.Int("__Init", 1),
+		attribute.String("Go.Version", utils.GoVersion()),
+		attribute.String("Go.SolarWindsAPM.Version", utils.Version()),
+		attribute.String("Go.InstallDirectory", utils.InstallDir()),
+		attribute.Int64("Go.InstallTimestamp", utils.InstallTsInSec()),
+		attribute.Int64("Go.LastRestart", utils.LastRestartInUSec()),
+	})
 
-	if err := ReportStatus(e); err != nil {
+	if err := ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}
 }

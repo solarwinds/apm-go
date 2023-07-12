@@ -21,6 +21,7 @@ const (
 
 	// Other
 
+	Edge       = "Edge"
 	Go         = "Go"
 	Label      = "Label"
 	Layer      = "Layer"

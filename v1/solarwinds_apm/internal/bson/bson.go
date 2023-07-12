@@ -15,6 +15,7 @@ package bson
 
 import (
 	"math"
+	"strconv"
 )
 
 type Buffer struct {
@@ -164,4 +165,36 @@ func (b *Buffer) addFloat64(v float64) {
 
 func (b *Buffer) addBytes(v ...byte) {
 	b.buf = append(b.buf, v...)
+}
+
+func (b *Buffer) AppendBoolSlice(key string, values []bool) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendBool(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendFloat64Slice(key string, values []float64) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendFloat64(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendInt64Slice(key string, values []int64) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendInt64(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendStringSlice(key string, values []string) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendString(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
 }

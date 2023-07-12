@@ -26,8 +26,8 @@ import (
 
 // defines what methods a reporter should offer (internal to reporter package)
 type reporter interface {
-	enqueueEvent(e *event) error
-	enqueueStatus(e *event) error
+	enqueueEvent(e Event) error
+	enqueueStatus(e Event) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
 	// ShutdownNow closes the reporter immediately
@@ -70,8 +70,8 @@ var (
 type nullReporter struct{}
 
 func newNullReporter() *nullReporter                          { return &nullReporter{} }
-func (r *nullReporter) enqueueEvent(e *event) error           { return nil }
-func (r *nullReporter) enqueueStatus(e *event) error          { return nil }
+func (r *nullReporter) enqueueEvent(e Event) error            { return nil }
+func (r *nullReporter) enqueueStatus(e Event) error           { return nil }
 func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
 func (r *nullReporter) ShutdownNow() error                    { return nil }
 func (r *nullReporter) Closed() bool                          { return true }
