@@ -66,9 +66,9 @@ type Event interface {
 	AddKV(attribute.KeyValue)
 	AddKVs([]attribute.KeyValue)
 
-	WithLabel(Label) Event
-	WithLayer(string) Event
-	WithParent(trace.SpanID) Event
+	SetLabel(Label)
+	SetLayer(string)
+	SetParent(trace.SpanID)
 
 	ToBson() []byte
 }
@@ -100,19 +100,16 @@ func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) (Event, error) {
 	return NewEvent(tid, oid, t)
 }
 
-func (e *event) WithLabel(label Label) Event {
+func (e *event) SetLabel(label Label) {
 	e.label = label
-	return e
 }
 
-func (e *event) WithLayer(layer string) Event {
+func (e *event) SetLayer(layer string) {
 	e.layer = layer
-	return e
 }
 
-func (e *event) WithParent(spanID trace.SpanID) Event {
+func (e *event) SetParent(spanID trace.SpanID) {
 	e.parent = spanID
-	return e
 }
 
 func (e *event) AddKV(kv attribute.KeyValue) {
@@ -167,9 +164,9 @@ func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (
 		return nil, err
 	}
 	if parent.IsValid() {
-		evt.WithParent(parent.SpanID())
+		evt.SetParent(parent.SpanID())
 	}
-	evt.WithLabel(LabelEntry)
+	evt.SetLabel(LabelEntry)
 	return evt, nil
 }
 
@@ -178,8 +175,8 @@ func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (Event
 	if err != nil {
 		return nil, err
 	}
-	evt.WithParent(ctx.SpanID())
-	evt.WithLabel(label)
+	evt.SetParent(ctx.SpanID())
+	evt.SetLabel(label)
 	return evt, nil
 }
 

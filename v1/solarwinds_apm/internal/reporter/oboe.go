@@ -179,8 +179,8 @@ func sendInitMessage() {
 		log.Error("could not create new event", err)
 		return
 	}
-	evt.WithLabel(LabelSingle)
-	evt.WithLayer(constants.Go)
+	evt.SetLabel(LabelSingle)
+	evt.SetLayer(constants.Go)
 
 	evt.AddKVs([]attribute.KeyValue{
 		attribute.Int("__Init", 1),

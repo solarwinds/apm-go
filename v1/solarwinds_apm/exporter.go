@@ -35,7 +35,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		return
 	}
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
-	evt.WithLayer(layer)
+	evt.SetLayer(layer)
 	evt.AddKVs([]attribute.KeyValue{
 		attribute.String("sw.span_name", s.Name()),
 		attribute.String("sw.span_kind", s.SpanKind().String()),
