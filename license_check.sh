@@ -24,6 +24,8 @@ check_file() {
 
 export -f check_file
 
+TMPFILE="$(mktemp)"
+
 find . -type f \
     -not -path '*/\.git*' \
     -not -path '*/go.sum' \
@@ -32,4 +34,13 @@ find . -type f \
     -not -path './README.md' \
     -not -path './\.editorconfig' \
     -not -path './\.codecov.yaml' \
-    -exec bash -c 'check_file "$0"' {} \;
+    -not -path './\.idea/*' \
+    -exec bash -c 'check_file "$0"' {} \; | tee $TMPFILE
+
+EXITCODE=0
+if [ -s $TMPFILE ]; then
+  EXITCODE=127
+fi
+
+rm $TMPFILE
+exit $EXITCODE
