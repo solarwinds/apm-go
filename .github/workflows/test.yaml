@@ -29,7 +29,8 @@ jobs:
           go get github.com/mattn/goveralls
           go install github.com/wadey/gocovmerge@latest
           go get -t -v ./...
-
+      - name: Go vet
+        run: go vet ./...
       - name: Run tests
         working-directory: ./v1
         run: |
