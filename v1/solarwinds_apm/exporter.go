@@ -21,6 +21,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -28,23 +29,25 @@ type exporter struct {
 }
 
 func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
-	evt, err := reporter.CreateEntry(s.SpanContext(), s.StartTime(), s.Parent())
+	evt, err := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
 	if err != nil {
 		log.Warning("could not create entry event", err)
 		return
 	}
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
-	evt.AddString(constants.Layer, layer)
-	evt.AddString("sw.span_name", s.Name())
-	evt.AddString("sw.span_kind", s.SpanKind().String())
-	evt.AddString("Language", constants.Go)
-	evt.AddString("otel.scope.name", s.InstrumentationScope().Name)
-	evt.AddString("otel.scope.version", s.InstrumentationScope().Version)
+	evt.SetLayer(layer)
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.String("sw.span_name", s.Name()),
+		attribute.String("sw.span_kind", s.SpanKind().String()),
+		attribute.String("Language", constants.Go),
+		attribute.String("otel.scope.name", s.InstrumentationScope().Name),
+		attribute.String("otel.scope.version", s.InstrumentationScope().Version),
+	})
 	if !s.Parent().IsValid() || s.Parent().IsRemote() {
 		// root span only
-		evt.AddString("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes()))
+		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes())))
 	}
-	evt.AddAttributes(s.Attributes())
+	evt.AddKVs(s.Attributes())
 
 	err = reporter.ReportEvent(evt)
 	if err != nil {
@@ -58,7 +61,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			log.Warning("could not create info event", err)
 			continue
 		}
-		evt.AddAttributes(otEvt.Attributes)
+		evt.AddKVs(otEvt.Attributes)
 		err = reporter.ReportEvent(evt)
 		if err != nil {
 			log.Warning("could not send info event", err)
@@ -66,12 +69,12 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		}
 	}
 
-	evt, err = reporter.CreateExit(s.SpanContext(), s.EndTime())
+	evt, err = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
 	if err != nil {
 		log.Warning("could not create exit event", err)
 		return
 	}
-	evt.AddString(constants.Layer, layer)
+	evt.AddKV(attribute.String(constants.Layer, layer))
 	err = reporter.ReportEvent(evt)
 	if err != nil {
 		log.Warning("cannot send exit event", err)

@@ -14,7 +14,10 @@
 package bson
 
 import (
+	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"math"
+	"strconv"
 )
 
 type Buffer struct {
@@ -164,4 +167,64 @@ func (b *Buffer) addFloat64(v float64) {
 
 func (b *Buffer) addBytes(v ...byte) {
 	b.buf = append(b.buf, v...)
+}
+
+func (b *Buffer) AppendBoolSlice(key string, values []bool) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendBool(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendFloat64Slice(key string, values []float64) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendFloat64(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendInt64Slice(key string, values []int64) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendInt64(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+
+func (b *Buffer) AppendStringSlice(key string, values []string) {
+	start := b.AppendStartArray(key)
+	for i, value := range values {
+		b.AppendString(strconv.Itoa(i), value)
+	}
+	b.AppendFinishObject(start)
+}
+func (b *Buffer) AddKV(kv attribute.KeyValue) error {
+	key := string(kv.Key)
+	value := kv.Value
+
+	switch value.Type() {
+	case attribute.BOOL:
+		b.AppendBool(key, value.AsBool())
+	case attribute.BOOLSLICE:
+		b.AppendBoolSlice(key, value.AsBoolSlice())
+	case attribute.FLOAT64:
+		b.AppendFloat64(key, value.AsFloat64())
+	case attribute.FLOAT64SLICE:
+		b.AppendFloat64Slice(key, value.AsFloat64Slice())
+	case attribute.INT64:
+		b.AppendInt64(key, value.AsInt64())
+	case attribute.INT64SLICE:
+		b.AppendInt64Slice(key, value.AsInt64Slice())
+	case attribute.INVALID:
+		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
+	case attribute.STRING:
+		b.AppendString(key, value.AsString())
+	case attribute.STRINGSLICE:
+		b.AppendStringSlice(key, value.AsStringSlice())
+	default:
+		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
+	}
+	return nil
 }
