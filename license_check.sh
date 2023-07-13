@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # © 2023 SolarWinds Worldwide, LLC. All rights reserved.
 #
