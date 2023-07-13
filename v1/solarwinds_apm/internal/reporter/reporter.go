@@ -17,6 +17,7 @@ package reporter
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
@@ -26,8 +27,8 @@ import (
 
 // defines what methods a reporter should offer (internal to reporter package)
 type reporter interface {
-	enqueueEvent(e *event) error
-	enqueueStatus(e *event) error
+	enqueueEvent(e Event) error
+	enqueueStatus(e Event) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
 	// ShutdownNow closes the reporter immediately
@@ -70,8 +71,8 @@ var (
 type nullReporter struct{}
 
 func newNullReporter() *nullReporter                          { return &nullReporter{} }
-func (r *nullReporter) enqueueEvent(e *event) error           { return nil }
-func (r *nullReporter) enqueueStatus(e *event) error          { return nil }
+func (r *nullReporter) enqueueEvent(e Event) error            { return nil }
+func (r *nullReporter) enqueueStatus(e Event) error           { return nil }
 func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
 func (r *nullReporter) ShutdownNow() error                    { return nil }
 func (r *nullReporter) Closed() bool                          { return true }
@@ -207,4 +208,31 @@ func SetServiceKey(key string) {
 
 func IsAppoptics() bool {
 	return globalReporter.IsAppoptics()
+}
+
+type evType int
+
+const (
+	evTypeEvent = iota
+	evTypeStatus
+)
+
+func report(e Event, typ evType) error {
+	if typ != evTypeEvent && typ != evTypeStatus {
+		return errors.New("invalid evType")
+	}
+
+	if typ == evTypeEvent {
+		return globalReporter.enqueueEvent(e)
+	} else {
+		return globalReporter.enqueueStatus(e)
+	}
+}
+
+func ReportStatus(e Event) error {
+	return report(e, evTypeStatus)
+}
+
+func ReportEvent(e Event) error {
+	return report(e, evTypeEvent)
 }

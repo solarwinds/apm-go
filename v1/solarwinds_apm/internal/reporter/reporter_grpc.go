@@ -628,12 +628,12 @@ func DefaultBackoff(retries int, wait func(d time.Duration)) error {
 
 // ================================ Event Handling ====================================
 
-func (r *grpcReporter) enqueueEvent(e *event) error {
+func (r *grpcReporter) enqueueEvent(e Event) error {
 	if e == nil {
 		return errors.New("cannot enqueue nil event")
 	}
 	select {
-	case r.eventMessages <- (*e).bbuf.GetBuf():
+	case r.eventMessages <- e.ToBson():
 		r.conn.queueStats.TotalEventsAdd(int64(1))
 		return nil
 	default:
@@ -642,12 +642,12 @@ func (r *grpcReporter) enqueueEvent(e *event) error {
 	}
 }
 
-func (r *grpcReporter) enqueueStatus(e *event) error {
+func (r *grpcReporter) enqueueStatus(e Event) error {
 	if e == nil {
 		return errors.New("cannot enqueue nil event")
 	}
 	select {
-	case r.statusMessages <- (*e).bbuf.GetBuf():
+	case r.statusMessages <- e.ToBson():
 		return nil
 	default:
 		return errors.New("status message queue is full")

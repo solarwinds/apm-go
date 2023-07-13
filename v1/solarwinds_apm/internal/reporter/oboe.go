@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"math"
 	"math/rand"
 	"strings"
@@ -30,6 +32,22 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
+)
+
+const (
+	maxSamplingRate = config.MaxSampleRate
+)
+
+// enums used by sampling and tracing settings
+type sampleSource int
+
+// source of the sample value
+const (
+	SAMPLE_SOURCE_UNSET sampleSource = iota - 1
+	SAMPLE_SOURCE_NONE
+	SAMPLE_SOURCE_FILE
+	SAMPLE_SOURCE_DEFAULT
+	SAMPLE_SOURCE_LAYER
 )
 
 // Current settings configuration
@@ -151,28 +169,29 @@ func sendInitMessage() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
 	}
-	e := &event{}
-	md := &oboeMetadata{}
-	md.Init()
-	if err := md.SetRandom(); err != nil {
-		log.Error("could not specify random task and op IDs", err)
+	tid := trace.TraceID{0}
+	if _, err := randReader.Read(tid[:]); err != nil {
+		log.Error("could not generate random task id for init message", err)
 		return
 	}
-	if err := oboeEventInit(e, md, UseMDOpID); err != nil {
-		log.Error("could not initialize oboe event", err)
+	evt, err := NewEventWithRandomOpID(tid, time.Now())
+	if err != nil {
+		log.Error("could not create new event", err)
 		return
 	}
-	e.AddString(constants.Label, "single")
-	e.AddString(constants.Layer, constants.Go)
+	evt.SetLabel(LabelSingle)
+	evt.SetLayer(constants.Go)
 
-	e.AddInt("__Init", 1)
-	e.AddString("Go.Version", utils.GoVersion())
-	e.AddString("Go.SolarWindsAPM.Version", utils.Version())
-	e.AddString("Go.InstallDirectory", utils.InstallDir())
-	e.AddInt64("Go.InstallTimestamp", utils.InstallTsInSec())
-	e.AddInt64("Go.LastRestart", utils.LastRestartInUSec())
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.Int("__Init", 1),
+		attribute.String("Go.Version", utils.GoVersion()),
+		attribute.String("Go.SolarWindsAPM.Version", utils.Version()),
+		attribute.String("Go.InstallDirectory", utils.InstallDir()),
+		attribute.Int64("Go.InstallTimestamp", utils.InstallTsInSec()),
+		attribute.Int64("Go.LastRestart", utils.LastRestartInUSec()),
+	})
 
-	if err := ReportStatus(e); err != nil {
+	if err := ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}
 }
@@ -228,7 +247,7 @@ func (b *tokenBucket) update(now time.Time) {
 type SampleDecision struct {
 	trace  bool
 	rate   int
-	source sampleSource
+	source sampleSource // TODO: This is unused. Remove?
 	// if the request is disabled from tracing in a per-transaction level or for
 	// the entire service.
 	enabled       bool
@@ -647,4 +666,104 @@ func flagStringToBin(flagString string) settingFlag {
 		}
 	}
 	return flags
+}
+
+// tracing mode
+type tracingMode int
+
+// tracing modes
+const (
+	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
+	TraceEnabled                     // perform sampling every inbound request for tracing
+	TraceUnknown                     // for cache purpose only
+)
+
+// newTracingMode creates a tracing mode object from a string
+func newTracingMode(mode config.TracingMode) tracingMode {
+	switch mode {
+	case config.DisabledTracingMode:
+		return TraceDisabled
+	case config.EnabledTracingMode:
+		return TraceEnabled
+	default:
+	}
+	return TraceUnknown
+}
+
+func (tm tracingMode) isUnknown() bool {
+	return tm == TraceUnknown
+}
+
+func (tm tracingMode) toFlags() settingFlag {
+	switch tm {
+	case TraceEnabled:
+		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
+	case TraceDisabled:
+	default:
+	}
+	return FLAG_OK
+}
+
+func (tm tracingMode) ToString() string {
+	switch tm {
+	case TraceEnabled:
+		return string(config.EnabledTracingMode)
+	case TraceDisabled:
+		return string(config.DisabledTracingMode)
+	default:
+		return string(config.UnknownTracingMode)
+	}
+}
+
+type settingType int
+type settingFlag uint16
+
+// setting types
+const (
+	TYPE_DEFAULT settingType = iota // default setting which serves as a fallback if no other settings found
+	TYPE_LAYER                      // layer specific settings
+)
+
+// setting flags offset
+const (
+	FlagInvalidOffset = iota
+	FlagOverrideOffset
+	FlagSampleStartOffset
+	FlagSampleThroughOffset
+	FlagSampleThroughAlwaysOffset
+	FlagTriggerTraceOffset
+)
+
+// setting flags
+const (
+	FLAG_OK                    settingFlag = 0x0
+	FLAG_INVALID               settingFlag = 1 << FlagInvalidOffset
+	FLAG_OVERRIDE              settingFlag = 1 << FlagOverrideOffset
+	FLAG_SAMPLE_START          settingFlag = 1 << FlagSampleStartOffset
+	FLAG_SAMPLE_THROUGH        settingFlag = 1 << FlagSampleThroughOffset
+	FLAG_SAMPLE_THROUGH_ALWAYS settingFlag = 1 << FlagSampleThroughAlwaysOffset
+	FLAG_TRIGGER_TRACE         settingFlag = 1 << FlagTriggerTraceOffset
+)
+
+// Enabled returns if the trace is enabled or not.
+func (f settingFlag) Enabled() bool {
+	return f&(FLAG_SAMPLE_START|FLAG_SAMPLE_THROUGH_ALWAYS) != 0
+}
+
+// TriggerTraceEnabled returns if the trigger trace is enabled
+func (f settingFlag) TriggerTraceEnabled() bool {
+	return f&FLAG_TRIGGER_TRACE != 0
+}
+
+func (st settingType) toSampleSource() sampleSource {
+	var source sampleSource
+	switch st {
+	case TYPE_DEFAULT:
+		source = SAMPLE_SOURCE_DEFAULT
+	case TYPE_LAYER:
+		source = SAMPLE_SOURCE_LAYER
+	default:
+		source = SAMPLE_SOURCE_NONE
+	}
+	return source
 }

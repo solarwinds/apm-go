@@ -189,11 +189,11 @@ func (r *TestReporter) WaitForReady(ctx context.Context) bool {
 	return true
 }
 
-func (r *TestReporter) enqueueEvent(e *event) error {
+func (r *TestReporter) enqueueEvent(e Event) error {
 	return errors.New("TestReporter.enqueueEvent not implemented")
 }
 
-func (r *TestReporter) enqueueStatus(e *event) error {
+func (r *TestReporter) enqueueStatus(e Event) error {
 	return errors.New("TestReporter.enqueueStatus not implemented")
 }
 

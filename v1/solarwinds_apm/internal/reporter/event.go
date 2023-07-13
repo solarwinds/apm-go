@@ -17,385 +17,172 @@
 package reporter
 
 import (
-	"errors"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/bson"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 )
 
-type event struct {
-	metadata oboeMetadata
-	bbuf     *bson.Buffer
-}
+type opID [8]byte
 
 // Label is a required event attribute.
-type Label string
-
-// Labels used for reporting events for Layer spans.
-const (
-	LabelEntry = "entry"
-	LabelExit  = "exit"
-	LabelInfo  = "info"
-	LabelError = "error"
-	EdgeKey    = "Edge"
-)
+type Label int
 
 const (
-	eventHeader = "1"
+	LabelUnset Label = iota
+	LabelEntry
+	LabelExit
+	LabelInfo
+	LabelError
+	LabelSingle
 )
 
-// enums used by sampling and tracing settings
-type tracingMode int
-type settingType int
-type settingFlag uint16
-type sampleSource int
-
-// tracing modes
-const (
-	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
-	TraceEnabled                     // perform sampling every inbound request for tracing
-	TraceUnknown                     // for cache purpose only
-)
-
-// setting types
-const (
-	TYPE_DEFAULT settingType = iota // default setting which serves as a fallback if no other settings found
-	TYPE_LAYER                      // layer specific settings
-)
-
-// setting flags offset
-const (
-	FlagInvalidOffset = iota
-	FlagOverrideOffset
-	FlagSampleStartOffset
-	FlagSampleThroughOffset
-	FlagSampleThroughAlwaysOffset
-	FlagTriggerTraceOffset
-)
-
-// setting flags
-const (
-	FLAG_OK                    settingFlag = 0x0
-	FLAG_INVALID               settingFlag = 1 << FlagInvalidOffset
-	FLAG_OVERRIDE              settingFlag = 1 << FlagOverrideOffset
-	FLAG_SAMPLE_START          settingFlag = 1 << FlagSampleStartOffset
-	FLAG_SAMPLE_THROUGH        settingFlag = 1 << FlagSampleThroughOffset
-	FLAG_SAMPLE_THROUGH_ALWAYS settingFlag = 1 << FlagSampleThroughAlwaysOffset
-	FLAG_TRIGGER_TRACE         settingFlag = 1 << FlagTriggerTraceOffset
-)
-
-// source of the sample value
-const (
-	SAMPLE_SOURCE_UNSET sampleSource = iota - 1
-	SAMPLE_SOURCE_NONE
-	SAMPLE_SOURCE_FILE
-	SAMPLE_SOURCE_DEFAULT
-	SAMPLE_SOURCE_LAYER
-)
-
-const (
-	maxSamplingRate = config.MaxSampleRate
-)
-
-// Enabled returns if the trace is enabled or not.
-func (f settingFlag) Enabled() bool {
-	return f&(FLAG_SAMPLE_START|FLAG_SAMPLE_THROUGH_ALWAYS) != 0
-}
-
-// TriggerTraceEnabled returns if the trigger trace is enabled
-func (f settingFlag) TriggerTraceEnabled() bool {
-	return f&FLAG_TRIGGER_TRACE != 0
-}
-
-func (st settingType) toSampleSource() sampleSource {
-	var source sampleSource
-	switch st {
-	case TYPE_DEFAULT:
-		source = SAMPLE_SOURCE_DEFAULT
-	case TYPE_LAYER:
-		source = SAMPLE_SOURCE_LAYER
-	default:
-		source = SAMPLE_SOURCE_NONE
+func (l Label) AsString() string {
+	switch l {
+	case LabelEntry:
+		return constants.EntryLabel
+	case LabelError:
+		return constants.ErrorLabel
+	case LabelExit:
+		return constants.ExitLabel
+	case LabelInfo:
+		return constants.InfoLabel
+	case LabelSingle:
+		return constants.SingleLabel
 	}
-	return source
+	return constants.UnknownLabel
 }
 
-// newTracingMode creates a tracing mode object from a string
-func newTracingMode(mode config.TracingMode) tracingMode {
-	switch mode {
-	case config.DisabledTracingMode:
-		return TraceDisabled
-	case config.EnabledTracingMode:
-		return TraceEnabled
-	default:
-	}
-	return TraceUnknown
+type Event interface {
+	AddKV(attribute.KeyValue)
+	AddKVs([]attribute.KeyValue)
+
+	SetLabel(Label)
+	SetLayer(string)
+	SetParent(trace.SpanID)
+
+	ToBson() []byte
 }
 
-func (tm tracingMode) isUnknown() bool {
-	return tm == TraceUnknown
+type event struct {
+	taskID trace.TraceID
+	opID   [8]byte
+	t      time.Time
+	kvs    []attribute.KeyValue
+
+	label  Label
+	layer  string
+	parent trace.SpanID
 }
 
-func (tm tracingMode) toFlags() settingFlag {
-	switch tm {
-	case TraceEnabled:
-		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
-	case TraceDisabled:
-	default:
-	}
-	return FLAG_OK
+func NewEvent(tid trace.TraceID, oid opID, t time.Time) (Event, error) {
+	return &event{
+		taskID: tid,
+		opID:   oid,
+		t:      t,
+	}, nil
 }
 
-func (tm tracingMode) ToString() string {
-	switch tm {
-	case TraceEnabled:
-		return string(config.EnabledTracingMode)
-	case TraceDisabled:
-		return string(config.DisabledTracingMode)
-	default:
-		return string(config.UnknownTracingMode)
-	}
-}
-
-type OpIDOption int
-
-const (
-	RandomOpID OpIDOption = iota
-	UseMDOpID
-)
-
-func oboeEventInit(evt *event, md *oboeMetadata, opt OpIDOption) error {
-	if evt == nil || md == nil {
-		return errors.New("oboeEventInit got nil args")
-	}
-
-	// Metadata initialization
-	evt.metadata.Init()
-
-	evt.metadata.taskLen = md.taskLen
-	evt.metadata.opLen = md.opLen
-	switch opt {
-	case UseMDOpID:
-		copy(evt.metadata.ids.opID, md.ids.opID)
-	case RandomOpID:
-		if err := evt.metadata.SetRandomOpID(); err != nil {
-			return err
-		}
-	default:
-		return errors.New("invalid OpIDOption")
-	}
-	copy(evt.metadata.ids.taskID, md.ids.taskID)
-	evt.metadata.flags = md.flags
-
-	// Buffer initialization
-	evt.bbuf = bson.NewBuffer()
-
-	// Copy header to buffer
-	evt.bbuf.AppendString("_V", eventHeader)
-
-	// For now the version and flags are always 00 and 01, respectively
-	swTraceContext := fmt.Sprintf("00-%x-%x-01", evt.metadata.ids.taskID[:16], evt.metadata.ids.opID[:8])
-	evt.bbuf.AppendString("sw.trace_context", swTraceContext)
-	// Pack metadata
-	mdStr, err := evt.metadata.ToString()
-	if err != nil {
-		return err
-	}
-	evt.bbuf.AppendString("X-Trace", mdStr)
-	return nil
-}
-
-func metaFromSpanContext(ctx trace.SpanContext) *oboeMetadata {
-	md := &oboeMetadata{}
-	md.Init()
-	if ctx.IsSampled() {
-		md.flags |= 0x01
-	}
-	traceID := ctx.TraceID()
-	spanID := ctx.SpanID()
-	copy(md.ids.taskID, traceID[:])
-	copy(md.ids.opID, spanID[:])
-	return md
-}
-
-func CreateEvent(ctx trace.SpanContext, t time.Time, label Label, opt OpIDOption) (*event, error) {
-	md := metaFromSpanContext(ctx)
-	evt := &event{}
-	if err := oboeEventInit(evt, md, opt); err != nil {
+func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) (Event, error) {
+	oid := opID{0}
+	if _, err := rand.Reader.Read(oid[:]); err != nil {
 		return nil, err
 	}
-	evt.AddString(constants.Label, string(label))
-	evt.AddInt64("Timestamp_u", t.UnixMicro())
-	return evt, nil
+	return NewEvent(tid, oid, t)
 }
 
-func CreateEntry(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (*event, error) {
-	evt, err := CreateEvent(ctx, t, LabelEntry, UseMDOpID)
+func (e *event) SetLabel(label Label) {
+	e.label = label
+}
+
+func (e *event) SetLayer(layer string) {
+	e.layer = layer
+}
+
+func (e *event) SetParent(spanID trace.SpanID) {
+	e.parent = spanID
+}
+
+func (e *event) AddKV(kv attribute.KeyValue) {
+	e.kvs = append(e.kvs, kv)
+}
+
+func (e *event) AddKVs(kvs []attribute.KeyValue) {
+	e.kvs = append(e.kvs, kvs...)
+}
+
+func (e *event) getSwTraceContext() string {
+	// For now the version and flags are always 00 and 01, respectively
+	return fmt.Sprintf("00-%s-%s-01", e.taskID.String(), hex.EncodeToString(e.opID[:]))
+}
+
+func (e *event) getXTrace() string {
+	tid := strings.ToUpper(e.taskID.String())
+	oid := strings.ToUpper(hex.EncodeToString(e.opID[:]))
+	return fmt.Sprintf("2B%s00000000%s01", tid, oid)
+}
+
+func (e *event) ToBson() []byte {
+	buf := bson.NewBuffer()
+	buf.AppendString("sw.trace_context", e.getSwTraceContext())
+	buf.AppendString("X-Trace", e.getXTrace())
+	buf.AppendInt64("Timestamp_u", e.t.UnixMicro())
+	buf.AppendString("Hostname", host.Hostname())
+	buf.AppendInt("PID", host.PID())
+	buf.AppendString(constants.Label, e.label.AsString())
+	if e.layer != "" {
+		buf.AppendString(constants.Layer, e.layer)
+	}
+
+	if e.parent.IsValid() {
+		hx := e.parent.String()
+		buf.AppendString(constants.Edge, strings.ToUpper(hx))
+		buf.AppendString("sw.parent_span_id", hx)
+	}
+
+	for _, kv := range e.kvs {
+		if err := buf.AddKV(kv); err != nil {
+			log.Warningf("could not add kv", kv, err)
+		}
+	}
+	buf.Finish()
+	return buf.GetBuf()
+}
+
+func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (Event, error) {
+	evt, err := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
 	if err != nil {
 		return nil, err
 	}
 	if parent.IsValid() {
-		evt.AddEdgeFromParent(parent)
+		evt.SetParent(parent.SpanID())
 	}
+	evt.SetLabel(LabelEntry)
 	return evt, nil
 }
 
-func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (*event, error) {
-	evt, err := CreateEvent(ctx, t, label, RandomOpID)
+func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (Event, error) {
+	evt, err := NewEventWithRandomOpID(ctx.TraceID(), t)
 	if err != nil {
 		return nil, err
 	}
-	evt.AddEdgeFromParent(ctx)
+	evt.SetParent(ctx.SpanID())
+	evt.SetLabel(label)
 	return evt, nil
 }
 
-func CreateExit(ctx trace.SpanContext, t time.Time) (*event, error) {
+func CreateExitEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelExit)
 }
 
-func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (*event, error) {
+func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelInfo)
-}
-
-func (e *event) AddAttributes(attrs []attribute.KeyValue) {
-	for _, kv := range attrs {
-		err := e.AddKV(kv)
-		if err != nil {
-			log.Warning("could not add KV", kv, err)
-			// Continue so we don't completely abandon the event
-		}
-	}
-}
-
-// Adds string key/value to event. BSON strings are assumed to be Unicode.
-func (e *event) AddString(key, value string) { e.bbuf.AppendString(key, value) }
-
-// Adds a binary buffer as a key/value to this event. This uses a binary-safe BSON buffer type.
-func (e *event) AddBinary(key string, value []byte) { e.bbuf.AppendBinary(key, value) }
-
-// Adds int key/value to event
-func (e *event) AddInt(key string, value int) { e.bbuf.AppendInt(key, value) }
-
-// Adds int64 key/value to event
-func (e *event) AddInt64(key string, value int64) { e.bbuf.AppendInt64(key, value) }
-
-// Adds int32 key/value to event
-func (e *event) AddInt32(key string, value int32) { e.bbuf.AppendInt32(key, value) }
-
-// Adds float32 key/value to event
-func (e *event) AddFloat32(key string, value float32) {
-	e.bbuf.AppendFloat64(key, float64(value))
-}
-
-// Adds float64 key/value to event
-func (e *event) AddFloat64(key string, value float64) { e.bbuf.AppendFloat64(key, value) }
-
-// Adds float key/value to event
-func (e *event) AddBool(key string, value bool) { e.bbuf.AppendBool(key, value) }
-
-func (e *event) AddInt64Slice(key string, values []int64) {
-	start := e.bbuf.AppendStartArray(key)
-	for i, value := range values {
-		e.bbuf.AppendInt64(strconv.Itoa(i), value)
-	}
-	e.bbuf.AppendFinishObject(start)
-}
-
-func (e *event) AddStringSlice(key string, values []string) {
-	start := e.bbuf.AppendStartArray(key)
-	for i, value := range values {
-		e.bbuf.AppendString(strconv.Itoa(i), value)
-	}
-	e.bbuf.AppendFinishObject(start)
-}
-
-func (e *event) AddFloat64Slice(key string, values []float64) {
-	start := e.bbuf.AppendStartArray(key)
-	for i, value := range values {
-		e.bbuf.AppendFloat64(strconv.Itoa(i), value)
-	}
-	e.bbuf.AppendFinishObject(start)
-}
-
-func (e *event) AddBoolSlice(key string, values []bool) {
-	start := e.bbuf.AppendStartArray(key)
-	for i, value := range values {
-		e.bbuf.AppendBool(strconv.Itoa(i), value)
-	}
-	e.bbuf.AppendFinishObject(start)
-}
-
-func (e *event) AddEdgeFromParent(parent trace.SpanContext) {
-	spanIDHex := parent.SpanID().String()
-	e.bbuf.AppendString(EdgeKey, strings.ToUpper(spanIDHex))
-	e.bbuf.AppendString("sw.parent_span_id", spanIDHex)
-}
-
-func (e *event) AddKV(kv attribute.KeyValue) error {
-	key := string(kv.Key)
-	value := kv.Value
-
-	switch value.Type() {
-	case attribute.BOOL:
-		e.AddBool(key, value.AsBool())
-	case attribute.BOOLSLICE:
-		e.AddBoolSlice(key, value.AsBoolSlice())
-	case attribute.FLOAT64:
-		e.AddFloat64(key, value.AsFloat64())
-	case attribute.FLOAT64SLICE:
-		e.AddFloat64Slice(key, value.AsFloat64Slice())
-	case attribute.INT64:
-		e.AddInt64(key, value.AsInt64())
-	case attribute.INT64SLICE:
-		e.AddInt64Slice(key, value.AsInt64Slice())
-	case attribute.INVALID:
-		return fmt.Errorf("cannot add value of INVALID type for key %s", key)
-	case attribute.STRING:
-		e.AddString(key, value.AsString())
-	case attribute.STRINGSLICE:
-		e.AddStringSlice(key, value.AsStringSlice())
-	default:
-		return fmt.Errorf("cannot add unknown value type %s for key %s", value.Type(), key)
-	}
-	return nil
-}
-
-type evType int
-
-const (
-	evTypeEvent = iota
-	evTypeStatus
-)
-
-func report(e *event, typ evType) error {
-	if typ != evTypeEvent && typ != evTypeStatus {
-		return errors.New("invalid evType")
-	}
-
-	e.AddString("Hostname", host.Hostname())
-	e.AddInt("PID", host.PID())
-
-	e.bbuf.Finish()
-	if typ == evTypeEvent {
-		return globalReporter.enqueueEvent(e)
-	} else {
-		return globalReporter.enqueueStatus(e)
-	}
-}
-
-func ReportStatus(e *event) error {
-	return report(e, evTypeStatus)
-}
-
-func ReportEvent(e *event) error {
-	return report(e, evTypeEvent)
 }
