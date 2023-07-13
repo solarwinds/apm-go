@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
+      - name: Check for license headers
+        run: ./license_check.sh
       - name: Install dependencies
         run: |
           go get golang.org/x/tools/cmd/cover
