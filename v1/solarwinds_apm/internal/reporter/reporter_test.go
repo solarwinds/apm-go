@@ -15,6 +15,7 @@ package reporter
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"io"
 	log2 "log"
 	"os"
@@ -157,7 +158,7 @@ func TestGRPCReporter(t *testing.T) {
 
 	require.Equal(t, dec1["Layer"], "layer1")
 	require.Equal(t, dec1["Hostname"], host.Hostname())
-	require.Equal(t, dec1["Label"], LabelInfo)
+	require.Equal(t, dec1["Label"], constants.InfoLabel)
 	require.Equal(t, dec1["PID"], host.PID())
 
 	require.Equal(t, dec2["Layer"], "layer2")
@@ -562,7 +563,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	require.Equal(t, dec1["Layer"], "layer1")
 	require.Equal(t, dec1["Hostname"], host.Hostname())
-	require.Equal(t, dec1["Label"], LabelInfo)
+	require.Equal(t, dec1["Label"], constants.InfoLabel)
 	require.Equal(t, dec1["PID"], host.PID())
 
 	require.Equal(t, dec2["Layer"], "layer2")
