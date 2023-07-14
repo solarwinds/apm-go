@@ -17,31 +17,32 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var _ sdktrace.SpanProcessor = &SolarWindsInboundMetricsSpanProcessor{}
+var _ sdktrace.SpanProcessor = &InboundMetricsProcessor{}
 
 var recordFunc = metrics.RecordSpan
 
-type SolarWindsInboundMetricsSpanProcessor struct{}
-
-func (s *SolarWindsInboundMetricsSpanProcessor) OnStart(parent context.Context, span sdktrace.ReadWriteSpan) {
+type InboundMetricsProcessor struct {
+	isAppoptics bool
 }
 
-func (s *SolarWindsInboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
+func (s *InboundMetricsProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {
+}
+
+func (s *InboundMetricsProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	parent := span.Parent()
 	if parent.IsValid() && !parent.IsRemote() {
 		return
 	}
-	recordFunc(span, reporter.IsAppoptics())
+	recordFunc(span, s.isAppoptics)
 }
 
-func (s *SolarWindsInboundMetricsSpanProcessor) Shutdown(ctx context.Context) error {
+func (s *InboundMetricsProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (s *SolarWindsInboundMetricsSpanProcessor) ForceFlush(ctx context.Context) error {
+func (s *InboundMetricsProcessor) ForceFlush(context.Context) error {
 	return nil
 }
