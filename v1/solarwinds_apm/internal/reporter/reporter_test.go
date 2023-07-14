@@ -30,7 +30,6 @@ import (
 	pb "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/mocks"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -63,8 +62,8 @@ var _ = func() (_ struct{}) {
 
 func TestNullReporter(t *testing.T) {
 	nullR := &nullReporter{}
-	assert.NoError(t, nullR.ReportEvent(nil))
-	assert.NoError(t, nullR.ReportStatus(nil))
+	require.NoError(t, nullR.ReportEvent(nil))
+	require.NoError(t, nullR.ReportStatus(nil))
 }
 
 // ========================= GRPC Reporter =============================
@@ -92,39 +91,39 @@ func TestGRPCReporter(t *testing.T) {
 	// The reporter is not ready when there is no default setting.
 	ctxTm1, cancel1 := context.WithTimeout(context.Background(), 0)
 	defer cancel1()
-	assert.False(t, r.WaitForReady(ctxTm1))
+	require.False(t, r.WaitForReady(ctxTm1))
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
 	r.getSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
-	assert.True(t, r.WaitForReady(ctxTm2))
-	assert.True(t, r.isReady())
+	require.True(t, r.WaitForReady(ctxTm2))
+	require.True(t, r.isReady())
 
 	ev1, err := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ev2, err := CreateInfoEvent(validSpanContext, time.Now())
 	ev2.SetLayer("layer2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Error(t, r.ReportEvent(nil))
-	assert.Error(t, r.ReportEvent(nil))
-	assert.NoError(t, r.ReportEvent(ev1))
+	require.Error(t, r.ReportEvent(nil))
+	require.Error(t, r.ReportEvent(nil))
+	require.NoError(t, r.ReportEvent(ev1))
 
-	assert.Error(t, r.ReportStatus(nil))
-	assert.Error(t, r.ReportStatus(nil))
+	require.Error(t, r.ReportStatus(nil))
+	require.Error(t, r.ReportStatus(nil))
 	// time.Sleep(time.Second)
-	assert.NoError(t, r.ReportStatus(ev2))
+	require.NoError(t, r.ReportStatus(ev2))
 
-	assert.Equal(t, addr, r.conn.address)
+	require.Equal(t, addr, r.conn.address)
 
-	assert.Equal(t, TestServiceKey, r.serviceKey.Load())
+	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	assert.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	assert.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
-	assert.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
+	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
+	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
+	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
@@ -132,9 +131,9 @@ func TestGRPCReporter(t *testing.T) {
 	removeSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
-	assert.False(t, r.isReady())
+	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
-	assert.False(t, r.WaitForReady(ctxTm3))
+	require.False(t, r.WaitForReady(ctxTm3))
 	defer cancel3()
 
 	// stop test reporter
@@ -143,11 +142,11 @@ func TestGRPCReporter(t *testing.T) {
 
 	// assert data received
 	require.Len(t, server.events, 1)
-	assert.Equal(t, server.events[0].Encoding, pb.EncodingType_BSON)
+	require.Equal(t, server.events[0].Encoding, pb.EncodingType_BSON)
 	require.Len(t, server.events[0].Messages, 1)
 
 	require.Len(t, server.status, 1)
-	assert.Equal(t, server.status[0].Encoding, pb.EncodingType_BSON)
+	require.Equal(t, server.status[0].Encoding, pb.EncodingType_BSON)
 	require.Len(t, server.status[0].Messages, 1)
 
 	dec1, dec2 := mbson.M{}, mbson.M{}
@@ -156,12 +155,12 @@ func TestGRPCReporter(t *testing.T) {
 	err = mbson.Unmarshal(server.status[0].Messages[0], &dec2)
 	require.NoError(t, err)
 
-	assert.Equal(t, dec1["Layer"], "layer1")
-	assert.Equal(t, dec1["Hostname"], host.Hostname())
-	assert.Equal(t, dec1["Label"], LabelInfo)
-	assert.Equal(t, dec1["PID"], host.PID())
+	require.Equal(t, dec1["Layer"], "layer1")
+	require.Equal(t, dec1["Hostname"], host.Hostname())
+	require.Equal(t, dec1["Label"], LabelInfo)
+	require.Equal(t, dec1["PID"], host.PID())
 
-	assert.Equal(t, dec2["Layer"], "layer2")
+	require.Equal(t, dec2["Layer"], "layer2")
 }
 
 func TestShutdownGRPCReporter(t *testing.T) {
@@ -184,7 +183,7 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	r := globalReporter.(*grpcReporter)
 	r.ShutdownNow()
 
-	assert.Equal(t, true, r.Closed())
+	require.Equal(t, true, r.Closed())
 
 	// // Print current goroutines stack
 	// buf := make([]byte, 1<<16)
@@ -192,7 +191,7 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	// fmt.Printf("%s", buf)
 
 	e := r.ShutdownNow()
-	assert.NotEqual(t, nil, e)
+	require.NotEqual(t, nil, e)
 
 	// stop test reporter
 	server.Stop()
@@ -236,15 +235,15 @@ func TestInvalidKey(t *testing.T) {
 	r := globalReporter.(*grpcReporter)
 	ev1, _ := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("hello-from-invalid-key")
-	assert.NoError(t, r.ReportEvent(ev1))
+	require.NoError(t, r.ReportEvent(ev1))
 
 	time.Sleep(time.Second)
 
 	// The agent reporter should be closed due to received INVALID_API_KEY from the collector
-	assert.Equal(t, true, r.Closed())
+	require.Equal(t, true, r.Closed())
 
 	e := r.ShutdownNow()
-	assert.NotEqual(t, nil, e)
+	require.NotEqual(t, nil, e)
 
 	// Tear down everything.
 	server.Stop()
@@ -260,7 +259,7 @@ func TestInvalidKey(t *testing.T) {
 		"eventBatchSender goroutine exiting",
 	}
 	for _, ptn := range patterns {
-		assert.True(t, strings.Contains(buf.String(), ptn), buf.String()+"^^^^^^"+ptn)
+		require.True(t, strings.Contains(buf.String(), ptn), buf.String()+"^^^^^^"+ptn)
 	}
 	log.SetLevel(log.WARNING)
 }
@@ -274,8 +273,8 @@ func TestDefaultBackoff(t *testing.T) {
 	for i := 1; i <= grpcMaxRetries+1; i++ {
 		DefaultBackoff(i, bf)
 	}
-	assert.Equal(t, expected, backoff)
-	assert.NotNil(t, DefaultBackoff(grpcMaxRetries+1, func(d time.Duration) {}))
+	require.Equal(t, expected, backoff)
+	require.NotNil(t, DefaultBackoff(grpcMaxRetries+1, func(d time.Duration) {}))
 }
 
 type NoopDialer struct{}
@@ -331,7 +330,7 @@ func TestInvokeRPC(t *testing.T) {
 	exit := make(chan struct{})
 	close(exit)
 	c.setFlushed()
-	assert.Equal(t, errReporterExiting, c.InvokeRPC(exit, mockMethod))
+	require.Equal(t, errReporterExiting, c.InvokeRPC(exit, mockMethod))
 
 	// Test invalid service key
 	exit = make(chan struct{})
@@ -349,7 +348,7 @@ func TestInvokeRPC(t *testing.T) {
 		Return(pb.ResultCode_INVALID_API_KEY, nil)
 	mockMethod.On("RetryOnErr", mock.Anything).Return(false)
 
-	assert.Equal(t, errInvalidServiceKey, c.InvokeRPC(exit, mockMethod))
+	require.Equal(t, errInvalidServiceKey, c.InvokeRPC(exit, mockMethod))
 
 	// Test no retry
 	mockMethod = &mocks.Method{}
@@ -366,7 +365,7 @@ func TestInvokeRPC(t *testing.T) {
 		Return(pb.ResultCode_LIMIT_EXCEEDED, nil)
 
 	mockMethod.On("RetryOnErr", mock.Anything).Return(false)
-	assert.Equal(t, errNoRetryOnErr, c.InvokeRPC(exit, mockMethod))
+	require.Equal(t, errNoRetryOnErr, c.InvokeRPC(exit, mockMethod))
 
 	// Test invocation error / recovery logs
 	failsNum := grpcRetryLogThreshold + (grpcMaxRetries-grpcRetryLogThreshold)/2
@@ -392,9 +391,9 @@ func TestInvokeRPC(t *testing.T) {
 				return status.Error(codes.Canceled, "Canceled")
 			}
 		})
-	assert.Equal(t, nil, c.InvokeRPC(exit, mockMethod))
-	assert.True(t, strings.Contains(buf.String(), "invocation error"))
-	assert.True(t, strings.Contains(buf.String(), "error recovered"))
+	require.Equal(t, nil, c.InvokeRPC(exit, mockMethod))
+	require.True(t, strings.Contains(buf.String(), "invocation error"))
+	require.True(t, strings.Contains(buf.String(), "error recovered"))
 
 	// Test redirect
 	redirectNum := 1
@@ -420,9 +419,9 @@ func TestInvokeRPC(t *testing.T) {
 
 	mockMethod.On("Call", mock.Anything, mock.Anything).
 		Return(nil)
-	assert.Equal(t, nil, c.InvokeRPC(exit, mockMethod))
-	assert.True(t, c.isActive())
-	assert.Equal(t, "new-addr:9999", c.address)
+	require.Equal(t, nil, c.InvokeRPC(exit, mockMethod))
+	require.True(t, c.isActive())
+	require.Equal(t, "new-addr:9999", c.address)
 
 	// Test request too big
 	mockMethod = &mocks.Method{}
@@ -437,7 +436,7 @@ func TestInvokeRPC(t *testing.T) {
 	mockMethod.On("Arg").Return("testArg")
 	mockMethod.On("RetryOnErr", mock.Anything).Return(false)
 
-	assert.Contains(t, c.InvokeRPC(exit, mockMethod).Error(), errNoRetryOnErr.Error())
+	require.Contains(t, c.InvokeRPC(exit, mockMethod).Error(), errNoRetryOnErr.Error())
 }
 
 func TestInitReporter(t *testing.T) {
@@ -451,7 +450,7 @@ func TestInitReporter(t *testing.T) {
 	os.Unsetenv("SW_APM_DISABLED")
 	setEnv("SW_APM_REPORTER", "ssl")
 	config.Load()
-	assert.False(t, config.GetDisabled())
+	require.False(t, config.GetDisabled())
 
 	initReporter()
 	require.IsType(t, &grpcReporter{}, globalReporter)
@@ -461,7 +460,7 @@ func TestCollectMetricsNextInterval(t *testing.T) {
 	r := &grpcReporter{collectMetricInterval: 10}
 	next := r.collectMetricsNextInterval()
 	// very weak check
-	assert.True(t, next <= time.Second*10, next)
+	require.True(t, next <= time.Second*10, next)
 }
 
 // testProxy performs tests of http/https proxy.
@@ -498,39 +497,39 @@ func testProxy(t *testing.T, proxyUrl string) {
 	// The reporter is not ready when there is no default setting.
 	ctxTm1, cancel1 := context.WithTimeout(context.Background(), 0)
 	defer cancel1()
-	assert.False(t, r.WaitForReady(ctxTm1))
+	require.False(t, r.WaitForReady(ctxTm1))
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
 	r.getSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
-	assert.True(t, r.WaitForReady(ctxTm2))
-	assert.True(t, r.isReady())
+	require.True(t, r.WaitForReady(ctxTm2))
+	require.True(t, r.isReady())
 
 	ev1, err := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	ev2, err := CreateInfoEvent(validSpanContext, time.Now())
 	ev2.SetLayer("layer2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Error(t, r.ReportEvent(nil))
-	assert.Error(t, r.ReportEvent(nil))
-	assert.NoError(t, r.ReportEvent(ev1))
+	require.Error(t, r.ReportEvent(nil))
+	require.Error(t, r.ReportEvent(nil))
+	require.NoError(t, r.ReportEvent(ev1))
 
-	assert.Error(t, r.ReportStatus(nil))
-	assert.Error(t, r.ReportStatus(nil))
+	require.Error(t, r.ReportStatus(nil))
+	require.Error(t, r.ReportStatus(nil))
 	// time.Sleep(time.Second)
-	assert.NoError(t, r.ReportStatus(ev2))
+	require.NoError(t, r.ReportStatus(ev2))
 
-	assert.Equal(t, addr, r.conn.address)
+	require.Equal(t, addr, r.conn.address)
 
-	assert.Equal(t, TestServiceKey, r.serviceKey.Load())
+	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	assert.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	assert.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
-	assert.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
+	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
+	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
+	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
@@ -538,9 +537,9 @@ func testProxy(t *testing.T, proxyUrl string) {
 	removeSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
-	assert.False(t, r.isReady())
+	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
-	assert.False(t, r.WaitForReady(ctxTm3))
+	require.False(t, r.WaitForReady(ctxTm3))
 	defer cancel3()
 
 	// stop test reporter
@@ -548,11 +547,11 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	// assert data received
 	require.Len(t, server.events, 1)
-	assert.Equal(t, server.events[0].Encoding, pb.EncodingType_BSON)
+	require.Equal(t, server.events[0].Encoding, pb.EncodingType_BSON)
 	require.Len(t, server.events[0].Messages, 1)
 
 	require.Len(t, server.status, 1)
-	assert.Equal(t, server.status[0].Encoding, pb.EncodingType_BSON)
+	require.Equal(t, server.status[0].Encoding, pb.EncodingType_BSON)
 	require.Len(t, server.status[0].Messages, 1)
 
 	dec1, dec2 := mbson.M{}, mbson.M{}
@@ -561,12 +560,12 @@ func testProxy(t *testing.T, proxyUrl string) {
 	err = mbson.Unmarshal(server.status[0].Messages[0], &dec2)
 	require.NoError(t, err)
 
-	assert.Equal(t, dec1["Layer"], "layer1")
-	assert.Equal(t, dec1["Hostname"], host.Hostname())
-	assert.Equal(t, dec1["Label"], LabelInfo)
-	assert.Equal(t, dec1["PID"], host.PID())
+	require.Equal(t, dec1["Layer"], "layer1")
+	require.Equal(t, dec1["Hostname"], host.Hostname())
+	require.Equal(t, dec1["Label"], LabelInfo)
+	require.Equal(t, dec1["PID"], host.PID())
 
-	assert.Equal(t, dec2["Layer"], "layer2")
+	require.Equal(t, dec2["Layer"], "layer2")
 }
 
 func TestHttpProxy(t *testing.T) {
