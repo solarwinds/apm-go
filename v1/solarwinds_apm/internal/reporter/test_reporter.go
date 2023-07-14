@@ -184,12 +184,12 @@ func (r *TestReporter) WaitForReady(ctx context.Context) bool {
 	return true
 }
 
-func (r *TestReporter) enqueueEvent(e Event) error {
-	return errors.New("TestReporter.enqueueEvent not implemented")
+func (r *TestReporter) ReportEvent(e Event) error {
+	return errors.New("TestReporter.ReportEvent not implemented")
 }
 
-func (r *TestReporter) enqueueStatus(e Event) error {
-	return errors.New("TestReporter.enqueueStatus not implemented")
+func (r *TestReporter) ReportStatus(e Event) error {
+	return errors.New("TestReporter.ReportStatus not implemented")
 }
 
 func (r *TestReporter) addDefaultSetting() {

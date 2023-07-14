@@ -620,7 +620,7 @@ func DefaultBackoff(retries int, wait func(d time.Duration)) error {
 
 // ================================ Event Handling ====================================
 
-func (r *grpcReporter) enqueueEvent(e Event) error {
+func (r *grpcReporter) ReportEvent(e Event) error {
 	if e == nil {
 		return errors.New("cannot enqueue nil event")
 	}
@@ -634,7 +634,7 @@ func (r *grpcReporter) enqueueEvent(e Event) error {
 	}
 }
 
-func (r *grpcReporter) enqueueStatus(e Event) error {
+func (r *grpcReporter) ReportStatus(e Event) error {
 	if e == nil {
 		return errors.New("cannot enqueue nil event")
 	}

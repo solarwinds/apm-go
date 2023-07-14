@@ -634,6 +634,18 @@ func getSetting(layer string) (*oboeSettings, bool) {
 	return nil, false
 }
 
+func removeSetting() {
+	globalSettingsCfg.lock.Lock()
+	defer globalSettingsCfg.lock.Unlock()
+
+	key := oboeSettingKey{
+		sType: TYPE_DEFAULT,
+		layer: "",
+	}
+
+	delete(globalSettingsCfg.settings, key)
+}
+
 func hasDefaultSetting() bool {
 	if _, ok := getSetting(""); ok {
 		return true
