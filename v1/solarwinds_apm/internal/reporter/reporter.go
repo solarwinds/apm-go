@@ -36,7 +36,6 @@ type reporter interface {
 	Closed() bool
 	// WaitForReady waits until the reporter becomes ready or the context is canceled.
 	WaitForReady(context.Context) bool
-	Flush() error
 	// SetServiceKey attaches a service key to the reporter
 	SetServiceKey(key string)
 }
@@ -73,7 +72,6 @@ func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
 func (r *nullReporter) ShutdownNow() error                    { return nil }
 func (r *nullReporter) Closed() bool                          { return true }
 func (r *nullReporter) WaitForReady(ctx context.Context) bool { return true }
-func (r *nullReporter) Flush() error                          { return nil }
 func (r *nullReporter) SetServiceKey(string)                  {}
 
 // init() is called only once on program startup. Here we create the reporter
@@ -115,11 +113,6 @@ func WaitForReady(ctx context.Context) bool {
 	// globalReporter is not protected by a mutex as currently it's only modified
 	// from the init() function.
 	return globalReporter.WaitForReady(ctx)
-}
-
-// Flush flush the events buffer to stderr. Currently it's used for AWS Lambda only
-func Flush() error {
-	return globalReporter.Flush()
 }
 
 // Shutdown flushes the metrics and stops the reporter. It blocked until the reporter

@@ -630,9 +630,3 @@ package reporter
 //func TestHttpsProxy(t *testing.T) {
 //	testProxy(t, "https://usr:pwd@localhost:12345")
 //}
-//
-//func TestFlush(t *testing.T) {
-//	globalReporter = newGRPCReporter()
-//	r := globalReporter.(*grpcReporter)
-//	assert.NoError(t, r.Flush())
-//}

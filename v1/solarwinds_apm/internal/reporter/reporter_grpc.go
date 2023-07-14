@@ -305,10 +305,6 @@ func newGRPCReporter() reporter {
 	return r
 }
 
-func (r *grpcReporter) Flush() error {
-	return nil
-}
-
 func (r *grpcReporter) SetServiceKey(key string) {
 	r.serviceKey.Store(key)
 }
