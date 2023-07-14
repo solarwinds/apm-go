@@ -48,45 +48,8 @@ var oldReporter reporter = &nullReporter{}
 // TestReporterOption values may be passed to SetTestReporter.
 type TestReporterOption func(*TestReporter)
 
-// TestReporterDisableDefaultSetting disables the default 100% test sampling rate and leaves settings state empty.
-func TestReporterDisableDefaultSetting(val bool) TestReporterOption {
-	return func(r *TestReporter) {
-		if val {
-			r.SettingType = NoSettingST
-		} else {
-			r.SettingType = DefaultST
-		}
-	}
-}
-
-// TestReporterTimeout sets a timeout for the TestReporter to wait before shutting down its writer.
-func TestReporterTimeout(timeout time.Duration) TestReporterOption {
-	return func(r *TestReporter) { r.Timeout = timeout }
-}
-
 func TestReporterSettingType(tp int) TestReporterOption {
 	return func(r *TestReporter) { r.SettingType = tp }
-}
-
-// TestReporterDisableTracing turns off settings lookup and ensures oboeSampleRequest returns false.
-func TestReporterDisableTracing() TestReporterOption {
-	return func(r *TestReporter) {
-		r.SettingType = NoSettingST
-		r.ShouldTrace = false
-		r.UseSettings = false
-	}
-}
-
-// TestReporterShouldTrace sets the first argument of the return value of oboeSampleRequest().
-func TestReporterShouldTrace(val bool) TestReporterOption {
-	return func(r *TestReporter) {
-		r.ShouldTrace = val
-	}
-}
-
-// TestReporterUseSettings sets whether to look up settings lookup or return the value of r.ShouldTrace.
-func TestReporterUseSettings(val bool) TestReporterOption {
-	return func(r *TestReporter) { r.UseSettings = val }
 }
 
 // SetTestReporter sets and returns a test reporter that captures raw event bytes
@@ -119,7 +82,7 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	return r
 }
 
-func (r *TestReporter) SetServiceKey(key string) {
+func (r *TestReporter) SetServiceKey(string) {
 	// do nothing
 }
 
@@ -165,7 +128,7 @@ func (r *TestReporter) Close(numBufs int) {
 }
 
 // Shutdown closes the Test reporter TODO: not supported
-func (r *TestReporter) Shutdown(ctx context.Context) error {
+func (r *TestReporter) Shutdown(context.Context) error {
 	// return r.conn.Close()
 	return errors.New("shutdown is not supported by TestReporter")
 }
@@ -180,15 +143,15 @@ func (r *TestReporter) Closed() bool {
 
 // WaitForReady checks the state of the reporter and may wait for up to the specified
 // duration until it becomes ready.
-func (r *TestReporter) WaitForReady(ctx context.Context) bool {
+func (r *TestReporter) WaitForReady(context.Context) bool {
 	return true
 }
 
-func (r *TestReporter) ReportEvent(e Event) error {
+func (r *TestReporter) ReportEvent(Event) error {
 	return errors.New("TestReporter.ReportEvent not implemented")
 }
 
-func (r *TestReporter) ReportStatus(e Event) error {
+func (r *TestReporter) ReportStatus(Event) error {
 	return errors.New("TestReporter.ReportStatus not implemented")
 }
 
