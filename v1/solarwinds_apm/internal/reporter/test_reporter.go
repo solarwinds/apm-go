@@ -265,5 +265,3 @@ func (r *TestReporter) updateSetting() {
 		panic("No such setting type.")
 	}
 }
-
-func (r *TestReporter) IsAppoptics() bool { return false }

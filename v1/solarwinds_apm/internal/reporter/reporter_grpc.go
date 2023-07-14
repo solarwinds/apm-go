@@ -313,10 +313,6 @@ func (r *grpcReporter) SetServiceKey(key string) {
 	r.serviceKey.Store(key)
 }
 
-func (r *grpcReporter) IsAppoptics() bool {
-	return strings.Contains(r.conn.address, "appoptics.com")
-}
-
 func (r *grpcReporter) isGracefully() bool {
 	return atomic.LoadInt32(&r.gracefully) == 1
 }
