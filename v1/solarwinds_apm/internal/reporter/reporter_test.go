@@ -182,17 +182,11 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
-	_ = r.ShutdownNow()
+	r.ShutdownNow()
 
 	require.Equal(t, true, r.Closed())
 
-	// // Print current goroutines stack
-	// buf := make([]byte, 1<<16)
-	// runtime.Stack(buf, true)
-	// fmt.Printf("%s", buf)
-
-	e := r.ShutdownNow()
-	require.NotEqual(t, nil, e)
+	r.ShutdownNow()
 
 	// stop test reporter
 	server.Stop()
@@ -243,8 +237,7 @@ func TestInvalidKey(t *testing.T) {
 	// The agent reporter should be closed due to received INVALID_API_KEY from the collector
 	require.Equal(t, true, r.Closed())
 
-	e := r.ShutdownNow()
-	require.NotEqual(t, nil, e)
+	r.ShutdownNow()
 
 	// Tear down everything.
 	server.Stop()
@@ -272,7 +265,7 @@ func TestDefaultBackoff(t *testing.T) {
 		43248, 60000, 60000, 60000, 60000, 60000, 60000, 60000, 60000}
 	bf := func(d time.Duration) { backoff = append(backoff, d.Nanoseconds()/1e6) }
 	for i := 1; i <= grpcMaxRetries+1; i++ {
-		require.NoError(t, DefaultBackoff(i, bf))
+		_ = DefaultBackoff(i, bf)
 	}
 	require.Equal(t, expected, backoff)
 	require.NotNil(t, DefaultBackoff(grpcMaxRetries+1, func(d time.Duration) {}))

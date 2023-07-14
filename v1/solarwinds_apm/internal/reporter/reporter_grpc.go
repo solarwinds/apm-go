@@ -342,10 +342,12 @@ func (r *grpcReporter) start() {
 }
 
 // ShutdownNow stops the reporter immediately.
-func (r *grpcReporter) ShutdownNow() error {
+func (r *grpcReporter) ShutdownNow() {
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
-	return r.Shutdown(ctx)
+	if err := r.Shutdown(ctx); err != nil {
+		log.Warning("Received error when shutting down reporter", err)
+	}
 }
 
 // Shutdown closes the reporter by close the `done` channel. All long-running goroutines
@@ -515,8 +517,8 @@ func (c *grpcConnection) setActive(active bool) {
 	atomic.StoreInt32(&c.atomicActive, flag)
 }
 
-func (c *grpcConnection) reconnect() {
-	c.connect()
+func (c *grpcConnection) reconnect() error {
+	return c.connect()
 }
 
 // long-running goroutine that kicks off periodic tasks like collectMetrics() and getSettings()
@@ -749,9 +751,7 @@ func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
 
 			switch err {
 			case errInvalidServiceKey:
-				if err2 := r.ShutdownNow(); err2 != nil {
-					log.Warning("Received error shutting down reporter", err2)
-				}
+				r.ShutdownNow()
 			case nil:
 				log.Info(method.CallSummary())
 			default:
@@ -1115,7 +1115,9 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 		}
 
 		if !c.isActive() {
-			c.reconnect()
+			if err = c.reconnect(); err != nil {
+				return err
+			}
 		}
 
 		if !m.RetryOnErr(err) {
@@ -1261,7 +1263,9 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 	return func(ctx context.Context, addr string) (conn net.Conn, err error) {
 		defer func() {
 			if err != nil && conn != nil {
-				conn.Close()
+				if err2 := conn.Close(); err2 != nil {
+					log.Warning("error when closing connection", err2)
+				}
 			}
 		}()
 

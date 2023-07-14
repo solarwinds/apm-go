@@ -134,7 +134,7 @@ func (r *TestReporter) Shutdown(context.Context) error {
 }
 
 // ShutdownNow closes the Test reporter immediately
-func (r *TestReporter) ShutdownNow() error { return nil }
+func (r *TestReporter) ShutdownNow() {}
 
 // Closed returns if the reporter is closed or not TODO: not supported
 func (r *TestReporter) Closed() bool {

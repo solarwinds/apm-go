@@ -30,8 +30,8 @@ type reporter interface {
 	ReportStatus(e Event) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
-	// ShutdownNow closes the reporter immediately
-	ShutdownNow() error
+	// ShutdownNow closes the reporter immediately, logs on error
+	ShutdownNow()
 	// Closed returns if the reporter is already closed.
 	Closed() bool
 	// WaitForReady waits until the reporter becomes ready or the context is canceled.
@@ -69,7 +69,7 @@ func newNullReporter() *nullReporter                      { return &nullReporter
 func (r *nullReporter) ReportEvent(Event) error           { return nil }
 func (r *nullReporter) ReportStatus(Event) error          { return nil }
 func (r *nullReporter) Shutdown(context.Context) error    { return nil }
-func (r *nullReporter) ShutdownNow() error                { return nil }
+func (r *nullReporter) ShutdownNow()                      {}
 func (r *nullReporter) Closed() bool                      { return true }
 func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string)              {}
@@ -97,9 +97,7 @@ func initReporter() {
 func setGlobalReporter(reporterType string) {
 	// Close the previous reporter
 	if globalReporter != nil {
-		if err := globalReporter.ShutdownNow(); err != nil {
-			log.Warning("Error when shutting down previous reporter:", err)
-		}
+		globalReporter.ShutdownNow()
 	}
 
 	switch strings.ToLower(reporterType) {
