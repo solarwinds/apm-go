@@ -20,18 +20,24 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var _ sdktrace.SpanProcessor = &InboundMetricsProcessor{}
+func NewInboundMetricsSpanProcessor(isAppoptics bool) sdktrace.SpanProcessor {
+	return &inboundMetricsSpanProcessor{
+		isAppoptics: isAppoptics,
+	}
+}
+
+var _ sdktrace.SpanProcessor = &inboundMetricsSpanProcessor{}
 
 var recordFunc = metrics.RecordSpan
 
-type InboundMetricsProcessor struct {
+type inboundMetricsSpanProcessor struct {
 	isAppoptics bool
 }
 
-func (s *InboundMetricsProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {
+func (s *inboundMetricsSpanProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {
 }
 
-func (s *InboundMetricsProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
+func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	parent := span.Parent()
 	if parent.IsValid() && !parent.IsRemote() {
 		return
@@ -39,10 +45,10 @@ func (s *InboundMetricsProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	recordFunc(span, s.isAppoptics)
 }
 
-func (s *InboundMetricsProcessor) Shutdown(context.Context) error {
+func (s *inboundMetricsSpanProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-func (s *InboundMetricsProcessor) ForceFlush(context.Context) error {
+func (s *inboundMetricsSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
