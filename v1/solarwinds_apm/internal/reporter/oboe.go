@@ -58,7 +58,7 @@ type oboeSettingsCfg struct {
 
 // FlushRateCounts collects the request counters values by categories.
 func FlushRateCounts() map[string]*metrics.RateCounts {
-	setting, ok := getSetting("")
+	setting, ok := getSetting()
 	if !ok {
 		return nil
 	}
@@ -342,7 +342,7 @@ func oboeSampleRequest(
 	var setting *oboeSettings
 	var ok bool
 	diceRolled := false
-	if setting, ok = getSetting(layer); !ok {
+	if setting, ok = getSetting(); !ok {
 		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
@@ -618,7 +618,7 @@ func (sc *oboeSettingsCfg) checkSettingsTimeout() {
 	}
 }
 
-func getSetting(layer string) (*oboeSettings, bool) {
+func getSetting() (*oboeSettings, bool) {
 	globalSettingsCfg.lock.RLock()
 	defer globalSettingsCfg.lock.RUnlock()
 
@@ -647,7 +647,7 @@ func removeSetting() {
 }
 
 func hasDefaultSetting() bool {
-	if _, ok := getSetting(""); ok {
+	if _, ok := getSetting(); ok {
 		return true
 	}
 	return false

@@ -201,7 +201,9 @@ func (c *grpcConnection) Close() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.connection != nil {
-		c.connection.Close()
+		if err := c.connection.Close(); err != nil {
+			log.Warning("error when closing connection; ignoring", err)
+		}
 	}
 	c.connection = nil
 }
@@ -488,7 +490,9 @@ func (c *grpcConnection) connect() error {
 
 	// close the old connection
 	if c.connection != nil {
-		c.connection.Close()
+		if err := c.connection.Close(); err != nil {
+			log.Warning("error when closing connection; ignoring", err)
+		}
 	}
 	// set new connection (need to be protected)
 	c.connection = conn
@@ -745,7 +749,9 @@ func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
 
 			switch err {
 			case errInvalidServiceKey:
-				r.ShutdownNow()
+				if err2 := r.ShutdownNow(); err2 != nil {
+					log.Warning("Received error shutting down reporter", err2)
+				}
 			case nil:
 				log.Info(method.CallSummary())
 			default:
