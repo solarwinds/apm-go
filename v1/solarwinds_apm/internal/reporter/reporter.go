@@ -65,14 +65,14 @@ var (
 // a noop reporter
 type nullReporter struct{}
 
-func newNullReporter() *nullReporter                          { return &nullReporter{} }
-func (r *nullReporter) ReportEvent(e Event) error             { return nil }
-func (r *nullReporter) ReportStatus(e Event) error            { return nil }
-func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
-func (r *nullReporter) ShutdownNow() error                    { return nil }
-func (r *nullReporter) Closed() bool                          { return true }
-func (r *nullReporter) WaitForReady(ctx context.Context) bool { return true }
-func (r *nullReporter) SetServiceKey(string)                  {}
+func newNullReporter() *nullReporter                      { return &nullReporter{} }
+func (r *nullReporter) ReportEvent(Event) error           { return nil }
+func (r *nullReporter) ReportStatus(Event) error          { return nil }
+func (r *nullReporter) Shutdown(context.Context) error    { return nil }
+func (r *nullReporter) ShutdownNow() error                { return nil }
+func (r *nullReporter) Closed() bool                      { return true }
+func (r *nullReporter) WaitForReady(context.Context) bool { return true }
+func (r *nullReporter) SetServiceKey(string)              {}
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
@@ -97,7 +97,9 @@ func initReporter() {
 func setGlobalReporter(reporterType string) {
 	// Close the previous reporter
 	if globalReporter != nil {
-		globalReporter.ShutdownNow()
+		if err := globalReporter.ShutdownNow(); err != nil {
+			log.Warning("Error when shutting down previous reporter:", err)
+		}
 	}
 
 	switch strings.ToLower(reporterType) {
