@@ -182,7 +182,7 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
-	r.ShutdownNow()
+	_ = r.ShutdownNow()
 
 	require.Equal(t, true, r.Closed())
 
@@ -272,7 +272,7 @@ func TestDefaultBackoff(t *testing.T) {
 		43248, 60000, 60000, 60000, 60000, 60000, 60000, 60000, 60000}
 	bf := func(d time.Duration) { backoff = append(backoff, d.Nanoseconds()/1e6) }
 	for i := 1; i <= grpcMaxRetries+1; i++ {
-		DefaultBackoff(i, bf)
+		require.NoError(t, DefaultBackoff(i, bf))
 	}
 	require.Equal(t, expected, backoff)
 	require.NotNil(t, DefaultBackoff(grpcMaxRetries+1, func(d time.Duration) {}))
@@ -280,7 +280,7 @@ func TestDefaultBackoff(t *testing.T) {
 
 type NoopDialer struct{}
 
-func (d *NoopDialer) Dial(p DialParams) (*grpc.ClientConn, error) {
+func (d *NoopDialer) Dial(DialParams) (*grpc.ClientConn, error) {
 	return nil, nil
 }
 
@@ -448,7 +448,7 @@ func TestInitReporter(t *testing.T) {
 	require.IsType(t, &nullReporter{}, globalReporter)
 
 	// Test enable agent
-	os.Unsetenv("SW_APM_DISABLED")
+	require.NoError(t, os.Unsetenv("SW_APM_DISABLED"))
 	setEnv("SW_APM_REPORTER", "ssl")
 	config.Load()
 	require.False(t, config.GetDisabled())
@@ -478,7 +478,9 @@ func testProxy(t *testing.T, proxyUrl string) {
 	proxy, err := NewTestProxyServer(proxyUrl, testCertFile, testKeyFile)
 	require.Nil(t, err)
 	require.Nil(t, proxy.Start())
-	defer proxy.Stop()
+	defer func() {
+		require.NoError(t, proxy.Stop())
+	}()
 
 	config.Load()
 
