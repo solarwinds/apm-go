@@ -63,7 +63,7 @@ var _ = func() (_ struct{}) {
 
 func TestNullReporter(t *testing.T) {
 	nullR := &nullReporter{}
-	assert.NoError(t, nullr.ReportEvent(nil))
+	assert.NoError(t, nullR.ReportEvent(nil))
 	assert.NoError(t, nullR.ReportStatus(nil))
 }
 
@@ -129,7 +129,7 @@ func TestGRPCReporter(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	removeSetting("")
+	removeSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	assert.False(t, r.isReady())
@@ -234,7 +234,8 @@ func TestInvalidKey(t *testing.T) {
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
-	ev1, _ := ctx.newEvent(LabelInfo, "hello-from-invalid-key")
+	ev1, _ := CreateInfoEvent(validSpanContext, time.Now())
+	ev1.SetLayer("hello-from-invalid-key")
 	assert.NoError(t, r.ReportEvent(ev1))
 
 	time.Sleep(time.Second)
