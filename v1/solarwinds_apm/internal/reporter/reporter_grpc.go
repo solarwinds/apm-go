@@ -1160,11 +1160,6 @@ func newHostID(id *host.ID) *collector.HostID {
 
 	gid.Hostname = id.Hostname()
 
-	// DEPRECATED: IP addresses and UUID are not part of the host ID anymore
-	// but kept for a while due to backward-compatibility.
-	gid.IpAddresses = host.IPAddresses()
-	gid.Uuid = ""
-
 	gid.Pid = int32(id.Pid())
 	gid.Ec2InstanceID = id.EC2Id()
 	gid.Ec2AvailabilityZone = id.EC2Zone()
@@ -1172,6 +1167,7 @@ func newHostID(id *host.ID) *collector.HostID {
 	gid.MacAddresses = id.MAC()
 	gid.HerokuDynoID = id.HerokuId()
 	gid.AzAppServiceInstanceID = id.AzureAppInstId()
+	gid.Uuid = id.InstanceID()
 	gid.HostType = collector.HostType_PERSISTENT
 
 	return gid
