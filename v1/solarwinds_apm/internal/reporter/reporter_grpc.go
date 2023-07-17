@@ -628,7 +628,7 @@ func DefaultBackoff(retries int, wait func(d time.Duration)) error {
 
 func (r *grpcReporter) ReportEvent(e Event) error {
 	if e == nil {
-		return errors.New("cannot enqueue nil event")
+		return errors.New("cannot report nil event")
 	}
 	select {
 	case r.eventMessages <- e.ToBson():
@@ -642,7 +642,7 @@ func (r *grpcReporter) ReportEvent(e Event) error {
 
 func (r *grpcReporter) ReportStatus(e Event) error {
 	if e == nil {
-		return errors.New("cannot enqueue nil event")
+		return errors.New("cannot report nil event")
 	}
 	select {
 	case r.statusMessages <- e.ToBson():
