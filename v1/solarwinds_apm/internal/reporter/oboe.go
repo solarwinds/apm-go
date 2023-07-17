@@ -165,20 +165,10 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func sendInitMessage(r *resource.Resource) {
-	if Closed() {
-		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
-		return
-	}
-	tid := trace.TraceID{0}
-	if _, err := randReader.Read(tid[:]); err != nil {
-		log.Error("could not generate random task id for init message", err)
-		return
-	}
+func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
 	evt, err := NewEventWithRandomOpID(tid, time.Now())
 	if err != nil {
-		log.Error("could not create new event", err)
-		return
+		return nil, err
 	}
 	evt.SetLabel(LabelUnset)
 	for _, kv := range r.Attributes() {
@@ -191,7 +181,23 @@ func sendInitMessage(r *resource.Resource) {
 		attribute.Int("__Init", 1),
 		attribute.String("APM.Version", utils.Version()),
 	})
+	return evt, nil
+}
 
+func sendInitMessage(r *resource.Resource) {
+	if Closed() {
+		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
+		return
+	}
+	tid := trace.TraceID{0}
+	if _, err := randReader.Read(tid[:]); err != nil {
+		log.Error("could not generate random task id for init message", err)
+		return
+	}
+	evt, err := createInitMessage(tid, r)
+	if err != nil {
+		log.Error("could not create init event")
+	}
 	if err := ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}
