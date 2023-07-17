@@ -15,11 +15,25 @@
 package host
 
 import (
+	"github.com/google/uuid"
 	"reflect"
 	"sync"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 )
+
+var instanceId = ""
+
+// We generate the instance ID on startup and keep the state here instead of `host.ID`
+// though we report it from `(*ID).InstanceID()`
+func init() {
+	i, err := uuid.NewRandom()
+	if err != nil {
+		log.Error("error generating instance id", err)
+	} else {
+		instanceId = i.String()
+	}
+}
 
 // logging texts
 const (
@@ -203,6 +217,11 @@ func (h *ID) HerokuId() string {
 // AzureAppInstId returns the Azure's web application instance ID
 func (h *ID) AzureAppInstId() string {
 	return h.azureAppInstId
+}
+
+// InstanceID returns a string of a version 4 UUID, generated on startup
+func (h *ID) InstanceID() string {
+	return instanceId
 }
 
 // IDSetter defines a function type which set a field of ID
