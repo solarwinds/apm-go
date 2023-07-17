@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 )
 
 // Method defines the interface of an RPC call

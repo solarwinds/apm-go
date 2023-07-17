@@ -40,10 +40,10 @@ import (
 
 	"context"
 
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
 
 	uatomic "go.uber.org/atomic"
 	"google.golang.org/grpc"

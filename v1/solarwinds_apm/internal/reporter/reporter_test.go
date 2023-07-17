@@ -25,11 +25,11 @@ import (
 
 	"strings"
 
+	pb "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
-	pb "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/mocks"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/mock"

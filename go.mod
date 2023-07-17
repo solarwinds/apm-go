@@ -19,6 +19,7 @@ require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/solarwindscloud/apm-proto v0.0.0-20230710230936-94bf6d5ee68a // indirect
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	golang.org/x/net v0.11.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
