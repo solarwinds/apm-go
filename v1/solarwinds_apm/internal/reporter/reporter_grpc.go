@@ -201,7 +201,9 @@ func (c *grpcConnection) Close() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if c.connection != nil {
-		c.connection.Close()
+		if err := c.connection.Close(); err != nil {
+			log.Warning("error when closing connection; ignoring", err)
+		}
 	}
 	c.connection = nil
 }
@@ -305,16 +307,8 @@ func newGRPCReporter() reporter {
 	return r
 }
 
-func (r *grpcReporter) Flush() error {
-	return nil
-}
-
 func (r *grpcReporter) SetServiceKey(key string) {
 	r.serviceKey.Store(key)
-}
-
-func (r *grpcReporter) IsAppoptics() bool {
-	return strings.Contains(r.conn.address, "appoptics.com")
 }
 
 func (r *grpcReporter) isGracefully() bool {
@@ -348,10 +342,12 @@ func (r *grpcReporter) start() {
 }
 
 // ShutdownNow stops the reporter immediately.
-func (r *grpcReporter) ShutdownNow() error {
+func (r *grpcReporter) ShutdownNow() {
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
-	return r.Shutdown(ctx)
+	if err := r.Shutdown(ctx); err != nil {
+		log.Warning("Received error when shutting down reporter", err)
+	}
 }
 
 // Shutdown closes the reporter by close the `done` channel. All long-running goroutines
@@ -496,7 +492,9 @@ func (c *grpcConnection) connect() error {
 
 	// close the old connection
 	if c.connection != nil {
-		c.connection.Close()
+		if err := c.connection.Close(); err != nil {
+			log.Warning("error when closing connection; ignoring", err)
+		}
 	}
 	// set new connection (need to be protected)
 	c.connection = conn
@@ -519,8 +517,8 @@ func (c *grpcConnection) setActive(active bool) {
 	atomic.StoreInt32(&c.atomicActive, flag)
 }
 
-func (c *grpcConnection) reconnect() {
-	c.connect()
+func (c *grpcConnection) reconnect() error {
+	return c.connect()
 }
 
 // long-running goroutine that kicks off periodic tasks like collectMetrics() and getSettings()
@@ -628,9 +626,9 @@ func DefaultBackoff(retries int, wait func(d time.Duration)) error {
 
 // ================================ Event Handling ====================================
 
-func (r *grpcReporter) enqueueEvent(e Event) error {
+func (r *grpcReporter) ReportEvent(e Event) error {
 	if e == nil {
-		return errors.New("cannot enqueue nil event")
+		return errors.New("cannot report nil event")
 	}
 	select {
 	case r.eventMessages <- e.ToBson():
@@ -642,9 +640,9 @@ func (r *grpcReporter) enqueueEvent(e Event) error {
 	}
 }
 
-func (r *grpcReporter) enqueueStatus(e Event) error {
+func (r *grpcReporter) ReportStatus(e Event) error {
 	if e == nil {
-		return errors.New("cannot enqueue nil event")
+		return errors.New("cannot report nil event")
 	}
 	select {
 	case r.statusMessages <- e.ToBson():
@@ -1117,7 +1115,9 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 		}
 
 		if !c.isActive() {
-			c.reconnect()
+			if err = c.reconnect(); err != nil {
+				return err
+			}
 		}
 
 		if !m.RetryOnErr(err) {
@@ -1263,7 +1263,9 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 	return func(ctx context.Context, addr string) (conn net.Conn, err error) {
 		defer func() {
 			if err != nil && conn != nil {
-				conn.Close()
+				if err2 := conn.Close(); err2 != nil {
+					log.Warning("error when closing connection", err2)
+				}
 			}
 		}()
 
