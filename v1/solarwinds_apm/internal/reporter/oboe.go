@@ -17,9 +17,10 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"math"
 	"math/rand"
@@ -164,7 +165,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func sendInitMessage() {
+func sendInitMessage(r *resource.Resource) {
 	if Closed() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
@@ -179,16 +180,16 @@ func sendInitMessage() {
 		log.Error("could not create new event", err)
 		return
 	}
-	evt.SetLabel(LabelSingle)
-	evt.SetLayer(constants.Go)
+	evt.SetLabel(LabelUnset)
+	for _, kv := range r.Attributes() {
+		if kv.Key != semconv.ServiceNameKey {
+			evt.AddKV(kv)
+		}
+	}
 
 	evt.AddKVs([]attribute.KeyValue{
 		attribute.Int("__Init", 1),
-		attribute.String("Go.Version", utils.GoVersion()),
-		attribute.String("Go.SolarWindsAPM.Version", utils.Version()),
-		attribute.String("Go.InstallDirectory", utils.InstallDir()),
-		attribute.Int64("Go.InstallTimestamp", utils.InstallTsInSec()),
-		attribute.Int64("Go.LastRestart", utils.LastRestartInUSec()),
+		attribute.String("APM.Version", utils.Version()),
 	})
 
 	if err := ReportStatus(evt); err != nil {
