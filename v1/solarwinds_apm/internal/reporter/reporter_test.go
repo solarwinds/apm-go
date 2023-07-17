@@ -18,7 +18,7 @@ import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"io"
-	log2 "log"
+	stdlog "log"
 	"os"
 	"testing"
 	"time"
@@ -44,7 +44,7 @@ const TestServiceKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4f
 
 func setEnv(k string, v string) {
 	if err := os.Setenv(k, v); err != nil {
-		log2.Panic("could not set env!", err)
+		stdlog.Panic("could not set env!", err)
 	}
 }
 
@@ -116,7 +116,6 @@ func TestGRPCReporter(t *testing.T) {
 
 	require.Error(t, r.ReportStatus(nil))
 	require.Error(t, r.ReportStatus(nil))
-	// time.Sleep(time.Second)
 	require.NoError(t, r.ReportStatus(ev2))
 
 	require.Equal(t, addr, r.conn.address)
@@ -177,7 +176,6 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
-	// numGo := runtime.NumGoroutine()
 	setGlobalReporter("ssl")
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
@@ -192,7 +190,6 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	// stop test reporter
 	server.Stop()
 	globalReporter = oldReporter
-	// fmt.Println(buf)
 }
 
 func TestInvalidKey(t *testing.T) {
@@ -248,7 +245,6 @@ func TestInvalidKey(t *testing.T) {
 	patterns := []string{
 		"rsp=INVALID_API_KEY",
 		"Shutting down the reporter",
-		// "periodicTasks goroutine exiting",
 		"eventSender goroutine exiting",
 		"statusSender goroutine exiting",
 		"eventBatchSender goroutine exiting",
