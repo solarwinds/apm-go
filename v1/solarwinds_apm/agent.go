@@ -105,6 +105,8 @@ func createResource(userAttrs ...attribute.KeyValue) (*resource.Resource, error)
 	)
 }
 
+// Start bootstraps otel requirements and starts the agent. The given `userAttrs` are added to the otel
+// `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(userAttrs ...attribute.KeyValue) (func(), error) {
 	resrc, err := createResource(userAttrs...)
 	if err != nil {
