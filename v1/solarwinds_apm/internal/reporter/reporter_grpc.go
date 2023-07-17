@@ -1155,7 +1155,7 @@ func (c *grpcConnection) isFlushed() bool {
 	}
 }
 
-func newHostID(id host.ID) *collector.HostID {
+func newHostID(id *host.ID) *collector.HostID {
 	gid := &collector.HostID{}
 
 	gid.Hostname = id.Hostname()

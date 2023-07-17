@@ -72,7 +72,7 @@ func newLockedID() *lockedID {
 	}
 }
 
-func (h *ID) copy() ID {
+func (h *ID) copy() *ID {
 	c := newID()
 	c.update(
 		withHostname(h.hostname),
@@ -83,7 +83,7 @@ func (h *ID) copy() ID {
 		withMAC(h.mac),
 		withHerokuId(h.herokuId),
 		withAzureAppInstId(h.azureAppInstId))
-	return *c
+	return c
 }
 
 // fullUpdate update all the fields of HostID with the setters. Unlike HostID's
@@ -131,7 +131,7 @@ func (lh *lockedID) waitForReady() {
 
 // copyID returns a copy of the lockedID's internal HostID. However, it doesn't
 // check if the internal HostID has been initialized.
-func (lh *lockedID) copyID() ID {
+func (lh *lockedID) copyID() *ID {
 	lh.RLock()
 	defer lh.RUnlock()
 
@@ -166,42 +166,42 @@ type ID struct {
 }
 
 // Hostname returns the hostname field of ID
-func (h ID) Hostname() string {
+func (h *ID) Hostname() string {
 	return h.hostname
 }
 
 // Pid returns the pid field of ID
-func (h ID) Pid() int {
+func (h *ID) Pid() int {
 	return h.pid
 }
 
 // EC2Id returns ec2id field of ID
-func (h ID) EC2Id() string {
+func (h *ID) EC2Id() string {
 	return h.ec2Id
 }
 
 // EC2Zone returns the ec2ZoneURL field of ID
-func (h ID) EC2Zone() string {
+func (h *ID) EC2Zone() string {
 	return h.ec2Zone
 }
 
 // ContainerId returns the containerId field of ID
-func (h ID) ContainerId() string {
+func (h *ID) ContainerId() string {
 	return h.containerId
 }
 
 // MAC returns the mac field of ID
-func (h ID) MAC() []string {
+func (h *ID) MAC() []string {
 	return h.mac
 }
 
 // HerokuId returns the herokuId field of ID
-func (h ID) HerokuId() string {
+func (h *ID) HerokuId() string {
 	return h.herokuId
 }
 
 // AzureAppInstId returns the Azure's web application instance ID
-func (h ID) AzureAppInstId() string {
+func (h *ID) AzureAppInstId() string {
 	return h.azureAppInstId
 }
 
