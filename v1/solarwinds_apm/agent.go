@@ -90,7 +90,7 @@ func SetServiceKey(key string) {
 	reporter.SetServiceKey(key)
 }
 
-func createResource(userAttrs ...attribute.KeyValue) (*resource.Resource, error) {
+func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
 	return resource.New(context.Background(),
 		resource.WithContainer(),
 		resource.WithFromEnv(),
@@ -101,14 +101,14 @@ func createResource(userAttrs ...attribute.KeyValue) (*resource.Resource, error)
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
 		resource.WithTelemetrySDK(),
-		resource.WithAttributes(userAttrs...),
+		resource.WithAttributes(resourceAttrs...),
 	)
 }
 
-// Start bootstraps otel requirements and starts the agent. The given `userAttrs` are added to the otel
+// Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
-func Start(userAttrs ...attribute.KeyValue) (func(), error) {
-	resrc, err := createResource(userAttrs...)
+func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
 		return nil, err
 	}
