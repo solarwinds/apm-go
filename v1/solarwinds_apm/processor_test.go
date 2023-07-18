@@ -39,7 +39,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	defer func() {
 		recordFunc = metrics.RecordSpan
 	}()
-	sp := &SolarWindsInboundMetricsSpanProcessor{}
+	sp := &inboundMetricsSpanProcessor{}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
@@ -60,7 +60,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T)
 	defer func() {
 		recordFunc = metrics.RecordSpan
 	}()
-	sp := &SolarWindsInboundMetricsSpanProcessor{}
+	sp := &inboundMetricsSpanProcessor{}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T
 	defer func() {
 		recordFunc = metrics.RecordSpan
 	}()
-	sp := &SolarWindsInboundMetricsSpanProcessor{}
+	sp := &inboundMetricsSpanProcessor{}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()

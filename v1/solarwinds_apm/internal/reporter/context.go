@@ -74,7 +74,7 @@ func HmacHash(token, data []byte) string {
 }
 
 func getTriggerTraceToken() ([]byte, error) {
-	setting, ok := getSetting("")
+	setting, ok := getSetting()
 	if !ok {
 		return nil, errors.New("failed to get settings")
 	}

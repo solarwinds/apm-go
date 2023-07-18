@@ -17,7 +17,6 @@ package reporter
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
@@ -27,22 +26,18 @@ import (
 
 // defines what methods a reporter should offer (internal to reporter package)
 type reporter interface {
-	enqueueEvent(e Event) error
-	enqueueStatus(e Event) error
+	ReportEvent(e Event) error
+	ReportStatus(e Event) error
 	// Shutdown closes the reporter.
 	Shutdown(ctx context.Context) error
-	// ShutdownNow closes the reporter immediately
-	ShutdownNow() error
+	// ShutdownNow closes the reporter immediately, logs on error
+	ShutdownNow()
 	// Closed returns if the reporter is already closed.
 	Closed() bool
 	// WaitForReady waits until the reporter becomes ready or the context is canceled.
 	WaitForReady(context.Context) bool
-	Flush() error
 	// SetServiceKey attaches a service key to the reporter
 	SetServiceKey(key string)
-
-	// IsAppoptics returns `true` if domain connected to contains `appoptics.com`
-	IsAppoptics() bool
 }
 
 // KVs from getSettingsResult arguments
@@ -70,16 +65,14 @@ var (
 // a noop reporter
 type nullReporter struct{}
 
-func newNullReporter() *nullReporter                          { return &nullReporter{} }
-func (r *nullReporter) enqueueEvent(e Event) error            { return nil }
-func (r *nullReporter) enqueueStatus(e Event) error           { return nil }
-func (r *nullReporter) Shutdown(ctx context.Context) error    { return nil }
-func (r *nullReporter) ShutdownNow() error                    { return nil }
-func (r *nullReporter) Closed() bool                          { return true }
-func (r *nullReporter) WaitForReady(ctx context.Context) bool { return true }
-func (r *nullReporter) Flush() error                          { return nil }
-func (r *nullReporter) SetServiceKey(string)                  {}
-func (r *nullReporter) IsAppoptics() bool                     { return false }
+func newNullReporter() *nullReporter                      { return &nullReporter{} }
+func (r *nullReporter) ReportEvent(Event) error           { return nil }
+func (r *nullReporter) ReportStatus(Event) error          { return nil }
+func (r *nullReporter) Shutdown(context.Context) error    { return nil }
+func (r *nullReporter) ShutdownNow()                      {}
+func (r *nullReporter) Closed() bool                      { return true }
+func (r *nullReporter) WaitForReady(context.Context) bool { return true }
+func (r *nullReporter) SetServiceKey(string)              {}
 
 // init() is called only once on program startup. Here we create the reporter
 // that will be used throughout the runtime of the app. Default is 'ssl' but
@@ -120,11 +113,6 @@ func WaitForReady(ctx context.Context) bool {
 	// globalReporter is not protected by a mutex as currently it's only modified
 	// from the init() function.
 	return globalReporter.WaitForReady(ctx)
-}
-
-// Flush flush the events buffer to stderr. Currently it's used for AWS Lambda only
-func Flush() error {
-	return globalReporter.Flush()
 }
 
 // Shutdown flushes the metrics and stops the reporter. It blocked until the reporter
@@ -206,33 +194,10 @@ func SetServiceKey(key string) {
 	globalReporter.SetServiceKey(key)
 }
 
-func IsAppoptics() bool {
-	return globalReporter.IsAppoptics()
-}
-
-type evType int
-
-const (
-	evTypeEvent = iota
-	evTypeStatus
-)
-
-func report(e Event, typ evType) error {
-	if typ != evTypeEvent && typ != evTypeStatus {
-		return errors.New("invalid evType")
-	}
-
-	if typ == evTypeEvent {
-		return globalReporter.enqueueEvent(e)
-	} else {
-		return globalReporter.enqueueStatus(e)
-	}
-}
-
 func ReportStatus(e Event) error {
-	return report(e, evTypeStatus)
+	return globalReporter.ReportStatus(e)
 }
 
 func ReportEvent(e Event) error {
-	return report(e, evTypeEvent)
+	return globalReporter.ReportEvent(e)
 }
