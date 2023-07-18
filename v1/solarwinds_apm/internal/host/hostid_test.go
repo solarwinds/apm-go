@@ -14,6 +14,7 @@
 package host
 
 import (
+	"github.com/google/uuid"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,4 +59,9 @@ func TestLockedHostID(t *testing.T) {
 	assert.Equal(t, mac, h.MAC())
 	assert.EqualValues(t, herokuId, h.HerokuId())
 	assert.EqualValues(t, azureAppInstId, h.AzureAppInstId())
+	assert.Equal(t, instanceId, h.InstanceID())
+	assert.Len(t, h.InstanceID(), 36)
+	uid, err := uuid.Parse(h.InstanceID())
+	assert.NoError(t, err)
+	assert.Equal(t, uuid.Version(4), uid.Version())
 }

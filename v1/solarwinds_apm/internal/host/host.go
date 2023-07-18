@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 // Package host has all the functions to get host metadata needed by traces and
 // metrics. It also maintains an update-to-date global HostID object, which is
 // refreshed periodically.
@@ -69,7 +70,7 @@ var (
 )
 
 // CurrentID returns a copyID of the current ID
-func CurrentID() ID {
+func CurrentID() *ID {
 	hostId.waitForReady()
 	return hostId.copyID()
 }
@@ -78,7 +79,7 @@ func CurrentID() ID {
 // doesn't wait until the ID is ready. This function is used mainly by getSettings
 // where the ID may not be fully initialized immediately after starting up but
 // it's acceptable.
-func BestEffortCurrentID() ID {
+func BestEffortCurrentID() *ID {
 	return hostId.copyID()
 }
 

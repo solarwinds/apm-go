@@ -42,7 +42,6 @@ const (
 	LabelExit
 	LabelInfo
 	LabelError
-	LabelSingle
 )
 
 func (l Label) AsString() string {
@@ -55,8 +54,6 @@ func (l Label) AsString() string {
 		return constants.ExitLabel
 	case LabelInfo:
 		return constants.InfoLabel
-	case LabelSingle:
-		return constants.SingleLabel
 	}
 	return constants.UnknownLabel
 }
@@ -137,7 +134,9 @@ func (e *event) ToBson() []byte {
 	buf.AppendInt64("Timestamp_u", e.t.UnixMicro())
 	buf.AppendString("Hostname", host.Hostname())
 	buf.AppendInt("PID", host.PID())
-	buf.AppendString(constants.Label, e.label.AsString())
+	if e.label != LabelUnset {
+		buf.AppendString(constants.Label, e.label.AsString())
+	}
 	if e.layer != "" {
 		buf.AppendString(constants.Layer, e.layer)
 	}
