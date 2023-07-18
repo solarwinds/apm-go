@@ -7,6 +7,18 @@ on:
       - master
 
 jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    name: License header check
+    steps:
+      - uses: actions/checkout@v3
+      - run: ./license_check.sh
+  fmt-check:
+    runs-on: ubuntu-latest
+    name: "`gofmt` check"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Jerome1337/gofmt-action@v1.0.5
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -14,15 +26,12 @@ jobs:
         goversion: ['1.19', '1.20']
     name: Go ${{ matrix.goversion }} tests
     env:
-      GO15VENDOREXPERIMENT: 1
       SW_APM_DEBUG_LEVEL: 1
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
-      - name: Check for license headers
-        run: ./license_check.sh
       - name: Install dependencies
         run: |
           go get golang.org/x/tools/cmd/cover
@@ -70,4 +79,3 @@ jobs:
         with:
           install-go: false
           cache-key: ${{ matrix.goversion }}
-      - uses: Jerome1337/gofmt-action@v1.0.5
