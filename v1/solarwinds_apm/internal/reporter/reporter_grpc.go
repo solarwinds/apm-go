@@ -40,10 +40,10 @@ import (
 
 	"context"
 
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
 
 	uatomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
@@ -1155,15 +1155,10 @@ func (c *grpcConnection) isFlushed() bool {
 	}
 }
 
-func newHostID(id host.ID) *collector.HostID {
+func newHostID(id *host.ID) *collector.HostID {
 	gid := &collector.HostID{}
 
 	gid.Hostname = id.Hostname()
-
-	// DEPRECATED: IP addresses and UUID are not part of the host ID anymore
-	// but kept for a while due to backward-compatibility.
-	gid.IpAddresses = host.IPAddresses()
-	gid.Uuid = ""
 
 	gid.Pid = int32(id.Pid())
 	gid.Ec2InstanceID = id.EC2Id()
@@ -1172,6 +1167,7 @@ func newHostID(id host.ID) *collector.HostID {
 	gid.MacAddresses = id.MAC()
 	gid.HerokuDynoID = id.HerokuId()
 	gid.AzAppServiceInstanceID = id.AzureAppInstId()
+	gid.Uuid = id.InstanceID()
 	gid.HostType = collector.HostType_PERSISTENT
 
 	return gid

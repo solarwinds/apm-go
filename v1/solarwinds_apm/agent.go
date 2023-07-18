@@ -16,7 +16,15 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"io"
+	stdlog "log"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
@@ -80,4 +88,53 @@ func SetLogOutput(w io.Writer) {
 // SetServiceKey sets the service key of the agent
 func SetServiceKey(key string) {
 	reporter.SetServiceKey(key)
+}
+
+func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
+	return resource.New(context.Background(),
+		resource.WithContainer(),
+		resource.WithFromEnv(),
+		resource.WithOS(),
+		resource.WithProcess(),
+		// Process runtime description is not recommended[1] for Go and thus is not added by `WithProcess` above.
+		// Example value: go version go1.20.4 linux/arm64
+		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
+		resource.WithProcessRuntimeDescription(),
+		resource.WithTelemetrySDK(),
+		resource.WithAttributes(resourceAttrs...),
+	)
+}
+
+// Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
+// `resource.Resource` that is supplied to the otel `TracerProvider`
+func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	resrc, err := createResource(resourceAttrs...)
+	if err != nil {
+		return nil, err
+	}
+	reporter.Start(resrc)
+
+	exprtr := NewExporter()
+	smplr := sdktrace.ParentBased(NewSampler())
+	config.Load()
+	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
+	processor := NewInboundMetricsSpanProcessor(isAppoptics)
+	propagator := propagation.NewCompositeTextMapPropagator(
+		&propagation.TraceContext{},
+		&SolarwindsPropagator{},
+	)
+	otel.SetTextMapPropagator(propagator)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exprtr),
+		sdktrace.WithResource(resrc),
+		sdktrace.WithSampler(smplr),
+		sdktrace.WithSpanProcessor(processor),
+	)
+	otel.SetTracerProvider(tp)
+	return func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			stdlog.Fatal(err)
+		}
+	}, nil
+
 }

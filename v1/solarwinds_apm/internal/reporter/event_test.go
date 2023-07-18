@@ -220,6 +220,5 @@ func TestLabelAsString(t *testing.T) {
 	require.Equal(t, constants.ErrorLabel, LabelError.AsString())
 	require.Equal(t, constants.ExitLabel, LabelExit.AsString())
 	require.Equal(t, constants.InfoLabel, LabelInfo.AsString())
-	require.Equal(t, constants.SingleLabel, LabelSingle.AsString())
 	require.Equal(t, constants.UnknownLabel, LabelUnset.AsString())
 }

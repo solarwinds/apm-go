@@ -21,7 +21,7 @@ import (
 
 var (
 	// The SolarWinds Observability Go agent version
-	version = "1.15.0" // TODO
+	version = "0.1" // TODO
 
 	// The Go version
 	goVersion = strings.TrimPrefix(runtime.Version(), "go")

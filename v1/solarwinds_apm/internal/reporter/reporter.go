@@ -20,6 +20,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"math"
 	"strings"
 )
@@ -74,13 +75,10 @@ func (r *nullReporter) Closed() bool                      { return true }
 func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string)              {}
 
-// init() is called only once on program startup. Here we create the reporter
-// that will be used throughout the runtime of the app. Default is 'ssl' but
-// can be overridden via SW_APM_REPORTER
-func init() {
+func Start(r *resource.Resource) {
 	log.SetLevelFromStr(config.DebugLevel())
 	initReporter()
-	sendInitMessage()
+	sendInitMessage(r)
 }
 
 func initReporter() {

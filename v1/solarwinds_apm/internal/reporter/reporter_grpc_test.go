@@ -30,7 +30,7 @@ import (
 
 	"context"
 	"github.com/pkg/errors"
-	pb "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
+	pb "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

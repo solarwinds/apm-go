@@ -18,7 +18,7 @@ package mocks
 import (
 	context "context"
 
-	collector "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter/collector"
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 
 	mock "github.com/stretchr/testify/mock"
 )

@@ -33,6 +33,5 @@ const (
 	ErrorLabel   = "error"
 	ExitLabel    = "exit"
 	InfoLabel    = "info"
-	SingleLabel  = "single"
 	UnknownLabel = "UNKNOWN"
 )
