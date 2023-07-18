@@ -178,7 +178,7 @@ func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
 	}
 
 	evt.AddKVs([]attribute.KeyValue{
-		attribute.Int("__Init", 1),
+		attribute.Bool("__Init", true),
 		attribute.String("APM.Version", utils.Version()),
 	})
 	return evt, nil

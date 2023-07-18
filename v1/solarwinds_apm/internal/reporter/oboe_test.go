@@ -46,7 +46,7 @@ func TestCreateInitMessage(t *testing.T) {
 	require.True(t, e.t.Before(b))
 	require.Equal(t, []attribute.KeyValue{
 		attribute.String("foo", "bar"),
-		attribute.Int("__Init", 1),
+		attribute.Bool("__Init", true),
 		attribute.String("APM.Version", utils.Version()),
 	}, e.kvs)
 	require.Equal(t, LabelUnset, e.label)
