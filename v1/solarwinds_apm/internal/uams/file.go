@@ -24,12 +24,6 @@ import (
 const linuxFilePath = "/opt/solarwinds/uamsclient/var/uamsclientid"
 const winFilePath = `C:\ProgramData\SolarWinds\UAMSClient\uamsclientid`
 
-//f := linuxFilePath
-////goland:noinspection GoBoolExpressions
-//if runtime.GOOS == "windows" {
-//	f = winFilePath
-//}
-
 func ReadFromFile(f string) (uuid.UUID, error) {
 	if st, err := os.Stat(f); err != nil {
 		return uuid.Nil, errors.Wrap(err, "could not stat uams client file")

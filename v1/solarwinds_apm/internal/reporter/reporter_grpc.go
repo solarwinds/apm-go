@@ -20,6 +20,8 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/uams"
 	"io"
 	"math"
 	"net"
@@ -1169,6 +1171,9 @@ func newHostID(id *host.ID) *collector.HostID {
 	gid.AzAppServiceInstanceID = id.AzureAppInstId()
 	gid.Uuid = id.InstanceID()
 	gid.HostType = collector.HostType_PERSISTENT
+	if uid := uams.GetCurrentClientId(); uid != uuid.Nil {
+		gid.UamsClientID = uid.String()
+	}
 
 	return gid
 }
