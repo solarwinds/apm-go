@@ -45,5 +45,5 @@ func SummaryMetric(name string, value float64, opts MetricOptions) error {
 // IncrementMetric submits a incremental measurement to the reporter. The measurements
 // will be collected in the background and reported periodically.
 func IncrementMetric(name string, opts MetricOptions) error {
-	return metrics.CustomMetrics.Increment(name, opts)
+   return metrics.CustomMetrics.Increment(name, opts)
 }
