@@ -36,8 +36,7 @@ type Compute struct {
 }
 
 type Metadata struct {
-	Compute Compute                `json:"compute"`
-	Other   map[string]interface{} `json:"-"`
+	Compute Compute `json:"compute"`
 }
 
 func (m *Metadata) ToPB() *collector.Azure {

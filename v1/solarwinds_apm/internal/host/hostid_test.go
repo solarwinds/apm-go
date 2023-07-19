@@ -40,7 +40,6 @@ func TestLockedHostID(t *testing.T) {
 			VMScaleSetName:    "my vmscaleset name",
 			VMSize:            "my vmsize",
 		},
-		Other: nil,
 	}
 
 	lh := newLockedID()
