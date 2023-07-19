@@ -17,9 +17,9 @@ package uams
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -28,14 +28,6 @@ func TestReadFromHttpConnRefused(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, uuid.Nil, uid)
 	require.Equal(t, `Get "http://localhost:12345": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
-}
-
-func srv(t *testing.T, response string, status int) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(status)
-		_, err := fmt.Fprint(w, response)
-		require.NoError(t, err)
-	}))
 }
 
 func TestReadFromHttp(t *testing.T) {
@@ -50,7 +42,7 @@ func TestReadFromHttp(t *testing.T) {
 }`,
 		expectedUid.String(),
 	)
-	svr := srv(t, response, http.StatusOK)
+	svr := testutils.Srv(t, response, http.StatusOK)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
@@ -65,7 +57,7 @@ func TestReadFromHttpInvalidIDType(t *testing.T) {
     "usc_connectivity": true,
     "uamsclient_id": 123456 
 }`
-	svr := srv(t, response, http.StatusOK)
+	svr := testutils.Srv(t, response, http.StatusOK)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
@@ -81,7 +73,7 @@ func TestReadFromHttpInvalidFormat(t *testing.T) {
     "usc_connectivity": true,
     "uamsclient_id": "Now is the winter of our discontent!" 
 }`
-	svr := srv(t, response, http.StatusOK)
+	svr := testutils.Srv(t, response, http.StatusOK)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
@@ -97,7 +89,7 @@ func TestReadFromHttpMissingKey(t *testing.T) {
     "otel_endpoint_access": false,
     "usc_connectivity": true
 }`
-	svr := srv(t, response, http.StatusOK)
+	svr := testutils.Srv(t, response, http.StatusOK)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
@@ -108,7 +100,7 @@ func TestReadFromHttpMissingKey(t *testing.T) {
 
 func TestReadFromHttpInvalidJSON(t *testing.T) {
 	response := "this is not json"
-	svr := srv(t, response, http.StatusOK)
+	svr := testutils.Srv(t, response, http.StatusOK)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
@@ -119,7 +111,7 @@ func TestReadFromHttpInvalidJSON(t *testing.T) {
 
 func TestReadFromHttpInvalidStatus(t *testing.T) {
 	response := "foo bar baz"
-	svr := srv(t, response, http.StatusInternalServerError)
+	svr := testutils.Srv(t, response, http.StatusInternalServerError)
 	defer svr.Close()
 
 	uid, err := ReadFromHttp(svr.URL)
