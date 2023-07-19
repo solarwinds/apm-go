@@ -33,7 +33,7 @@ func TestReadFromHttpConnRefused(t *testing.T) {
 func srv(t *testing.T, response string, status int) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
-		_, err := fmt.Fprintf(w, response)
+		_, err := fmt.Fprint(w, response)
 		require.NoError(t, err)
 	}))
 }
