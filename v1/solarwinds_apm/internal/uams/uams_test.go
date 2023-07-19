@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -47,14 +46,6 @@ func TestUpdateClientId(t *testing.T) {
 	require.True(t, currState.updated.Before(b))
 
 	require.Equal(t, uid, GetCurrentClientId())
-}
-
-func determineFileForOS() string {
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "windows" {
-		return windowsFilePath
-	}
-	return linuxFilePath
 }
 
 func resetState() {

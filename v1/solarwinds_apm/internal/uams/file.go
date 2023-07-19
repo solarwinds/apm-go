@@ -19,10 +19,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"os"
+	"runtime"
 )
 
 const linuxFilePath = "/opt/solarwinds/uamsclient/var/uamsclientid"
 const windowsFilePath = `C:\ProgramData\SolarWinds\UAMSClient\uamsclientid`
+
+func determineFileForOS() string {
+	//goland:noinspection GoBoolExpressions
+	if runtime.GOOS == "windows" {
+		return windowsFilePath
+	}
+	return linuxFilePath
+}
 
 func ReadFromFile(f string) (uuid.UUID, error) {
 	if st, err := os.Stat(f); err != nil {

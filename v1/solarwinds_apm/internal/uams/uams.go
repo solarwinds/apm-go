@@ -17,7 +17,6 @@ package uams
 import (
 	"github.com/google/uuid"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -56,11 +55,7 @@ func Start() {
 }
 
 func clientIdCheck() {
-	f := linuxFilePath
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "windows" {
-		f = windowsFilePath
-	}
+	f := determineFileForOS()
 	i, err := ReadFromFile(f)
 	if err != nil {
 		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
