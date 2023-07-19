@@ -30,9 +30,9 @@ import (
 func TestUpdateClientId(t *testing.T) {
 	defer resetState()
 	var defaultTime time.Time // default (1970-01-01 00:00:00)
-	require.Equal(t, uuid.Nil, uamsState.clientId)
-	require.Equal(t, defaultTime, uamsState.updated)
-	require.Equal(t, "", uamsState.via)
+	require.Equal(t, uuid.Nil, currState.clientId)
+	require.Equal(t, defaultTime, currState.updated)
+	require.Equal(t, "", currState.via)
 
 	require.Equal(t, uuid.Nil, GetCurrentClientId())
 
@@ -41,10 +41,10 @@ func TestUpdateClientId(t *testing.T) {
 	a := time.Now()
 	updateClientId(uid, "file")
 	b := time.Now()
-	require.Equal(t, uid, uamsState.clientId)
-	require.Equal(t, "file", uamsState.via)
-	require.True(t, uamsState.updated.After(a))
-	require.True(t, uamsState.updated.Before(b))
+	require.Equal(t, uid, currState.clientId)
+	require.Equal(t, "file", currState.via)
+	require.True(t, currState.updated.After(a))
+	require.True(t, currState.updated.Before(b))
 
 	require.Equal(t, uid, GetCurrentClientId())
 }
@@ -58,7 +58,7 @@ func determineFileForOS() string {
 }
 
 func resetState() {
-	uamsState = &state{}
+	currState = &state{}
 }
 
 func TestClientIdCheckFromFile(t *testing.T) {
@@ -66,7 +66,7 @@ func TestClientIdCheckFromFile(t *testing.T) {
 	f := determineFileForOS()
 	require.NoFileExists(t, f, "Test needs to write to file, but it may exist for another purpose", f)
 	clientIdCheck()
-	require.Equal(t, uuid.Nil, uamsState.clientId)
+	require.Equal(t, uuid.Nil, currState.clientId)
 
 	dir := filepath.Dir(f)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -88,8 +88,8 @@ func TestClientIdCheckFromFile(t *testing.T) {
 
 	clientIdCheck()
 
-	require.Equal(t, uid, uamsState.clientId)
-	require.Equal(t, "file", uamsState.via)
+	require.Equal(t, uid, currState.clientId)
+	require.Equal(t, "file", currState.via)
 }
 
 func TestClientIdCheckFromHttp(t *testing.T) {
@@ -98,7 +98,7 @@ func TestClientIdCheckFromHttp(t *testing.T) {
 	require.NoFileExists(t, f, "Test needs to write to file, but it may exist for another purpose", f)
 
 	clientIdCheck()
-	require.Equal(t, uuid.Nil, uamsState.clientId)
+	require.Equal(t, uuid.Nil, currState.clientId)
 
 	uid, err := uuid.NewRandom()
 	require.NoError(t, err)
@@ -119,6 +119,6 @@ func TestClientIdCheckFromHttp(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	clientIdCheck()
 
-	require.Equal(t, uid, uamsState.clientId)
-	require.Equal(t, "http", uamsState.via)
+	require.Equal(t, uid, currState.clientId)
+	require.Equal(t, "http", currState.via)
 }

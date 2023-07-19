@@ -24,7 +24,7 @@ import (
 
 var exit = make(chan bool, 1)
 
-var uamsState = &state{}
+var currState = &state{}
 
 type state struct {
 	m sync.Mutex
@@ -64,7 +64,7 @@ func clientIdCheck() {
 	i, err := ReadFromFile(f)
 	if err != nil {
 		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(uamsClientUrl)
+		i, err = ReadFromHttp(clientUrl)
 		if err != nil {
 			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
 		} else {
@@ -76,24 +76,24 @@ func clientIdCheck() {
 }
 
 func updateClientId(uid uuid.UUID, via string) {
-	uamsState.m.Lock()
-	defer uamsState.m.Unlock()
+	currState.m.Lock()
+	defer currState.m.Unlock()
 
-	if uid == uamsState.clientId {
+	if uid == currState.clientId {
 		log.Debug("Found the same UAMS client ID that we had before, skipping")
 		return
 	}
 
 	log.Debugf("UAMS client ID (%s) successfully loaded via %s", uid, via)
-	uamsState.clientId = uid
-	uamsState.via = via
-	uamsState.updated = time.Now()
+	currState.clientId = uid
+	currState.via = via
+	currState.updated = time.Now()
 }
 
 func GetCurrentClientId() uuid.UUID {
-	uamsState.m.Lock()
-	defer uamsState.m.Unlock()
-	return uamsState.clientId
+	currState.m.Lock()
+	defer currState.m.Unlock()
+	return currState.clientId
 }
 
 func Stop() {

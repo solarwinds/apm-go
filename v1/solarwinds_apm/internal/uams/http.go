@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-const uamsClientUrl = "http://127.0.0.1:2113/info/uamsclient"
+const clientUrl = "http://127.0.0.1:2113/info/uamsclient"
 
 func ReadFromHttp(url string) (uuid.UUID, error) {
 	resp, err := http.Get(url)
