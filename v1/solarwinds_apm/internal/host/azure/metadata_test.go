@@ -43,7 +43,7 @@ func TestQueryAzureNoHttpResponse(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, m)
 	assert.Equal(t, `Get "http://localhost:12345/asdf?api-version=2021-12-13&format=json": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
-
+	assert.Nil(t, m.ToPB())
 }
 
 func TestQueryAzureIMDS(t *testing.T) {
@@ -58,6 +58,20 @@ func TestQueryAzureIMDS(t *testing.T) {
 	require.Equal(t, "02aab8a4-74ef-476e-8182-f6d2ba4166a6", m.Compute.VMID)
 	require.Equal(t, "crpteste9vflji9", m.Compute.VMScaleSetName)
 	require.Equal(t, "Standard_A3", m.Compute.VMSize)
+
+	// Test the conversion to protobuf we send to the collector
+	pb := m.ToPB()
+	require.NotNil(t, pb)
+	require.Equal(t, "azure", pb.CloudProvider)
+	require.Equal(t, "azure_vm", pb.CloudPlatform)
+	require.Equal(t, "westus", pb.CloudRegion)
+	require.Equal(t, "examplevmname", pb.HostName)
+	require.Equal(t, "examplevmname", pb.AzureVmName)
+	require.Equal(t, "macikgo-test-may-23", pb.AzureResourceGroupName)
+	require.Equal(t, "xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx", pb.CloudAccountId)
+	require.Equal(t, "02aab8a4-74ef-476e-8182-f6d2ba4166a6", pb.HostId)
+	require.Equal(t, "crpteste9vflji9", pb.AzureVmScaleSetName)
+	require.Equal(t, "Standard_A3", pb.AzureVmSize)
 }
 
 // Example JSON from https://learn.microsoft.com/en-us/azure/virtual-machines/instance-metadata-service

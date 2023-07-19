@@ -15,6 +15,7 @@
 package host
 
 import (
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
 	"io"
 	"net"
 	"net/http"
@@ -127,6 +128,8 @@ func updateHostID(lh *lockedID) {
 	cid := getOrFallback(getContainerID, old.containerId)
 	herokuId := getOrFallback(getHerokuDynoId, old.herokuId)
 	azureId := getOrFallback(getAzureAppInstId, old.azureAppInstId)
+	// we do not need to use getOrFallback here, we've already memoized the value
+	azureMd := getAzureMetadata()
 
 	mac := getMACAddressList()
 	if len(mac) == 0 {
@@ -142,6 +145,7 @@ func updateHostID(lh *lockedID) {
 		withMAC(mac),
 		withHerokuId(herokuId),
 		withAzureAppInstId(azureId),
+		withAzureMetadata(azureMd),
 	}
 
 	lh.fullUpdate(setters...)
@@ -293,6 +297,17 @@ func getAzureAppInstId() string {
 		log.Debugf("Got and cached Azure webapp instance id: %s", azureAppInstId)
 	})
 	return azureAppInstId
+}
+
+func getAzureMetadata() *azure.Metadata {
+	azureMetadataOnce.Do(func() {
+		var err error
+		azureMetadata, err = azure.RequestMetadata()
+		if err != nil {
+			log.Debug("failed to retrieve Azure metadata", err)
+		}
+	})
+	return azureMetadata
 }
 
 func initDyno(dyno *string) {

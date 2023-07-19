@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"io"
 	"net/http"
 	"time"
@@ -35,8 +36,34 @@ type Compute struct {
 }
 
 type Metadata struct {
-	Compute `json:"compute"`
+	Compute Compute                `json:"compute"`
 	Other   map[string]interface{} `json:"-"`
+}
+
+func (m *Metadata) ToPB() *collector.Azure {
+	if m == nil {
+		return nil
+	}
+	// Mimicking the specified behavior here:
+	// https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#azure
+	return &collector.Azure{
+		CloudProvider:          "azure",
+		CloudPlatform:          "azure_vm",
+		CloudRegion:            m.Compute.Location,
+		CloudAccountId:         m.Compute.SubscriptionID,
+		HostId:                 m.Compute.VMID,
+		HostName:               m.Compute.Name,
+		AzureVmName:            m.Compute.Name,
+		AzureVmSize:            m.Compute.VMSize,
+		AzureVmScaleSetName:    m.Compute.VMScaleSetName,
+		AzureResourceGroupName: m.Compute.ResourceGroupName,
+	}
+}
+
+const metadataUrl = "http://169.254.169.254/metadata/instance"
+
+func RequestMetadata() (*Metadata, error) {
+	return queryAzureIMDS(metadataUrl)
 }
 
 func queryAzureIMDS(url_ string) (*Metadata, error) {

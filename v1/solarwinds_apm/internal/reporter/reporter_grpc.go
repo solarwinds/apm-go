@@ -1176,6 +1176,9 @@ func newHostID(id *host.ID) *collector.HostID {
 	if uid := uams.GetCurrentClientId(); uid != uuid.Nil {
 		gid.UamsClientID = uid.String()
 	}
+	if md := id.AzureMetadata(); md != nil {
+		gid.AzureMetadata = md.ToPB()
+	}
 
 	return gid
 }
