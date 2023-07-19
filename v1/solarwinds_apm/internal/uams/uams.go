@@ -22,6 +22,8 @@ import (
 	"time"
 )
 
+var exit = make(chan bool, 1)
+
 var uamsState = &state{}
 
 type state struct {
@@ -35,18 +37,36 @@ type state struct {
 	via string
 }
 
-func init() {
+func Start() {
+	go clientIdCheck()
+	// Poll for UAMS client update once per hour
+	ticker := time.NewTicker(time.Hour)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-exit:
+				return
+			case <-ticker.C:
+				log.Debug("Checking for UAMS client update")
+				clientIdCheck()
+			}
+		}
+	}()
+}
+
+func clientIdCheck() {
 	f := linuxFilePath
 	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "windows" {
-		f = winFilePath
+		f = windowsFilePath
 	}
 	i, err := ReadFromFile(f)
 	if err != nil {
-		log.Infof("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
+		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
 		i, err = ReadFromHttp(uamsClientUrl)
 		if err != nil {
-			log.Infof("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default")
+			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
 		} else {
 			updateClientId(i, "http")
 		}
@@ -56,10 +76,15 @@ func init() {
 }
 
 func updateClientId(uid uuid.UUID, via string) {
-	log.Infof("UAMS client ID (%s) successfully loaded via %s", uid, via)
 	uamsState.m.Lock()
 	defer uamsState.m.Unlock()
 
+	if uid == uamsState.clientId {
+		log.Debug("Found the same UAMS client ID that we had before, skipping")
+		return
+	}
+
+	log.Debugf("UAMS client ID (%s) successfully loaded via %s", uid, via)
 	uamsState.clientId = uid
 	uamsState.via = via
 	uamsState.updated = time.Now()
@@ -69,4 +94,9 @@ func GetCurrentClientId() uuid.UUID {
 	uamsState.m.Lock()
 	defer uamsState.m.Unlock()
 	return uamsState.clientId
+}
+
+func Stop() {
+	log.Debug("Stopping UAMS client ID poller")
+	exit <- true
 }

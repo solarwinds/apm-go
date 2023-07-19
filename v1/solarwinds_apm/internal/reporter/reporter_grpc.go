@@ -328,6 +328,7 @@ func (r *grpcReporter) setGracefully(flag bool) {
 func (r *grpcReporter) start() {
 	// start up the host observer
 	host.Start()
+	uams.Start()
 	// start up long-running goroutine eventSender() which listens on the events message channel
 	// and reports incoming events to the collector using GRPC
 	go r.eventSender()
@@ -383,6 +384,7 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 			r.closeConns()
 			r.setReady(false)
 			host.Stop()
+			uams.Stop()
 			log.Warning("SolarWinds Observability APM agent is stopped.")
 		})
 	}

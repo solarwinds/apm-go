@@ -22,7 +22,7 @@ import (
 )
 
 const linuxFilePath = "/opt/solarwinds/uamsclient/var/uamsclientid"
-const winFilePath = `C:\ProgramData\SolarWinds\UAMSClient\uamsclientid`
+const windowsFilePath = `C:\ProgramData\SolarWinds\UAMSClient\uamsclientid`
 
 func ReadFromFile(f string) (uuid.UUID, error) {
 	if st, err := os.Stat(f); err != nil {
