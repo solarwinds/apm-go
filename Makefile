@@ -15,10 +15,10 @@ certgen:
 	@cd v1/solarwinds_apm/internal/reporter && ./certgen.sh
 
 runtest:
-	@cd v1 && go test -race -timeout 3m -count=1 -short ./... && echo "All tests passed."
+	go test -race -timeout 3m -count=1 -short -covermode=atomic  ./... && echo "All tests passed."
 
 runtestfast:
-	@cd v1 && go test -race -timeout 3m -short ./... && echo "All tests passed."
+	go test -race -timeout 3m -short -covermode=atomic ./... && echo "All tests passed."
 
 removecert:
 	@cd v1/solarwinds_apm/internal/reporter && rm for_test.crt for_test.key
