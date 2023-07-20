@@ -1181,6 +1181,9 @@ func newHostID(id *host.ID) *collector.HostID {
 		gid.AzureMetadata = md.ToPB()
 		log.Debugf("sending azure metadata %+v", gid.AzureMetadata)
 	}
+	if md := id.K8sMetadata(); md != nil {
+		gid.K8SMetadata = md.ToPB()
+	}
 
 	return gid
 }

@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"os"
 	"regexp"
@@ -36,6 +37,14 @@ type Metadata struct {
 	Namespace string
 	PodName   string
 	PodUid    string
+}
+
+func (m *Metadata) ToPB() *collector.K8S {
+	return &collector.K8S{
+		Namespace: m.Namespace,
+		PodName:   m.PodName,
+		PodUid:    m.PodUid,
+	}
 }
 
 func determineNamspaceFileForOS() string {

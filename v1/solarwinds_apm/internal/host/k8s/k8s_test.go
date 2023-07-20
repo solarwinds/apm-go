@@ -70,6 +70,18 @@ func TestRequestMetadataNoNamespace(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("open %s: no such file or directory", determineNamspaceFileForOS()), err.Error())
 }
 
+func TestMetadata_ToPB(t *testing.T) {
+	md := &Metadata{
+		Namespace: "foo",
+		PodName:   "bar",
+		PodUid:    "baz",
+	}
+	pb := md.ToPB()
+	require.Equal(t, md.Namespace, pb.Namespace)
+	require.Equal(t, md.PodName, pb.PodName)
+	require.Equal(t, md.PodUid, pb.PodUid)
+}
+
 // Test getNamespace
 
 func TestGetNamespaceFromFallbackFile(t *testing.T) {
