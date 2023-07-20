@@ -16,7 +16,6 @@ package host
 
 import (
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
 	"reflect"
 	"sync"
 
@@ -60,10 +59,6 @@ var (
 	// the Azure web application instance ID
 	azureAppInstId     string
 	azureAppInstIdOnce sync.Once
-
-	// k8s metadata
-	k8sMetadata     *k8s.Metadata
-	k8sMetadataOnce sync.Once
 )
 
 // lockedID is a ID protected by a mutex. To avoid being modified without
