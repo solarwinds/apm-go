@@ -24,10 +24,10 @@ import (
 )
 
 func TestReadFromHttpConnRefused(t *testing.T) {
-	uid, err := ReadFromHttp("http://localhost:12345")
+	uid, err := ReadFromHttp("http://127.0.0.1:12345")
 	require.Error(t, err)
 	require.Equal(t, uuid.Nil, uid)
-	require.Equal(t, `Get "http://localhost:12345": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
+	require.Equal(t, `Get "http://127.0.0.1:12345": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
 }
 
 func TestReadFromHttp(t *testing.T) {
