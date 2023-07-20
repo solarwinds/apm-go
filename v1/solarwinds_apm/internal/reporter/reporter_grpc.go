@@ -21,11 +21,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/google/uuid"
-<<<<<<< HEAD
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
-=======
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
->>>>>>> a878e6c (Memoize metadata local to the package)
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/uams"
 	"io"
 	"math"
