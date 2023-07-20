@@ -1184,6 +1184,7 @@ func newHostID(id *host.ID) *collector.HostID {
 	}
 	if md := k8s.MemoizeMetadata(); md != nil {
 		gid.K8SMetadata = md.ToPB()
+		log.Debugf("sending k8s metadata %+v", gid.K8SMetadata)
 	}
 
 	return gid
