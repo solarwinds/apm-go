@@ -66,7 +66,7 @@ func RequestMetadata() (*Metadata, error) {
 }
 
 func queryAzureIMDS(url_ string) (*Metadata, error) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url_, nil)
 	if err != nil {
