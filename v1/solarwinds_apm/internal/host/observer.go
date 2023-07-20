@@ -309,6 +309,8 @@ func getAzureMetadata() *azure.Metadata {
 		azureMetadata, err = azure.RequestMetadata()
 		if err != nil {
 			log.Debug("failed to retrieve Azure metadata", err)
+		} else {
+			log.Debugf("Successfully retrieved Azure metadata: %+v", azureMetadata)
 		}
 	})
 	return azureMetadata
