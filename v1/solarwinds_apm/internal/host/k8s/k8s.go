@@ -23,6 +23,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"sync"
 )
 
 const (
@@ -32,6 +33,11 @@ const (
 )
 
 var uuidRegex = regexp.MustCompile("[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}")
+
+var (
+	memoized *Metadata
+	once     sync.Once
+)
 
 type Metadata struct {
 	Namespace string
@@ -55,7 +61,20 @@ func determineNamspaceFileForOS() string {
 	return linuxNamespaceFile
 }
 
-func RequestMetadata() (*Metadata, error) {
+func MemoizeMetadata() *Metadata {
+	once.Do(func() {
+		var err error
+		memoized, err = requestMetadata()
+		if err != nil {
+			log.Debugf("error when retrieving k8s metadata %s", err)
+		} else {
+			log.Debugf("retrieved k8s metadata: %+v", memoized)
+		}
+	})
+	return memoized
+}
+
+func requestMetadata() (*Metadata, error) {
 	namespace, err := getNamespace(determineNamspaceFileForOS())
 	if err != nil {
 		return nil, err

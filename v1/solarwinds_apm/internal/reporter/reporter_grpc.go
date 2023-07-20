@@ -21,7 +21,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
+=======
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
+>>>>>>> a878e6c (Memoize metadata local to the package)
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/uams"
 	"io"
 	"math"
@@ -1181,7 +1185,7 @@ func newHostID(id *host.ID) *collector.HostID {
 		gid.AzureMetadata = md.ToPB()
 		log.Debugf("sending azure metadata %+v", gid.AzureMetadata)
 	}
-	if md := id.K8sMetadata(); md != nil {
+	if md := k8s.MemoizeMetadata(); md != nil {
 		gid.K8SMetadata = md.ToPB()
 	}
 

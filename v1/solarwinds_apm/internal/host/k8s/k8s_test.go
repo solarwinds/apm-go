@@ -22,11 +22,11 @@ import (
 	"testing"
 )
 
-// Test RequestMetadata
+// Test requestMetadata
 
 func TestRequestMetadataFromEnv(t *testing.T) {
 	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", ""))
-	md, err := RequestMetadata()
+	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
 	require.Equal(t, "k8s namespace was empty", err.Error())
@@ -35,7 +35,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	defer func() {
 		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
 	}()
-	md, err = RequestMetadata()
+	md, err = requestMetadata()
 	require.NoError(t, err)
 	var hostname string
 	hostname, err = os.Hostname()
@@ -55,7 +55,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 		require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
 	}()
 
-	md, err = RequestMetadata()
+	md, err = requestMetadata()
 	require.NoError(t, err)
 	require.NotNil(t, md)
 	require.Equal(t, "my env namespace", md.Namespace)
@@ -64,7 +64,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 }
 
 func TestRequestMetadataNoNamespace(t *testing.T) {
-	md, err := RequestMetadata()
+	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
 	require.Equal(t, fmt.Sprintf("open %s: no such file or directory", determineNamspaceFileForOS()), err.Error())

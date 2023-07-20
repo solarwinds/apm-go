@@ -15,7 +15,6 @@
 package host
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
 	"io"
 	"net"
 	"net/http"
@@ -128,7 +127,6 @@ func updateHostID(lh *lockedID) {
 	cid := getOrFallback(getContainerID, old.containerId)
 	herokuId := getOrFallback(getHerokuDynoId, old.herokuId)
 	azureId := getOrFallback(getAzureAppInstId, old.azureAppInstId)
-	k8sMd := getK8sMetadata()
 
 	mac := getMACAddressList()
 	if len(mac) == 0 {
@@ -144,7 +142,6 @@ func updateHostID(lh *lockedID) {
 		withMAC(mac),
 		withHerokuId(herokuId),
 		withAzureAppInstId(azureId),
-		withK8sMetadata(k8sMd),
 	}
 
 	lh.fullUpdate(setters...)
@@ -300,19 +297,6 @@ func getAzureAppInstId() string {
 		log.Debugf("Got and cached Azure webapp instance id: %s", azureAppInstId)
 	})
 	return azureAppInstId
-}
-
-func getK8sMetadata() *k8s.Metadata {
-	k8sMetadataOnce.Do(func() {
-		var err error
-		k8sMetadata, err = k8s.RequestMetadata()
-		if err != nil {
-			log.Debugf("failed to retrieve k8s metadata", err)
-		} else {
-			log.Debugf("Successfully retrieved k8s metadata: %+v", k8sMetadata)
-		}
-	})
-	return k8sMetadata
 }
 
 func initDyno(dyno *string) {

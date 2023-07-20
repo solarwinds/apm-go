@@ -102,7 +102,6 @@ func (h *ID) copy() *ID {
 		withMAC(h.mac),
 		withHerokuId(h.herokuId),
 		withAzureAppInstId(h.azureAppInstId),
-		withK8sMetadata(h.k8sMetadata),
 	)
 	return c
 }
@@ -184,9 +183,6 @@ type ID struct {
 
 	// The Azure's WEBAPP_INSTANCE_ID
 	azureAppInstId string
-
-	// k8s metadata
-	k8sMetadata *k8s.Metadata
 }
 
 // Hostname returns the hostname field of ID
@@ -227,10 +223,6 @@ func (h *ID) HerokuId() string {
 // AzureAppInstId returns the Azure's web application instance ID
 func (h *ID) AzureAppInstId() string {
 	return h.azureAppInstId
-}
-
-func (h *ID) K8sMetadata() *k8s.Metadata {
-	return h.k8sMetadata
 }
 
 // InstanceID returns a string of a version 4 UUID, generated on startup
@@ -287,12 +279,6 @@ func withHerokuId(id string) IDSetter {
 func withAzureAppInstId(id string) IDSetter {
 	return func(h *ID) {
 		h.azureAppInstId = id
-	}
-}
-
-func withK8sMetadata(m *k8s.Metadata) IDSetter {
-	return func(h *ID) {
-		h.k8sMetadata = m
 	}
 }
 

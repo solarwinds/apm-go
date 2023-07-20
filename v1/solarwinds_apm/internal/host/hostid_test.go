@@ -15,7 +15,6 @@ package host
 
 import (
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,11 +29,6 @@ func TestLockedHostID(t *testing.T) {
 	mac := []string{"72:00:07:e5:23:51", "c6:61:8b:53:d6:b5", "72:00:07:e5:23:50"}
 	herokuId := "heroku-test"
 	azureAppInstId := "azure-test"
-	k8sMetadata := &k8s.Metadata{
-		Namespace: "foo",
-		PodName:   "bar",
-		PodUid:    "baz",
-	}
 
 	lh := newLockedID()
 	assert.False(t, lh.ready())
@@ -51,7 +45,6 @@ func TestLockedHostID(t *testing.T) {
 		withMAC(mac),
 		withHerokuId(herokuId),
 		withAzureAppInstId(azureAppInstId),
-		withK8sMetadata(k8sMetadata),
 	)
 
 	assert.True(t, lh.ready())
