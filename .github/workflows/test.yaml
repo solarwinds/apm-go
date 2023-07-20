@@ -41,6 +41,9 @@ jobs:
       - name: Go vet
         run: go vet ./...
       - name: Run tests
+        run: make test
+      - name: Test coverage (FIXME! I don't check everything!)
+        if: matrix.goversion == '1.20'
         working-directory: ./v1
         run: |
           pushd solarwinds_apm/internal/reporter
