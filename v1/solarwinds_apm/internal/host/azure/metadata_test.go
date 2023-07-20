@@ -39,10 +39,10 @@ func TestQueryAzureInvalidJson(t *testing.T) {
 }
 
 func TestQueryAzureNoHttpResponse(t *testing.T) {
-	m, err := queryAzureIMDS("http://localhost:12345/asdf")
+	m, err := queryAzureIMDS("http://127.0.0.1:12345/asdf")
 	assert.Error(t, err)
 	assert.Nil(t, m)
-	assert.Equal(t, `Get "http://localhost:12345/asdf?api-version=2021-12-13&format=json": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
+	assert.Equal(t, `Get "http://127.0.0.1:12345/asdf?api-version=2021-12-13&format=json": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
 	assert.Nil(t, m.ToPB())
 }
 
