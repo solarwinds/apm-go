@@ -195,6 +195,10 @@ func getAWSMeta(url string) (meta string) {
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Debugf("Failed to read AWS metadata: expected 200 status, got %s", resp.Status)
+		return
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Debugf("Failed to read AWS metadata response: %s", url)
