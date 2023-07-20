@@ -95,7 +95,7 @@ func TestGetPodUidFromFileFails(t *testing.T) {
 	require.Error(t, err)
 	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "linux" {
-		require.Equal(t, "this is incorrect until we see what CI returns", err.Error())
+		require.Equal(t, "no match found in file /proc/self/mountinfo", err.Error())
 	} else {
 		require.Equal(t, "cannot determine k8s pod uid on host OS", err.Error())
 	}
