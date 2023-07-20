@@ -30,16 +30,14 @@ func TestLockedHostID(t *testing.T) {
 	mac := []string{"72:00:07:e5:23:51", "c6:61:8b:53:d6:b5", "72:00:07:e5:23:50"}
 	herokuId := "heroku-test"
 	azureAppInstId := "azure-test"
-	azureMetadata := &azure.Metadata{
-		Compute: azure.Compute{
-			Location:          "westus",
-			Name:              "my name",
-			ResourceGroupName: "my resource group name",
-			SubscriptionID:    "my subscription id",
-			VMID:              "my vmid",
-			VMScaleSetName:    "my vmscaleset name",
-			VMSize:            "my vmsize",
-		},
+	azureMetadata := &azure.MetadataCompute{
+		Location:          "westus",
+		Name:              "my name",
+		ResourceGroupName: "my resource group name",
+		SubscriptionID:    "my subscription id",
+		VMID:              "my vmid",
+		VMScaleSetName:    "my vmscaleset name",
+		VMSize:            "my vmsize",
 	}
 
 	lh := newLockedID()

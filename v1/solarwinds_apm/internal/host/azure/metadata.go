@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-type Compute struct {
+type MetadataCompute struct {
 	Location          string `json:"location"`
 	Name              string `json:"name"`
 	ResourceGroupName string `json:"resourceGroupName"`
@@ -35,11 +35,7 @@ type Compute struct {
 	VMSize            string `json:"vmSize"`
 }
 
-type Metadata struct {
-	Compute Compute `json:"compute"`
-}
-
-func (m *Metadata) ToPB() *collector.Azure {
+func (m *MetadataCompute) ToPB() *collector.Azure {
 	if m == nil {
 		return nil
 	}
@@ -48,24 +44,24 @@ func (m *Metadata) ToPB() *collector.Azure {
 	return &collector.Azure{
 		CloudProvider:          "azure",
 		CloudPlatform:          "azure_vm",
-		CloudRegion:            m.Compute.Location,
-		CloudAccountId:         m.Compute.SubscriptionID,
-		HostId:                 m.Compute.VMID,
-		HostName:               m.Compute.Name,
-		AzureVmName:            m.Compute.Name,
-		AzureVmSize:            m.Compute.VMSize,
-		AzureVmScaleSetName:    m.Compute.VMScaleSetName,
-		AzureResourceGroupName: m.Compute.ResourceGroupName,
+		CloudRegion:            m.Location,
+		CloudAccountId:         m.SubscriptionID,
+		HostId:                 m.VMID,
+		HostName:               m.Name,
+		AzureVmName:            m.Name,
+		AzureVmSize:            m.VMSize,
+		AzureVmScaleSetName:    m.VMScaleSetName,
+		AzureResourceGroupName: m.ResourceGroupName,
 	}
 }
 
-const metadataUrl = "http://169.254.169.254/metadata/instance"
+const metadataUrl = "http://169.254.169.254/metadata/instance/compute"
 
-func RequestMetadata() (*Metadata, error) {
+func RequestMetadata() (*MetadataCompute, error) {
 	return queryAzureIMDS(metadataUrl)
 }
 
-func queryAzureIMDS(url_ string) (*Metadata, error) {
+func queryAzureIMDS(url_ string) (*MetadataCompute, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url_, nil)
@@ -96,7 +92,7 @@ func queryAzureIMDS(url_ string) (*Metadata, error) {
 		return nil, err
 	}
 
-	m := &Metadata{}
+	m := &MetadataCompute{}
 	if err = json.Unmarshal(b, m); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal json")
 	}

@@ -303,7 +303,7 @@ func getAzureAppInstId() string {
 	return azureAppInstId
 }
 
-func getAzureMetadata() *azure.Metadata {
+func getAzureMetadata() *azure.MetadataCompute {
 	azureMetadataOnce.Do(func() {
 		var err error
 		azureMetadata, err = azure.RequestMetadata()

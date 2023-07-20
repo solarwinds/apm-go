@@ -62,7 +62,7 @@ var (
 	azureAppInstIdOnce sync.Once
 
 	// Azure metadata
-	azureMetadata     *azure.Metadata
+	azureMetadata     *azure.MetadataCompute
 	azureMetadataOnce sync.Once
 )
 
@@ -186,7 +186,7 @@ type ID struct {
 	azureAppInstId string
 
 	// Azure metadata
-	azureMetadata *azure.Metadata
+	azureMetadata *azure.MetadataCompute
 }
 
 // Hostname returns the hostname field of ID
@@ -230,7 +230,7 @@ func (h *ID) AzureAppInstId() string {
 }
 
 // AzureMetadata returns the metadata queried from Azure Instance Metadata Service, or nil if it failed
-func (h *ID) AzureMetadata() *azure.Metadata {
+func (h *ID) AzureMetadata() *azure.MetadataCompute {
 	return h.azureMetadata
 }
 
@@ -291,7 +291,7 @@ func withAzureAppInstId(id string) IDSetter {
 	}
 }
 
-func withAzureMetadata(m *azure.Metadata) IDSetter {
+func withAzureMetadata(m *azure.MetadataCompute) IDSetter {
 	return func(h *ID) {
 		h.azureMetadata = m
 	}
