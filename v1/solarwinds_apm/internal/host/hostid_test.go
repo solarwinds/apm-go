@@ -15,7 +15,6 @@ package host
 
 import (
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,15 +29,6 @@ func TestLockedHostID(t *testing.T) {
 	mac := []string{"72:00:07:e5:23:51", "c6:61:8b:53:d6:b5", "72:00:07:e5:23:50"}
 	herokuId := "heroku-test"
 	azureAppInstId := "azure-test"
-	azureMetadata := &azure.MetadataCompute{
-		Location:          "westus",
-		Name:              "my name",
-		ResourceGroupName: "my resource group name",
-		SubscriptionID:    "my subscription id",
-		VMID:              "my vmid",
-		VMScaleSetName:    "my vmscaleset name",
-		VMSize:            "my vmsize",
-	}
 
 	lh := newLockedID()
 	assert.False(t, lh.ready())
@@ -55,7 +45,6 @@ func TestLockedHostID(t *testing.T) {
 		withMAC(mac),
 		withHerokuId(herokuId),
 		withAzureAppInstId(azureAppInstId),
-		withAzureMetadata(azureMetadata),
 	)
 
 	assert.True(t, lh.ready())
@@ -71,7 +60,6 @@ func TestLockedHostID(t *testing.T) {
 	assert.Equal(t, mac, h.MAC())
 	assert.EqualValues(t, herokuId, h.HerokuId())
 	assert.EqualValues(t, azureAppInstId, h.AzureAppInstId())
-	assert.Equal(t, azureMetadata, h.AzureMetadata())
 	assert.Equal(t, instanceId, h.InstanceID())
 	assert.Len(t, h.InstanceID(), 36)
 	uid, err := uuid.Parse(h.InstanceID())

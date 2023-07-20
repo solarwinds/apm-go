@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -33,6 +35,24 @@ type MetadataCompute struct {
 	VMID              string `json:"vmId"`
 	VMScaleSetName    string `json:"vmScaleSetName"`
 	VMSize            string `json:"vmSize"`
+}
+
+var (
+	memoized *MetadataCompute
+	once     sync.Once
+)
+
+func MemoizeMetadata() *MetadataCompute {
+	once.Do(func() {
+		var err error
+		memoized, err = requestMetadata()
+		if err != nil {
+			log.Debug("failed to retrieve Azure metadata", err)
+		} else {
+			log.Debugf("Successfully retrieved Azure metadata: %+v", memoized)
+		}
+	})
+	return memoized
 }
 
 func (m *MetadataCompute) ToPB() *collector.Azure {
@@ -57,7 +77,7 @@ func (m *MetadataCompute) ToPB() *collector.Azure {
 
 const metadataUrl = "http://169.254.169.254/metadata/instance/compute"
 
-func RequestMetadata() (*MetadataCompute, error) {
+func requestMetadata() (*MetadataCompute, error) {
 	return queryAzureIMDS(metadataUrl)
 }
 

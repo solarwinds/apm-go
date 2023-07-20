@@ -16,7 +16,6 @@ package host
 
 import (
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
 	"reflect"
 	"sync"
 
@@ -60,10 +59,6 @@ var (
 	// the Azure web application instance ID
 	azureAppInstId     string
 	azureAppInstIdOnce sync.Once
-
-	// Azure metadata
-	azureMetadata     *azure.MetadataCompute
-	azureMetadataOnce sync.Once
 )
 
 // lockedID is a ID protected by a mutex. To avoid being modified without
@@ -102,7 +97,6 @@ func (h *ID) copy() *ID {
 		withMAC(h.mac),
 		withHerokuId(h.herokuId),
 		withAzureAppInstId(h.azureAppInstId),
-		withAzureMetadata(h.azureMetadata),
 	)
 	return c
 }
@@ -184,9 +178,6 @@ type ID struct {
 
 	// The Azure's WEBAPP_INSTANCE_ID
 	azureAppInstId string
-
-	// Azure metadata
-	azureMetadata *azure.MetadataCompute
 }
 
 // Hostname returns the hostname field of ID
@@ -227,11 +218,6 @@ func (h *ID) HerokuId() string {
 // AzureAppInstId returns the Azure's web application instance ID
 func (h *ID) AzureAppInstId() string {
 	return h.azureAppInstId
-}
-
-// AzureMetadata returns the metadata queried from Azure Instance Metadata Service, or nil if it failed
-func (h *ID) AzureMetadata() *azure.MetadataCompute {
-	return h.azureMetadata
 }
 
 // InstanceID returns a string of a version 4 UUID, generated on startup
@@ -288,12 +274,6 @@ func withHerokuId(id string) IDSetter {
 func withAzureAppInstId(id string) IDSetter {
 	return func(h *ID) {
 		h.azureAppInstId = id
-	}
-}
-
-func withAzureMetadata(m *azure.MetadataCompute) IDSetter {
-	return func(h *ID) {
-		h.azureMetadata = m
 	}
 }
 
