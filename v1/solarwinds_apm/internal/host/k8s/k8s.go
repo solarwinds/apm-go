@@ -32,6 +32,47 @@ const (
 
 var uuidRegex = regexp.MustCompile("[[:xdigit:]]{8}-([[:xdigit:]]{4}-){3}[[:xdigit:]]{12}")
 
+type Metadata struct {
+	Namespace string
+	PodName   string
+	PodUid    string
+}
+
+func determineNamspaceFileForOS() string {
+	//goland:noinspection GoBoolExpressions
+	if runtime.GOOS == "windows" {
+		return windowsNamespaceFile
+	}
+	return linuxNamespaceFile
+}
+
+func RequestMetadata() (*Metadata, error) {
+	namespace, err := getNamespace(determineNamspaceFileForOS())
+	if err != nil {
+		return nil, err
+	}
+	if namespace == "" {
+		return nil, errors.New("k8s namespace was empty")
+	}
+
+	podName, err := getPodname()
+	if err != nil {
+		log.Debugf("could not retrieve k8s podname %s, continuing", err)
+	}
+
+	// This function will only fallback when GOOS == "linux", so we always pass in `linuxProcMountInfo` as the filename
+	podUid, err := getPodUid(linuxProcMountInfo)
+	if err != nil {
+		log.Debugf("could not retrieve k8s podUid %s, continuing", err)
+	}
+
+	return &Metadata{
+		Namespace: namespace,
+		PodName:   podName,
+		PodUid:    podUid,
+	}, nil
+}
+
 func getNamespace(fallbackFile string) (string, error) {
 	if ns, ok := os.LookupEnv("SW_K8S_POD_NAMESPACE"); ok {
 		log.Debug("Successfully read k8s namespace from SW_K8S_POD_NAMESPACE")

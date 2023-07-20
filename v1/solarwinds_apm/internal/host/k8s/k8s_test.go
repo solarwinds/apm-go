@@ -22,6 +22,54 @@ import (
 	"testing"
 )
 
+// Test RequestMetadata
+
+func TestRequestMetadataFromEnv(t *testing.T) {
+	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", ""))
+	md, err := RequestMetadata()
+	require.Error(t, err)
+	require.Nil(t, md)
+	require.Equal(t, "k8s namespace was empty", err.Error())
+
+	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", "my env namespace"))
+	defer func() {
+		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
+	}()
+	md, err = RequestMetadata()
+	require.NoError(t, err)
+	var hostname string
+	hostname, err = os.Hostname()
+	require.NoError(t, err)
+	require.NotNil(t, md)
+	require.Equal(t, "my env namespace", md.Namespace)
+	require.Equal(t, hostname, md.PodName)
+	require.Equal(t, "", md.PodUid)
+
+	require.NoError(t, os.Setenv("SW_K8S_POD_NAME", "my env pod name"))
+	defer func() {
+		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAME"))
+	}()
+
+	require.NoError(t, os.Setenv("SW_K8S_POD_UID", "my env uid"))
+	defer func() {
+		require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
+	}()
+
+	md, err = RequestMetadata()
+	require.NoError(t, err)
+	require.NotNil(t, md)
+	require.Equal(t, "my env namespace", md.Namespace)
+	require.Equal(t, "my env pod name", md.PodName)
+	require.Equal(t, "my env uid", md.PodUid)
+}
+
+func TestRequestMetadataNoNamespace(t *testing.T) {
+	md, err := RequestMetadata()
+	require.Error(t, err)
+	require.Nil(t, md)
+	require.Equal(t, fmt.Sprintf("open %s: no such file or directory", determineNamspaceFileForOS()), err.Error())
+}
+
 // Test getNamespace
 
 func TestGetNamespaceFromFallbackFile(t *testing.T) {
