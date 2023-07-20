@@ -1179,6 +1179,7 @@ func newHostID(id *host.ID) *collector.HostID {
 	}
 	if md := azure.MemoizeMetadata(); md != nil {
 		gid.AzureMetadata = md.ToPB()
+		log.Debugf("sending azure metadata %+v", gid.AzureMetadata)
 	}
 
 	return gid
