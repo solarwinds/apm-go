@@ -44,7 +44,8 @@ func TestLockedHostID(t *testing.T) {
 		withContainerId(dockerId),
 		withMAC(mac),
 		withHerokuId(herokuId),
-		withAzureAppInstId(azureAppInstId))
+		withAzureAppInstId(azureAppInstId),
+	)
 
 	assert.True(t, lh.ready())
 	lh.setReady()

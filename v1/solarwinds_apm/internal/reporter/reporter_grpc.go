@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/uams"
 	"io"
 	"math"
@@ -1175,6 +1176,10 @@ func newHostID(id *host.ID) *collector.HostID {
 	gid.HostType = collector.HostType_PERSISTENT
 	if uid := uams.GetCurrentClientId(); uid != uuid.Nil {
 		gid.UamsClientID = uid.String()
+	}
+	if md := azure.MemoizeMetadata(); md != nil {
+		gid.AzureMetadata = md.ToPB()
+		log.Debugf("sending azure metadata %+v", gid.AzureMetadata)
 	}
 
 	return gid

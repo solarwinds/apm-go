@@ -96,7 +96,8 @@ func (h *ID) copy() *ID {
 		withContainerId(h.containerId),
 		withMAC(h.mac),
 		withHerokuId(h.herokuId),
-		withAzureAppInstId(h.azureAppInstId))
+		withAzureAppInstId(h.azureAppInstId),
+	)
 	return c
 }
 

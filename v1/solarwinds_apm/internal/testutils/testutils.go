@@ -17,9 +17,13 @@ package testutils
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 func TracerSetup() (trace.Tracer, func()) {
@@ -69,4 +73,12 @@ func (de *dummyExporter) ExportSpans(context.Context, []sdktrace.ReadOnlySpan) e
 
 func (de *dummyExporter) Shutdown(context.Context) error {
 	return nil
+}
+
+func Srv(t *testing.T, response string, status int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		_, err := fmt.Fprint(w, response)
+		require.NoError(t, err)
+	}))
 }
