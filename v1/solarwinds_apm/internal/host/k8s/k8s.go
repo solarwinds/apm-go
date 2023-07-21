@@ -16,10 +16,13 @@ package k8s
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
 	"regexp"
 	"runtime"
@@ -75,23 +78,47 @@ func MemoizeMetadata() *Metadata {
 }
 
 func requestMetadata() (*Metadata, error) {
-	namespace, err := getNamespace(determineNamspaceFileForOS())
-	if err != nil {
-		return nil, err
+	var namespace, podName, podUid string
+	var err error
+
+	// `k8s.*` attributes in `OTEL_RESOURCE_ATTRIBUTES` take precedence
+	if otelRes, err := resource.New(context.Background(), resource.WithFromEnv()); err != nil {
+		log.Debugf("otel resource detector failed: %s; continuing", err)
+	} else {
+		for _, attr := range otelRes.Attributes() {
+			if attr.Key == semconv.K8SNamespaceNameKey {
+				namespace = attr.Value.AsString()
+			} else if attr.Key == semconv.K8SPodNameKey {
+				podName = attr.Value.AsString()
+			} else if attr.Key == semconv.K8SPodUIDKey {
+				podUid = attr.Value.AsString()
+			}
+		}
 	}
+
 	if namespace == "" {
-		return nil, errors.New("k8s namespace was empty")
+		// If we don't find a namespace, we skip the rest
+		namespace, err = getNamespace(determineNamspaceFileForOS())
+		if err != nil {
+			return nil, err
+		} else if namespace == "" {
+			return nil, errors.New("k8s namespace was empty")
+		}
 	}
 
-	podName, err := getPodname()
-	if err != nil {
-		log.Debugf("could not retrieve k8s podname %s, continuing", err)
+	if podName == "" {
+		podName, err = getPodname()
+		if err != nil {
+			log.Debugf("could not retrieve k8s podname %s, continuing", err)
+		}
 	}
 
-	// This function will only fallback when GOOS == "linux", so we always pass in `linuxProcMountInfo` as the filename
-	podUid, err := getPodUid(linuxProcMountInfo)
-	if err != nil {
-		log.Debugf("could not retrieve k8s podUid %s, continuing", err)
+	if podUid == "" {
+		// This function will only fallback when GOOS == "linux", so we always pass in `linuxProcMountInfo` as the filename
+		podUid, err = getPodUid(linuxProcMountInfo)
+		if err != nil {
+			log.Debugf("could not retrieve k8s podUid %s, continuing", err)
+		}
 	}
 
 	return &Metadata{

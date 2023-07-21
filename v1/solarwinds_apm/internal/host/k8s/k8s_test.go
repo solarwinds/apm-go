@@ -15,14 +15,42 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
 	"runtime"
 	"testing"
 )
 
 // Test requestMetadata
+
+func TestRequestMetadataFromOtelResource(t *testing.T) {
+	defer testutils.Setenv(t,
+		"OTEL_RESOURCE_ATTRIBUTES",
+		"k8s.pod.name=otel pod name,k8s.namespace.name=otel namespace,k8s.pod.uid=otel uid",
+	)()
+
+	// our envs should be ignored
+	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "IGNORED")()
+	defer testutils.Setenv(t, "SW_K8S_POD_NAME", "IGNORED")()
+	defer testutils.Setenv(t, "SW_K8S_POD_UID", "IGNORED")()
+
+	otelRes, err := resource.New(context.Background(), resource.WithFromEnv())
+	require.NoError(t, err)
+	require.Contains(t, otelRes.Attributes(), semconv.K8SPodName("otel pod name"))
+	require.Contains(t, otelRes.Attributes(), semconv.K8SNamespaceName("otel namespace"))
+	require.Contains(t, otelRes.Attributes(), semconv.K8SPodUID("otel uid"))
+	md, err := requestMetadata()
+	require.NoError(t, err)
+	require.NotNil(t, md)
+	require.Equal(t, md.PodName, "otel pod name")
+	require.Equal(t, md.Namespace, "otel namespace")
+	require.Equal(t, md.PodUid, "otel uid")
+}
 
 func TestRequestMetadataFromEnv(t *testing.T) {
 	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", ""))
@@ -31,10 +59,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	require.Nil(t, md)
 	require.Equal(t, "k8s namespace was empty", err.Error())
 
-	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", "my env namespace"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
-	}()
+	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
 	md, err = requestMetadata()
 	require.NoError(t, err)
 	var hostname string
@@ -45,15 +70,8 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	require.Equal(t, hostname, md.PodName)
 	require.Equal(t, "", md.PodUid)
 
-	require.NoError(t, os.Setenv("SW_K8S_POD_NAME", "my env pod name"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAME"))
-	}()
-
-	require.NoError(t, os.Setenv("SW_K8S_POD_UID", "my env uid"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
-	}()
+	defer testutils.Setenv(t, "SW_K8S_POD_NAME", "my env pod name")()
+	defer testutils.Setenv(t, "SW_K8S_POD_UID", "my env uid")()
 
 	md, err = requestMetadata()
 	require.NoError(t, err)
@@ -99,10 +117,7 @@ func TestGetNamespaceFromFallbackFile(t *testing.T) {
 }
 
 func TestGetNamespaceFromEnv(t *testing.T) {
-	require.NoError(t, os.Setenv("SW_K8S_POD_NAMESPACE", "my env namespace"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
-	}()
+	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
 	ns, err := getNamespace("this file does not exist and should not be opened")
 	require.NoError(t, err)
 	require.Equal(t, "my env namespace", ns)
@@ -128,10 +143,7 @@ func TestGetPodNameHostname(t *testing.T) {
 }
 
 func TestGetPodNameFromEnv(t *testing.T) {
-	require.NoError(t, os.Setenv("SW_K8S_POD_NAME", "my env pod name"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_NAME"))
-	}()
+	defer testutils.Setenv(t, "SW_K8S_POD_NAME", "my env pod name")()
 	pn, err := getPodname()
 	require.NoError(t, err)
 	require.Equal(t, "my env pod name", pn)
@@ -140,10 +152,7 @@ func TestGetPodNameFromEnv(t *testing.T) {
 // Test getPodUid
 
 func TestGetPodUidFromEnv(t *testing.T) {
-	require.NoError(t, os.Setenv("SW_K8S_POD_UID", "0c04997a-a33e-44d6-8185-32fb1cb4357f"))
-	defer func() {
-		require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
-	}()
+	defer testutils.Setenv(t, "SW_K8S_POD_UID", "0c04997a-a33e-44d6-8185-32fb1cb4357f")()
 	uid, err := getPodUid("fallback file does not exist")
 	require.NoError(t, err)
 	require.Equal(t, "0c04997a-a33e-44d6-8185-32fb1cb4357f", uid)
