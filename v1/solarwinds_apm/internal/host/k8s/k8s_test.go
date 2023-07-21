@@ -23,8 +23,47 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
 	"runtime"
+	"sync"
 	"testing"
 )
+
+// Test MemoizeMetadata
+
+func TestMemoizeMetadata(t *testing.T) {
+	// reset the once
+	once = sync.Once{}
+	defer testutils.Setenv(t,
+		"OTEL_RESOURCE_ATTRIBUTES",
+		"k8s.pod.name=otel pod name,k8s.namespace.name=otel namespace,k8s.pod.uid=otel uid",
+	)()
+
+	md := MemoizeMetadata()
+	require.NotNil(t, md)
+	require.Equal(t, "otel pod name", md.PodName)
+	require.Equal(t, "otel namespace", md.Namespace)
+	require.Equal(t, "otel uid", md.PodUid)
+
+	require.NoError(t, os.Unsetenv("OTEL_RESOURCE_ATTRIBUTES"))
+
+	// A second call to memoize should basically be a no-op, returning the previous value
+	md2 := MemoizeMetadata()
+	// They should not only be equal...
+	require.Equal(t, md, md2)
+	// they should point to the same thing!
+	require.Equal(t, *md, *md2)
+}
+
+func TestMemoizeMetadataNil(t *testing.T) {
+	// reset the once
+	once = sync.Once{}
+	require.NoError(t, os.Unsetenv("OTEL_RESOURCE_ATTRIBUTES"))
+	require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
+
+	md := MemoizeMetadata()
+	require.Nil(t, md)
+	md2 := MemoizeMetadata()
+	require.Nil(t, md2)
+}
 
 // Test requestMetadata
 
