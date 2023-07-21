@@ -57,7 +57,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
-	require.Equal(t, "k8s namespace was empty", err.Error())
+	require.Equal(t, "open /run/secrets/kubernetes.io/serviceaccount/namespace: no such file or directory", err.Error())
 
 	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
 	md, err = requestMetadata()
@@ -100,7 +100,7 @@ func TestMetadata_ToPB(t *testing.T) {
 	require.Equal(t, md.PodUid, pb.PodUid)
 }
 
-// Test getNamespace
+// Test getNamespaceFromFile
 
 func TestGetNamespaceFromFallbackFile(t *testing.T) {
 	f, err := os.CreateTemp("", "")
@@ -111,21 +111,14 @@ func TestGetNamespaceFromFallbackFile(t *testing.T) {
 	}()
 	_, err = f.WriteString("my file namespace")
 	require.NoError(t, err)
-	ns, err := getNamespace(f.Name())
+	ns, err := getNamespaceFromFile(f.Name())
 	require.NoError(t, err)
 	require.Equal(t, "my file namespace", ns)
 }
 
-func TestGetNamespaceFromEnv(t *testing.T) {
-	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
-	ns, err := getNamespace("this file does not exist and should not be opened")
-	require.NoError(t, err)
-	require.Equal(t, "my env namespace", ns)
-}
-
 func TestGetNamespaceNoneFound(t *testing.T) {
 	require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
-	ns, err := getNamespace("this file does not exist and should not be opened")
+	ns, err := getNamespaceFromFile("this file does not exist and should not be opened")
 	require.Error(t, err)
 	require.Equal(t, "open this file does not exist and should not be opened: no such file or directory", err.Error())
 	require.Equal(t, "", ns)
@@ -135,32 +128,18 @@ func TestGetNamespaceNoneFound(t *testing.T) {
 // Test getPodName
 
 func TestGetPodNameHostname(t *testing.T) {
-	pn, err := getPodname()
+	pn, err := getPodnameFromHostname()
 	require.NoError(t, err)
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 	require.Equal(t, hostname, pn)
 }
 
-func TestGetPodNameFromEnv(t *testing.T) {
-	defer testutils.Setenv(t, "SW_K8S_POD_NAME", "my env pod name")()
-	pn, err := getPodname()
-	require.NoError(t, err)
-	require.Equal(t, "my env pod name", pn)
-}
-
-// Test getPodUid
-
-func TestGetPodUidFromEnv(t *testing.T) {
-	defer testutils.Setenv(t, "SW_K8S_POD_UID", "0c04997a-a33e-44d6-8185-32fb1cb4357f")()
-	uid, err := getPodUid("fallback file does not exist")
-	require.NoError(t, err)
-	require.Equal(t, "0c04997a-a33e-44d6-8185-32fb1cb4357f", uid)
-}
+// Test getPodUidFromFile
 
 func TestGetPodUidFromFileFails(t *testing.T) {
 	require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
-	uid, err := getPodUid(linuxProcMountInfo)
+	uid, err := getPodUidFromFile(linuxProcMountInfo)
 	require.Error(t, err)
 	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "linux" {

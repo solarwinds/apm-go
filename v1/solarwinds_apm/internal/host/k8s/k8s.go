@@ -96,9 +96,22 @@ func requestMetadata() (*Metadata, error) {
 		}
 	}
 
+	// Now, check `SW_K8S_*` environment variables
+	if namespace == "" {
+		namespace = os.Getenv("SW_K8S_POD_NAMESPACE")
+	}
+	if podName == "" {
+		podName = os.Getenv("SW_K8S_POD_NAME")
+	}
+	if podUid == "" {
+		podUid = os.Getenv("SW_K8S_POD_UID")
+	}
+
+	// Now fallbacks
+
 	if namespace == "" {
 		// If we don't find a namespace, we skip the rest
-		namespace, err = getNamespace(determineNamspaceFileForOS())
+		namespace, err = getNamespaceFromFile(determineNamspaceFileForOS())
 		if err != nil {
 			return nil, err
 		} else if namespace == "" {
@@ -107,7 +120,7 @@ func requestMetadata() (*Metadata, error) {
 	}
 
 	if podName == "" {
-		podName, err = getPodname()
+		podName, err = getPodnameFromHostname()
 		if err != nil {
 			log.Debugf("could not retrieve k8s podname %s, continuing", err)
 		}
@@ -115,7 +128,7 @@ func requestMetadata() (*Metadata, error) {
 
 	if podUid == "" {
 		// This function will only fallback when GOOS == "linux", so we always pass in `linuxProcMountInfo` as the filename
-		podUid, err = getPodUid(linuxProcMountInfo)
+		podUid, err = getPodUidFromFile(linuxProcMountInfo)
 		if err != nil {
 			log.Debugf("could not retrieve k8s podUid %s, continuing", err)
 		}
@@ -128,38 +141,24 @@ func requestMetadata() (*Metadata, error) {
 	}, nil
 }
 
-func getNamespace(fallbackFile string) (string, error) {
-	if ns, ok := os.LookupEnv("SW_K8S_POD_NAMESPACE"); ok {
-		log.Debug("Successfully read k8s namespace from SW_K8S_POD_NAMESPACE")
-		return ns, nil
-	}
-
-	log.Debugf("Attempting to read namespace from %s", fallbackFile)
-	if ns, err := os.ReadFile(fallbackFile); err != nil {
+func getNamespaceFromFile(fn string) (string, error) {
+	log.Debugf("Attempting to read namespace from %s", fn)
+	if ns, err := os.ReadFile(fn); err != nil {
 		return "", err
 	} else {
 		return string(ns), nil
 	}
 }
 
-func getPodname() (string, error) {
-	if pn, ok := os.LookupEnv("SW_K8S_POD_NAME"); ok {
-		log.Debug("Successfully read k8s pod name from SW_K8S_POD_NAME")
-		return pn, nil
-	}
-
+func getPodnameFromHostname() (string, error) {
+	log.Debugf("Returning hostname as k8s pod name")
 	return os.Hostname()
 }
 
-func getPodUid(fallbackFile string) (string, error) {
-	if uid, ok := os.LookupEnv("SW_K8S_POD_UID"); ok {
-		log.Debug("Successfully read k8s pod uid from SW_K8S_POD_UID")
-		return uid, nil
-	}
-
+func getPodUidFromFile(fn string) (string, error) {
 	//goland:noinspection GoBoolExpressions
 	if runtime.GOOS == "linux" {
-		return getPodUidFromProc(fallbackFile)
+		return getPodUidFromProc(fn)
 	} else {
 		log.Debugf("Cannot determine k8s pod uid on OS %s; please set SW_K8S_POD_UID", runtime.GOOS)
 		return "", errors.New("cannot determine k8s pod uid on host OS")
