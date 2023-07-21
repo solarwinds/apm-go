@@ -14,11 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+CONFIG=$(mktemp)
+cat > "$CONFIG" <<- EOM
+[req]
+distinguished_name=req
+[san]
+subjectAltName=DNS:localhost
+EOM
+
 openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
   -keyout for_test.key -out for_test.crt -extensions san -config \
-  <(echo "[req]";
-    echo distinguished_name=req;
-    echo "[san]";
-    echo subjectAltName=DNS:localhost
-    ) \
+  "$CONFIG" \
   -subj "/CN=localhost"
+
+rm -f "$CONFIG"
