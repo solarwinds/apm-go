@@ -85,14 +85,15 @@ func requestMetadata() (*Metadata, error) {
 	if otelRes, err := resource.New(context.Background(), resource.WithFromEnv()); err != nil {
 		log.Debugf("otel resource detector failed: %s; continuing", err)
 	} else {
-		for _, attr := range otelRes.Attributes() {
-			if attr.Key == semconv.K8SNamespaceNameKey {
-				namespace = attr.Value.AsString()
-			} else if attr.Key == semconv.K8SPodNameKey {
-				podName = attr.Value.AsString()
-			} else if attr.Key == semconv.K8SPodUIDKey {
-				podUid = attr.Value.AsString()
-			}
+		kvs := otelRes.Set()
+		if val, ok := kvs.Value(semconv.K8SNamespaceNameKey); ok {
+			namespace = val.AsString()
+		}
+		if val, ok := kvs.Value(semconv.K8SPodNameKey); ok {
+			podName = val.AsString()
+		}
+		if val, ok := kvs.Value(semconv.K8SPodUIDKey); ok {
+			podUid = val.AsString()
 		}
 	}
 
