@@ -15,6 +15,7 @@
 package host
 
 import (
+	"bufio"
 	"io"
 	"net"
 	"net/http"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 )
 
 // EC2 Metadata URLs
@@ -226,43 +226,69 @@ func getEC2Zone() string {
 // getContainerID fetches the container ID by reading '/proc/self/cgroup'
 func getContainerID() (id string) {
 	containerIdOnce.Do(func() {
-		containerId = getContainerIDFromString(func(keyword string) string {
-			return utils.GetLineByKeyword("/proc/self/cgroup", keyword)
-		})
+		containerId = getContainerIdFromFile("/proc/self/cgroup")
 		log.Debugf("Got and cached container id: %s", containerId)
 	})
 
 	return containerId
 }
 
-// getContainerIDFromString initializes the container ID (or empty
-// string if not a docker/ecs container). It accepts a function parameter
-// as the source where it gets container metadata from, which makes it more
-// flexible and enables better testability.
-// A typical line returned by cat /proc/self/cgroup:
-// 9:devices:/docker/40188af19439697187e3f60b933e7e37c5c41035f4c0b266a51c86c5a0074b25
-func getContainerIDFromString(getter func(string) string) string {
-	keywords := []string{"/docker/", "/ecs/", "/kubepods/", "/docker.service/"}
-	isID := regexp.MustCompile("^[0-9a-f]{64}$").MatchString
-	line := ""
+var containerIdRegex = regexp.MustCompile(`\A[a-f0-9]{64}\z`)
 
-	for _, keyword := range keywords {
-		if line = getter(keyword); line != "" {
-			break
+func getContainerIdFromFile(fn string) string {
+	if f, err := os.Open(fn); err != nil {
+		log.Debugf("failed to open cgroup file: %s", err)
+	} else {
+		defer func() {
+			if err = f.Close(); err != nil {
+				log.Debugf("failed to close cgroup file %s", err)
+			}
+		}()
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			if cid := findContainerId(scanner.Text()); cid != "" {
+				return cid
+			}
 		}
 	}
+	return ""
+}
 
-	if line == "" {
+func findContainerId(line string) string {
+	if len(line) < 64 {
 		return ""
 	}
-
-	tokens := strings.Split(line, "/")
-	for _, token := range tokens {
-		// a length of 64 indicates a container ID
-		// ensure token is hex SHA1
-		if isID(token) {
-			return token
+	lastSlashIdx := strings.LastIndex(line, "/")
+	if lastSlashIdx == -1 {
+		return ""
+	}
+	var containerId string
+	lastSection := line[lastSlashIdx+1:]
+	colonIdx := strings.LastIndex(lastSection, ":")
+	if colonIdx > -1 {
+		// since containerd v1.5.0+, containerId is divided by the last colon when the cgroupDriver is systemd:
+		// https://github.com/containerd/containerd/blob/release/1.5/pkg/cri/server/helpers_linux.go#L64
+		containerId = lastSection[colonIdx+1:]
+	} else {
+		startIdx := strings.LastIndex(lastSection, "-")
+		if startIdx == -1 {
+			startIdx = 0
+		} else {
+			startIdx++
 		}
+
+		endIdx := strings.LastIndex(lastSection, ".")
+		if endIdx == -1 {
+			endIdx = len(lastSection)
+		}
+		if startIdx > endIdx {
+			return ""
+		}
+		containerId = lastSection[startIdx:endIdx]
+	}
+
+	if containerIdRegex.MatchString(containerId) {
+		return containerId
 	}
 	return ""
 }
