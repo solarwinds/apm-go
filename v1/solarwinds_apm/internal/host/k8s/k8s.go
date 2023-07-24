@@ -26,6 +26,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -174,6 +175,9 @@ func getPodUidFromProc(fn string) (string, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
+		if !strings.Contains(line, "kube") {
+			continue
+		}
 		if match := uuidRegex.FindString(line); match != "" {
 			return match, nil
 		}
