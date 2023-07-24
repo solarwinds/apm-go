@@ -211,7 +211,8 @@ func TestGetPodUidFromProcNoMatch(t *testing.T) {
 		require.NoError(t, os.Remove(f.Name()))
 	}()
 	_, err = f.WriteString(`
-just a file that should not match the regex
+contains kube but does not have a uuid
+this will match the regex but does not contain k.u.b.e 9dcdb600-4156-4b7b-afcc-f8c06cb0e474
 `)
 	require.NoError(t, err)
 	uid, err := getPodUidFromProc(f.Name())
