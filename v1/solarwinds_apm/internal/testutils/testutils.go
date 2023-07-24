@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -81,4 +82,12 @@ func Srv(t *testing.T, response string, status int) *httptest.Server {
 		_, err := fmt.Fprint(w, response)
 		require.NoError(t, err)
 	}))
+}
+
+// Setenv Returns a callback for use with defer
+func Setenv(t *testing.T, k string, v string) func() {
+	require.NoError(t, os.Setenv(k, v))
+	return func() {
+		require.NoError(t, os.Unsetenv(k))
+	}
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/azure"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host/k8s"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/uams"
 	"io"
 	"math"
@@ -1180,6 +1181,10 @@ func newHostID(id *host.ID) *collector.HostID {
 	if md := azure.MemoizeMetadata(); md != nil {
 		gid.AzureMetadata = md.ToPB()
 		log.Debugf("sending azure metadata %+v", gid.AzureMetadata)
+	}
+	if md := k8s.MemoizeMetadata(); md != nil {
+		gid.K8SMetadata = md.ToPB()
+		log.Debugf("sending k8s metadata %+v", gid.K8SMetadata)
 	}
 
 	return gid
