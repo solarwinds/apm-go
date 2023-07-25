@@ -16,7 +16,7 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
@@ -213,7 +213,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		if s.traceStateSwSampled {
 			flags = "01"
 		}
-		traceState, err = traceState.Insert(constants.SWTraceStateKey, fmt.Sprintf("2222222222222222-%s", flags))
+		traceState, err = swotel.SetSw(traceState, fmt.Sprintf("2222222222222222-%s", flags))
 		if err != nil {
 			t.Fatal("Could not insert tracestate key")
 		}

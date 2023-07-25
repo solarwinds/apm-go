@@ -109,6 +109,7 @@ func parseXTraceOptions(opts string, sig string) Options {
 		x.sigState = NoSignature
 	} else {
 		err := reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
+		// TODO handle `no-signature-key`
 		if err != nil {
 			log.Warning("Invalid xtrace options signature", err)
 			x.sigState = InvalidSignature
@@ -162,6 +163,6 @@ func (x Options) Opts() string {
 	return x.opts
 }
 
-func (x Options) IncludeReponse() bool {
+func (x Options) IncludeResponse() bool {
 	return x.opts != ""
 }

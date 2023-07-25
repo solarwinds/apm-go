@@ -17,6 +17,7 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 
@@ -51,8 +52,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 			return
 		}
 	}
-	// Note: Insert will update the key if it exists
-	traceState, err = traceState.Insert(constants.SWTraceStateKey, swVal)
+	traceState, err = swotel.SetSw(traceState, swVal)
 	if err != nil {
 		log.Debugf("could not insert vendor info into tracestate `%s`", swVal)
 		return

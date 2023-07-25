@@ -85,7 +85,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		}
 		ts := hydrateTraceState(psc)
 		var attrs []attribute.KeyValue
-		if xto.IncludeReponse() {
+		if xto.IncludeResponse() {
 			auth := ""
 			switch xto.SignatureState() {
 			case xtrace.InvalidSignature:
