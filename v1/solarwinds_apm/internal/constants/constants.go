@@ -16,11 +16,6 @@ package constants
 
 const (
 
-	// Headers
-
-	XTraceHdr         = "X-Trace"
-	XTraceOptsRespHdr = "X-Trace-Options-Response"
-
 	// Other
 
 	Edge       = "Edge"

@@ -16,12 +16,16 @@ package swohttp
 
 import (
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strings"
+)
+
+const (
+	XTraceHdr         = "X-Trace"
+	XTraceOptsRespHdr = "X-Trace-Options-Response"
 )
 
 func NewHandler(h http.Handler) http.Handler {
@@ -32,8 +36,8 @@ func NewHandler(h http.Handler) http.Handler {
 				flags = "01"
 			}
 			x := fmt.Sprintf("00-%s-%s-%s", ctx.TraceID().String(), ctx.SpanID().String(), flags)
-			exposeHeaders := []string{constants.XTraceHdr}
-			w.Header().Add(constants.XTraceHdr, x)
+			exposeHeaders := []string{XTraceHdr}
+			w.Header().Add(XTraceHdr, x)
 
 			ts := ctx.TraceState()
 			resp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
@@ -41,8 +45,8 @@ func NewHandler(h http.Handler) http.Handler {
 				log.Debugf("Could not get xtrace opt resp header: %s", err)
 			}
 			if resp != "" {
-				exposeHeaders = append(exposeHeaders, constants.XTraceOptsRespHdr)
-				w.Header().Add(constants.XTraceOptsRespHdr, resp)
+				exposeHeaders = append(exposeHeaders, XTraceOptsRespHdr)
+				w.Header().Add(XTraceOptsRespHdr, resp)
 			}
 
 			w.Header().Add("Access-Control-Expose-Headers", strings.Join(exposeHeaders, ","))
