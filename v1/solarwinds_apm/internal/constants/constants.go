@@ -15,9 +15,6 @@
 package constants
 
 const (
-	// SW-specific constants
-
-	SWXTraceOptsResp = "sw.xtrace.options.response"
 
 	// Headers
 

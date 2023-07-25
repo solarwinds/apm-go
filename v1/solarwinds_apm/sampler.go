@@ -16,8 +16,9 @@ package solarwinds_apm
 
 import (
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,13 +42,37 @@ func (s sampler) Description() string {
 var alwaysSampler = sdktrace.AlwaysSample()
 var neverSampler = sdktrace.NeverSample()
 
-func hydrateTraceState(psc trace.SpanContext) trace.TraceState {
+func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, dec reporter.SampleDecision) trace.TraceState {
 	var ts trace.TraceState
 	if !psc.IsValid() {
 		// create new tracestate
 		ts = trace.TraceState{}
 	} else {
 		ts = psc.TraceState()
+	}
+	if xto.IncludeResponse() {
+		auth := ""
+		switch xto.SignatureState() {
+		case xtrace.InvalidSignature:
+			auth = "bad-signature"
+		case xtrace.ValidSignature:
+			auth = "ok"
+		case xtrace.NoSignature:
+		default:
+			// nothing
+		}
+		xtoResp := dec.XTraceOptsRsp()
+		if xtoResp != "" {
+			fullResp := fmt.Sprintf("trigger-trace:%s", xtoResp)
+			if auth != "" {
+				fullResp = fmt.Sprintf("auth=%s;%s", auth, fullResp)
+			}
+			var err error
+			ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, fullResp)
+			if err != nil {
+				log.Debugf("could not set xtrace opts response header: %s", err)
+			}
+		}
 	}
 
 	return ts
@@ -83,29 +108,8 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		} else {
 			decision = sdktrace.RecordOnly
 		}
-		ts := hydrateTraceState(psc)
+		ts := hydrateTraceState(psc, xto, traceDecision)
 		var attrs []attribute.KeyValue
-		if xto.IncludeResponse() {
-			auth := ""
-			switch xto.SignatureState() {
-			case xtrace.InvalidSignature:
-				auth = "bad-signature"
-			case xtrace.ValidSignature:
-				auth = "ok"
-			case xtrace.NoSignature:
-			default:
-				// nothing
-			}
-			xtoResp := traceDecision.XTraceOptsRsp()
-			if xtoResp != "" {
-				fullResp := fmt.Sprintf("trigger-trace:%s", xtoResp)
-				if auth != "" {
-					fullResp = fmt.Sprintf("auth=%s;%s", auth, fullResp)
-				}
-				attrs = append(attrs, attribute.String(constants.SWXTraceOptsResp, fullResp))
-			}
-		}
-
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
 			Tracestate: ts,
