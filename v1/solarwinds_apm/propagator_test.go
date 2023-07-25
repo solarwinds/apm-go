@@ -16,6 +16,8 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
+	"github.com/stretchr/testify/require"
 	"log"
 	"testing"
 
@@ -102,6 +104,22 @@ func TestInjectWithTracestatePrevSw(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("sw=%s-00", spanIdHex), carrier.Get("tracestate"))
 }
 
+func TestInjectWithTracestateRemoveXOptsResp(t *testing.T) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceId,
+		SpanID:     spanId,
+		TraceFlags: 0,
+	})
+	carrier := propagation.MapCarrier{}
+	carrier.Set("tracestate", "sw=012301230-00,xtrace_options_response=foobarbaz")
+	p := SolarwindsPropagator{}
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+
+	p.Inject(ctx, carrier)
+
+	assert.Equal(t, fmt.Sprintf("sw=%s-00", spanIdHex), carrier.Get("tracestate"))
+}
+
 func TestExtract(t *testing.T) {
 	ctx := context.TODO()
 	carrier := propagation.MapCarrier{}
@@ -109,6 +127,40 @@ func TestExtract(t *testing.T) {
 	p := SolarwindsPropagator{}
 	newCtx := p.Extract(ctx, carrier)
 	assert.Equal(t, ctx, newCtx)
+}
+
+func TestExtractXOpts(t *testing.T) {
+	carrier := propagation.MapCarrier{
+		xtrace.OptionsHeaderName: "foo bar baz",
+	}
+
+	p := SolarwindsPropagator{}
+	ctx := p.Extract(context.Background(), carrier)
+	require.Equal(t, "foo bar baz", ctx.Value(xtrace.OptionsKey))
+	require.Nil(t, ctx.Value(xtrace.SignatureKey))
+}
+
+func TestExtractXOptsSig(t *testing.T) {
+	carrier := propagation.MapCarrier{
+		xtrace.OptionsSigHeaderName: "signature",
+	}
+
+	p := SolarwindsPropagator{}
+	ctx := p.Extract(context.Background(), carrier)
+	require.Equal(t, "signature", ctx.Value(xtrace.SignatureKey))
+	require.Nil(t, ctx.Value(xtrace.OptionsKey))
+}
+
+func TestExtractXOptsAndSig(t *testing.T) {
+	carrier := propagation.MapCarrier{
+		xtrace.OptionsHeaderName:    "foo bar baz",
+		xtrace.OptionsSigHeaderName: "signature",
+	}
+
+	p := SolarwindsPropagator{}
+	ctx := p.Extract(context.Background(), carrier)
+	require.Equal(t, "foo bar baz", ctx.Value(xtrace.OptionsKey))
+	require.Equal(t, "signature", ctx.Value(xtrace.SignatureKey))
 }
 
 func TestFields(t *testing.T) {
