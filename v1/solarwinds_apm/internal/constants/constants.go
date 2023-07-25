@@ -17,7 +17,13 @@ package constants
 const (
 	// SW-specific constants
 
-	SWTraceStateKey = "sw"
+	SWTraceStateKey  = "sw"
+	SWXTraceOptsResp = "sw.xtrace.options.response"
+
+	// Headers
+
+	XTraceHdr         = "X-Trace"
+	XTraceOptsRespHdr = "X-Trace-Options-Response"
 
 	// Other
 

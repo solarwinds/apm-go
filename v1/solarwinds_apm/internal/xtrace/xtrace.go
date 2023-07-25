@@ -161,3 +161,7 @@ func (x Options) SignatureState() SignatureState {
 func (x Options) Opts() string {
 	return x.opts
 }
+
+func (x Options) IncludeReponse() bool {
+	return x.opts != ""
+}
