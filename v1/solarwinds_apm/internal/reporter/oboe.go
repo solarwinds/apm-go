@@ -273,6 +273,10 @@ func (s SampleDecision) XTraceOptsRsp() string {
 	return s.xTraceOptsRsp
 }
 
+func (s SampleDecision) Enabled() bool {
+	return s.enabled
+}
+
 type TriggerTraceMode int
 
 const (
@@ -331,13 +335,7 @@ func (tm TriggerTraceMode) Requested() bool {
 	}
 }
 
-func oboeSampleRequest(
-	layer string,
-	continued bool,
-	url string,
-	triggerTrace TriggerTraceMode,
-	swState *w3cfmt.SwTraceState,
-) SampleDecision {
+func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	if usingTestReporter {
 		if r, ok := globalReporter.(*TestReporter); ok {
 			if !r.UseSettings {
@@ -399,23 +397,8 @@ func oboeSampleRequest(
 				doRateLimiting = true
 			}
 		}
-	} else {
-		// TODO: When we refactor oboe, extract into something easier to test
-		if swState != nil && swState.IsValid() {
-			if swState.Flags().IsSampled() {
-				if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
-					retval = true
-				} else if flags&FLAG_SAMPLE_THROUGH != 0 {
-					// roll the dice
-					diceRolled = true
-					retval = shouldSample(sampleRate)
-				}
-			} else {
-				retval = false
-			}
-		} else {
-			// This path will only be hit by the legacy non-otel code
-			// TODO remove when we rip out the ao-style context/trace/span/etc
+	} else if swState.IsValid() {
+		if swState.Flags().IsSampled() {
 			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
@@ -423,7 +406,8 @@ func oboeSampleRequest(
 				diceRolled = true
 				retval = shouldSample(sampleRate)
 			}
-
+		} else {
+			retval = false
 		}
 	}
 

@@ -124,12 +124,12 @@ func Closed() bool {
 	return globalReporter.Closed()
 }
 
-func ShouldTraceRequestWithURL(layer string, traced bool, url string, ttMode TriggerTraceMode, swState *w3cfmt.SwTraceState) SampleDecision {
-	return shouldTraceRequestWithURL(layer, traced, url, ttMode, swState)
+func ShouldTraceRequestWithURL(traced bool, url string, ttMode TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+	return shouldTraceRequestWithURL(traced, url, ttMode, swState)
 }
 
-func shouldTraceRequestWithURL(layer string, traced bool, url string, triggerTrace TriggerTraceMode, swState *w3cfmt.SwTraceState) SampleDecision {
-	return oboeSampleRequest(layer, traced, url, triggerTrace, swState)
+func shouldTraceRequestWithURL(traced bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+	return oboeSampleRequest(traced, url, triggerTrace, swState)
 }
 
 func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,

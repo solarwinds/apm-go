@@ -95,15 +95,11 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := reporter.ShouldTraceRequestWithURL(
-			params.Name, // "may not be super relevant" -- lin
-			swState.IsValid(),
-			url,
-			ttMode,
-			&swState,
-		)
+		traceDecision := reporter.ShouldTraceRequestWithURL(swState.IsValid(), url, ttMode, swState)
 		var decision sdktrace.SamplingDecision
-		if traceDecision.Trace() {
+		if !traceDecision.Enabled() {
+			decision = sdktrace.Drop
+		} else if traceDecision.Trace() {
 			decision = sdktrace.RecordAndSample
 		} else {
 			decision = sdktrace.RecordOnly
