@@ -259,9 +259,8 @@ type SamplingScenario struct {
 	oboeDecision bool
 
 	// expectations
-	ttMode             reporter.TriggerTraceMode
-	decision           sdktrace.SamplingDecision
-	attrsIncludeSwKeys bool
+	ttMode   reporter.TriggerTraceMode
+	decision sdktrace.SamplingDecision
 }
 
 func (s SamplingScenario) test(t *testing.T) {
