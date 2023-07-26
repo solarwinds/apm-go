@@ -282,7 +282,7 @@ func (s SamplingScenario) test(t *testing.T) {
 		}
 	}
 	if s.traceStateContainsOther {
-		traceState, err = traceState.Insert("other", "this value should be ignored")
+		traceState, err = traceState.Insert("other", "capture me!")
 		if err != nil {
 			t.Fatal("Could not insert tracestate key")
 		}
@@ -327,6 +327,16 @@ func (s SamplingScenario) test(t *testing.T) {
 	assert.Equal(t, s.decision, result.Decision)
 
 	attrs := attribute.NewSet(result.Attributes...)
+
+	if s.traceStateContainsOther {
+		if result.Decision == sdktrace.RecordAndSample {
+			captured, ok := attrs.Value("sw.w3c.tracestate")
+			require.True(t, ok)
+			require.Equal(t, "other=capture me!", captured.AsString())
+		} else {
+			require.False(t, attrs.HasValue("s3.w3c.tracestate"))
+		}
+	}
 
 	if s.xtraceSwKeys {
 		swKeys, ok := attrs.Value("SWKeys")

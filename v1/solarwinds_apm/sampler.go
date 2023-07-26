@@ -117,6 +117,10 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 			if xto.TriggerTrace() {
 				attrs = append(attrs, attribute.String("TriggeredTrace", "true"))
 			}
+
+			if capture := swotel.Capture(ts); capture.Len() > 0 {
+				attrs = append(attrs, attribute.String("sw.w3c.tracestate", capture.String()))
+			}
 		}
 		result = sdktrace.SamplingResult{
 			Decision:   decision,

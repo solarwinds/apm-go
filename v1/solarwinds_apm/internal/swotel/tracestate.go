@@ -33,6 +33,10 @@ const (
 	XTraceOptResp InternalTSKey = iota
 )
 
+const (
+	xtraceOptRespKey = "xtrace_options_response"
+)
+
 func GetSw(ts trace.TraceState) string {
 	return ts.Get(sw)
 }
@@ -75,10 +79,15 @@ func RemoveInternalState(ts trace.TraceState, key InternalTSKey) (trace.TraceSta
 	}
 }
 
+// Capture returns a tracestate with other (non-sw) vendor identifiers
+func Capture(ts trace.TraceState) trace.TraceState {
+	return ts.Delete(sw).Delete(xtraceOptRespKey)
+}
+
 func internalKeyStr(key InternalTSKey) (string, error) {
 	switch key {
 	case XTraceOptResp:
-		return "xtrace_options_response", nil
+		return xtraceOptRespKey, nil
 	default:
 		return "", fmt.Errorf("invalid key: %d", key)
 	}
