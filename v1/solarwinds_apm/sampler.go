@@ -50,7 +50,6 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, ttResp string)
 	} else {
 		ts = psc.TraceState()
 	}
-	fmt.Printf("XTO: %+v", xto)
 	if xto.IncludeResponse() {
 		full := ""
 		switch xto.SignatureState() {
