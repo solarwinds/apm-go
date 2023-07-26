@@ -17,10 +17,8 @@ package swohttp
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/trace"
 	"regexp"
 
 	"net/http"
@@ -59,8 +57,6 @@ func TestHandlerWithXOptsResponse(t *testing.T) {
 	defer cb()
 
 	resp := doRequest(t, "trigger-trace")
-	ts := trace.TraceState{}
-	ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, "my internal state")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Equal(t, XTrace+","+XTraceOptionsResponse, resp.Header.Get(ACEHdr))
