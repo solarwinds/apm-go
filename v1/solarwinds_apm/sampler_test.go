@@ -386,7 +386,7 @@ func TestHydrateTraceStateBadTimestamp(t *testing.T) {
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, "not a valid signature")
 	xto := xtrace.GetXTraceOptions(ctx)
-	ts := hydrateTraceState(sc, xto, "should not be propagated into the response")
+	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
 	require.Equal(t, "auth=bad-timestamp", fullResp)
@@ -402,7 +402,7 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 	sig := "invalid signature"
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
 	xto := xtrace.GetXTraceOptions(ctx)
-	ts := hydrateTraceState(sc, xto, "ok")
+	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
 	require.Equal(t, "auth=bad-signature", fullResp)

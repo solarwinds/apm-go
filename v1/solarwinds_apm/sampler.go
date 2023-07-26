@@ -50,27 +50,26 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, ttResp string)
 	} else {
 		ts = psc.TraceState()
 	}
+	fmt.Printf("XTO: %+v", xto)
 	if xto.IncludeResponse() {
-		if ttResp != "" {
-			full := ""
-			switch xto.SignatureState() {
-			case xtrace.NoSignature, xtrace.ValidSignature:
-				full = fmt.Sprintf("trigger-trace=%s", ttResp)
-				if xto.SignatureState() == xtrace.ValidSignature {
-					full = fmt.Sprintf("auth=%s;%s", xto.SigAuthMsg(), full)
-				}
-			case xtrace.InvalidSignature:
-				full = fmt.Sprintf("auth=%s", xto.SigAuthMsg())
-			default:
-				log.Debugf("unknown signature state %s, not adding xtrace opts response header", xto.SignatureState())
+		full := ""
+		switch xto.SignatureState() {
+		case xtrace.NoSignature, xtrace.ValidSignature:
+			full = fmt.Sprintf("trigger-trace=%s", ttResp)
+			if xto.SignatureState() == xtrace.ValidSignature {
+				full = fmt.Sprintf("auth=%s;%s", xto.SigAuthMsg(), full)
 			}
+		case xtrace.InvalidSignature:
+			full = fmt.Sprintf("auth=%s", xto.SigAuthMsg())
+		default:
+			log.Debugf("unknown signature state %s, not adding xtrace opts response header", xto.SignatureState())
+		}
 
-			if full != "" {
-				var err error
-				ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, full)
-				if err != nil {
-					log.Debugf("could not set xtrace opts response header: %s", err)
-				}
+		if full != "" {
+			var err error
+			ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, full)
+			if err != nil {
+				log.Debugf("could not set xtrace opts response header: %s", err)
 			}
 		}
 	}
