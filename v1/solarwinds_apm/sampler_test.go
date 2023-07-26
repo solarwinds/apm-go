@@ -271,7 +271,7 @@ func TestHydrateTraceState(t *testing.T) {
 	require.Equal(t, "trigger-trace=ok", fullResp)
 }
 
-func TestHydrateTraceStateInvalidSignature(t *testing.T) {
+func TestHydrateTraceStateBadTimestamp(t *testing.T) {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceId,
 		SpanID:  spanId,
@@ -282,7 +282,41 @@ func TestHydrateTraceStateInvalidSignature(t *testing.T) {
 	ts := hydrateTraceState(sc, xto, "should not be propagated into the response")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
+	require.Equal(t, "auth=bad-timestamp", fullResp)
+}
+
+func TestHydrateTraceStateBadSignature(t *testing.T) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
+	sig := "invalid signature"
+	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
+	xto := xtrace.GetXTraceOptions(ctx)
+	ts := hydrateTraceState(sc, xto, "ok")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
 	require.Equal(t, "auth=bad-signature", fullResp)
+}
+
+func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
+	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.NoSettingST))
+	defer r.Close(0)
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
+	sig := "0000"
+	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
+	xto := xtrace.GetXTraceOptions(ctx)
+	ts := hydrateTraceState(sc, xto, "ok")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
+	require.Equal(t, "auth=no-signature-key", fullResp)
 }
 
 func TestHydrateTraceStateValidSignature(t *testing.T) {

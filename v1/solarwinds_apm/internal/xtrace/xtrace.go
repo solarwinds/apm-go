@@ -108,10 +108,9 @@ func parseXTraceOptions(opts string, sig string) Options {
 	if sig == "" {
 		x.sigState = NoSignature
 	} else {
-		err := reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
-		// TODO handle `no-signature-key`
-		if err != nil {
-			log.Warning("Invalid xtrace options signature", err)
+		x.authStatus = reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
+		if x.authStatus.IsError() {
+			log.Warning("Invalid xtrace options signature", x.authStatus.Msg())
 			x.sigState = InvalidSignature
 		} else {
 			x.sigState = ValidSignature
@@ -129,6 +128,7 @@ type Options struct {
 	tt          bool
 	ignoredKeys []string
 	sigState    SignatureState
+	authStatus  reporter.AuthStatus
 }
 
 func (x Options) SwKeys() string {
@@ -165,4 +165,8 @@ func (x Options) Opts() string {
 
 func (x Options) IncludeResponse() bool {
 	return x.opts != ""
+}
+
+func (x Options) SigAuthMsg() string {
+	return x.authStatus.Msg()
 }

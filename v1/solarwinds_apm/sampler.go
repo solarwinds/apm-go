@@ -57,10 +57,10 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, ttResp string)
 			case xtrace.NoSignature, xtrace.ValidSignature:
 				full = fmt.Sprintf("trigger-trace=%s", ttResp)
 				if xto.SignatureState() == xtrace.ValidSignature {
-					full = fmt.Sprintf("auth=ok;%s", full)
+					full = fmt.Sprintf("auth=%s;%s", xto.SigAuthMsg(), full)
 				}
 			case xtrace.InvalidSignature:
-				full = "auth=bad-signature"
+				full = fmt.Sprintf("auth=%s", xto.SigAuthMsg())
 			default:
 				log.Debugf("unknown signature state %s, not adding xtrace opts response header", xto.SignatureState())
 			}
