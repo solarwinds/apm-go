@@ -19,6 +19,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"testing"
@@ -324,19 +325,17 @@ func (s SamplingScenario) test(t *testing.T) {
 	}
 	result := smplr.ShouldSample(params)
 	assert.Equal(t, s.decision, result.Decision)
-	//
+
+	attrs := attribute.NewSet(result.Attributes...)
+
 	if s.xtraceSwKeys {
-		swKeys := ""
-		for _, a := range result.Attributes {
-			if a.Key == "SWKeys" {
-				swKeys = a.Value.AsString()
-				break
-			}
-		}
+		swKeys, ok := attrs.Value("SWKeys")
 		if result.Decision == sdktrace.RecordAndSample {
-			require.Equal(t, swKeys, "lo:se,check-id:123")
+			require.True(t, ok)
+			require.Equal(t, swKeys.AsString(), "lo:se,check-id:123")
 		} else {
-			require.Equal(t, swKeys, "")
+			require.False(t, ok)
+			require.Equal(t, swKeys.AsString(), "")
 		}
 	}
 
@@ -355,6 +354,12 @@ func (s SamplingScenario) test(t *testing.T) {
 		} else {
 			require.Len(t, res, 0)
 		}
+	}
+
+	if s.triggerTrace && result.Decision == sdktrace.RecordAndSample {
+		v, ok := attrs.Value("TriggeredTrace")
+		require.True(t, ok)
+		require.Equal(t, "true", v.AsString())
 	}
 }
 

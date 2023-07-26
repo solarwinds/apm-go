@@ -116,6 +116,9 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 					attrs = append(attrs, attribute.String(k, v))
 				}
 			}
+			if xto.TriggerTrace() {
+				attrs = append(attrs, attribute.String("TriggeredTrace", "true"))
+			}
 		}
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
