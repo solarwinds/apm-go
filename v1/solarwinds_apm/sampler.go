@@ -42,7 +42,7 @@ func (s sampler) Description() string {
 var alwaysSampler = sdktrace.AlwaysSample()
 var neverSampler = sdktrace.NeverSample()
 
-func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, dec reporter.SampleDecision) trace.TraceState {
+func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, ttResp string) trace.TraceState {
 	var ts trace.TraceState
 	if !psc.IsValid() {
 		// create new tracestate
@@ -51,26 +51,26 @@ func hydrateTraceState(psc trace.SpanContext, xto xtrace.Options, dec reporter.S
 		ts = psc.TraceState()
 	}
 	if xto.IncludeResponse() {
-		auth := ""
-		switch xto.SignatureState() {
-		case xtrace.InvalidSignature:
-			auth = "bad-signature"
-		case xtrace.ValidSignature:
-			auth = "ok"
-		case xtrace.NoSignature:
-		default:
-			// nothing
-		}
-		xtoResp := dec.XTraceOptsRsp()
-		if xtoResp != "" {
-			fullResp := fmt.Sprintf("trigger-trace:%s", xtoResp)
-			if auth != "" {
-				fullResp = fmt.Sprintf("auth=%s;%s", auth, fullResp)
+		if ttResp != "" {
+			full := ""
+			switch xto.SignatureState() {
+			case xtrace.NoSignature, xtrace.ValidSignature:
+				full = fmt.Sprintf("trigger-trace=%s", ttResp)
+				if xto.SignatureState() == xtrace.ValidSignature {
+					full = fmt.Sprintf("auth=ok;%s", full)
+				}
+			case xtrace.InvalidSignature:
+				full = "auth=bad-signature"
+			default:
+				log.Debugf("unknown signature state %s, not adding xtrace opts response header", xto.SignatureState())
 			}
-			var err error
-			ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, fullResp)
-			if err != nil {
-				log.Debugf("could not set xtrace opts response header: %s", err)
+
+			if full != "" {
+				var err error
+				ts, err = swotel.SetInternalState(ts, swotel.XTraceOptResp, full)
+				if err != nil {
+					log.Debugf("could not set xtrace opts response header: %s", err)
+				}
 			}
 		}
 	}
@@ -104,7 +104,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		} else {
 			decision = sdktrace.RecordOnly
 		}
-		ts := hydrateTraceState(psc, xto, traceDecision)
+		ts := hydrateTraceState(psc, xto, traceDecision.XTraceOptsRsp())
 		var attrs []attribute.KeyValue
 		result = sdktrace.SamplingResult{
 			Decision:   decision,

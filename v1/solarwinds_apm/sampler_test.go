@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
+	"time"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/stretchr/testify/assert"
@@ -252,4 +254,53 @@ func (s SamplingScenario) test(t *testing.T) {
 	}
 	result := smplr.ShouldSample(params)
 	assert.Equal(t, s.decision, result.Decision)
+}
+
+// hydrateTraceState
+
+func TestHydrateTraceState(t *testing.T) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
+	xto := xtrace.GetXTraceOptions(ctx)
+	ts := hydrateTraceState(sc, xto, "ok")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
+	require.Equal(t, "trigger-trace=ok", fullResp)
+}
+
+func TestHydrateTraceStateInvalidSignature(t *testing.T) {
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
+	ctx = context.WithValue(ctx, xtrace.SignatureKey, "not a valid signature")
+	xto := xtrace.GetXTraceOptions(ctx)
+	ts := hydrateTraceState(sc, xto, "should not be propagated into the response")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
+	require.Equal(t, "auth=bad-signature", fullResp)
+}
+
+func TestHydrateTraceStateValidSignature(t *testing.T) {
+	// set test reporter so we can use the hmac token for signing the xto
+	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
+	defer r.Close(0)
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
+	sig, err := reporter.HmacHashTT([]byte(opts))
+	require.NoError(t, err)
+	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
+	xto := xtrace.GetXTraceOptions(ctx)
+	ts := hydrateTraceState(sc, xto, "ok")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
+	require.Equal(t, "auth=ok;trigger-trace=ok", fullResp)
 }
