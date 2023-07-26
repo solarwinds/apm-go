@@ -20,6 +20,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,6 +165,64 @@ func TestScenario8(t *testing.T) {
 	// No need to test unsampled here since oboe handles that logic
 }
 
+func TestScenarioSwKeys(t *testing.T) {
+	scen := SamplingScenario{
+		validTraceParent:        true,
+		traceStateContainsOther: true,
+		triggerTrace:            true,
+		xtraceSignature:         false,
+		xtraceSwKeys:            true,
+
+		oboeDecision: true,
+		ttMode:       reporter.ModeTriggerTraceNotPresent,
+		decision:     sdktrace.RecordAndSample,
+	}
+	scen.test(t)
+}
+
+func TestScenarioSwKeysUnsampled(t *testing.T) {
+	scen := SamplingScenario{
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		traceStateSwSampled:  false,
+		oboeDecision:         false,
+		xtraceSwKeys:         true,
+
+		ttMode:   reporter.ModeTriggerTraceNotPresent,
+		decision: sdktrace.RecordOnly,
+	}
+	scen.test(t)
+}
+
+func TestScenarioCustomKeys(t *testing.T) {
+	scen := SamplingScenario{
+		validTraceParent:        true,
+		traceStateContainsOther: true,
+		triggerTrace:            true,
+		xtraceSignature:         false,
+		xtraceCustomKeys:        true,
+
+		oboeDecision: true,
+		ttMode:       reporter.ModeTriggerTraceNotPresent,
+		decision:     sdktrace.RecordAndSample,
+	}
+	scen.test(t)
+}
+
+func TestScenarioCustomKeysUnsampled(t *testing.T) {
+	scen := SamplingScenario{
+		validTraceParent:     true,
+		traceStateContainsSw: true,
+		traceStateSwSampled:  false,
+		oboeDecision:         false,
+		xtraceCustomKeys:     false,
+
+		ttMode:   reporter.ModeTriggerTraceNotPresent,
+		decision: sdktrace.RecordOnly,
+	}
+	scen.test(t)
+}
+
 func TestLocalTraces(t *testing.T) {
 	scen := SamplingScenario{
 		validTraceParent:     true,
@@ -192,15 +251,17 @@ type SamplingScenario struct {
 	traceStateContainsOther bool
 	local                   bool
 
-	triggerTrace    bool
-	xtraceSignature bool
+	triggerTrace     bool
+	xtraceSignature  bool
+	xtraceSwKeys     bool
+	xtraceCustomKeys bool
 
 	oboeDecision bool
 
 	// expectations
-	//obeyTT   bool // TODO verify this somehow (NH-5731)
-	ttMode   reporter.TriggerTraceMode
-	decision sdktrace.SamplingDecision
+	ttMode             reporter.TriggerTraceMode
+	decision           sdktrace.SamplingDecision
+	attrsIncludeSwKeys bool
 }
 
 func (s SamplingScenario) test(t *testing.T) {
@@ -241,8 +302,18 @@ func (s SamplingScenario) test(t *testing.T) {
 	spanCtx := trace.NewSpanContext(spanCtxConfig)
 	assert.Equal(t, s.validTraceParent, spanCtx.IsValid())
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
+	var xopts []string
 	if s.triggerTrace {
-		ctx = context.WithValue(ctx, xtrace.OptionsKey, "trigger-trace")
+		xopts = append(xopts, "trigger-trace")
+	}
+	if s.xtraceSwKeys {
+		xopts = append(xopts, "sw-keys=lo:se,check-id:123")
+	}
+	if s.xtraceCustomKeys {
+		xopts = append(xopts, "custom-key1=value 1;custom-key2=value 2")
+	}
+	if len(xopts) > 0 {
+		ctx = context.WithValue(ctx, xtrace.OptionsKey, strings.Join(xopts, ";"))
 	}
 	//if s.xtraceSignature {
 	//	// TODO do hmac (NH-5731)
@@ -254,6 +325,38 @@ func (s SamplingScenario) test(t *testing.T) {
 	}
 	result := smplr.ShouldSample(params)
 	assert.Equal(t, s.decision, result.Decision)
+	//
+	if s.xtraceSwKeys {
+		swKeys := ""
+		for _, a := range result.Attributes {
+			if a.Key == "SWKeys" {
+				swKeys = a.Value.AsString()
+				break
+			}
+		}
+		if result.Decision == sdktrace.RecordAndSample {
+			require.Equal(t, swKeys, "lo:se,check-id:123")
+		} else {
+			require.Equal(t, swKeys, "")
+		}
+	}
+
+	if s.xtraceCustomKeys {
+		res := make(map[string]string)
+		for _, a := range result.Attributes {
+			if strings.HasPrefix(string(a.Key), "custom-") {
+				res[string(a.Key)] = a.Value.AsString()
+			}
+		}
+		if result.Decision == sdktrace.RecordAndSample {
+			require.Equal(t, map[string]string{
+				"custom-key1": "value 1",
+				"custom-key2": "value 2",
+			}, res)
+		} else {
+			require.Len(t, res, 0)
+		}
+	}
 }
 
 // hydrateTraceState

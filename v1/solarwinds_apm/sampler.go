@@ -106,6 +106,17 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		}
 		ts := hydrateTraceState(psc, xto, traceDecision.XTraceOptsRsp())
 		var attrs []attribute.KeyValue
+		if decision == sdktrace.RecordAndSample {
+			// Add SWKeys and custom keys only when sampling
+			if swKeys := xto.SwKeys(); swKeys != "" {
+				attrs = append(attrs, attribute.String("SWKeys", swKeys))
+			}
+			if customKeys := xto.CustomKVs(); len(customKeys) > 0 {
+				for k, v := range customKeys {
+					attrs = append(attrs, attribute.String(k, v))
+				}
+			}
+		}
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
 			Tracestate: ts,
