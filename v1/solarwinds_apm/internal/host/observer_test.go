@@ -15,48 +15,89 @@ package host
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitContainerID(t *testing.T) {
-	id := "unintialized"
+func assertContainerId(t *testing.T, filetext string, expectedContainerId string) {
+	f, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, f.Close())
+		require.NoError(t, os.Remove(f.Name()))
+	}()
+	_, err = f.WriteString(filetext)
+	require.NoError(t, err)
 
-	var mockGetContainerMeta = func(keyword string) string {
-		if keyword == "/kubepods/" {
-			return "11:freezer:/kubepods/besteffort/pod23b7d80b-7b31-11e8-9fa1-0ea6a2c824d6/32fd701b15f2a907051d3b07b791cc08d45696c3aa372a4764c98c8be9c57626"
-		} else {
-			return ""
-		}
+	cid := getContainerIdFromFile(f.Name())
+	require.Equal(t, expectedContainerId, cid)
+	if expectedContainerId != "" {
+		require.Len(t, cid, 64)
+		_, err = hex.DecodeString(cid)
+		require.NoError(t, err)
 	}
+}
 
-	id = getContainerIDFromString(mockGetContainerMeta)
-	assert.Equal(t, "32fd701b15f2a907051d3b07b791cc08d45696c3aa372a4764c98c8be9c57626", id)
+func TestGetContainerId(t *testing.T) {
+	assertContainerId(
+		t,
+		"12:hugetlb:/docker/c90cc641f43e3276534283717b4d08385ea0cfbcf5c7b308701d810a1bd19036",
+		"c90cc641f43e3276534283717b4d08385ea0cfbcf5c7b308701d810a1bd19036",
+	)
 
-	id = "unintialized"
+	assertContainerId(
+		t,
+		"12:hugetlb:/something/other:c90cc641f43e3276534283717b4d08385ea0cfbcf5c7b308701d810a1bd19036",
+		"c90cc641f43e3276534283717b4d08385ea0cfbcf5c7b308701d810a1bd19036",
+	)
 
-	var badGetContainerMeta = func(keyword string) string {
-		if keyword == "/kubepods/" {
-			return "11:freezer:/kubepods/besteffort/pod23b7d80b-7b31-11e8-9fa1-0ea6a2c824d6/abc123hello-world"
-		} else {
-			return ""
-		}
-	}
+	assertContainerId(t, `
+11:devices:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+10:freezer:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+9:blkio:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+8:pids:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+7:cpuset:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+6:hugetlb:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+5:perf_event:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+4:memory:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+3:cpu,cpuacct:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+2:net_cls,net_prio:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+1:name=systemd:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod9a43c98c_c0dd_4642_bf7d_acdb53d443ec.slice/cri-containerd-31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567.scope
+`,
+		"31df9b0d9819f8b4c80f502880afaa4bd71079514cd0a90b0b47db972fdc9567",
+	)
 
-	id = getContainerIDFromString(badGetContainerMeta)
-	assert.Equal(t, "", id)
+	assertContainerId(t, `
+12:devices:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+11:blkio:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+10:perf_event:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+9:rdma:/
+8:memory:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+7:net_cls,net_prio:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+6:cpuset:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+5:hugetlb:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+4:pids:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+3:freezer:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+2:cpu,cpuacct:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+1:name=systemd:/kubepods/burstable/poda0178de9-9963-4c21-a277-14564e7abd2b/b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69
+0::/system.slice/containerd.service
+`,
+		"b08be0f4a5536647b2ec2c5c8bd03d928ca897b483528848e716ce80ed37ec69",
+	)
+
+	assertContainerId(t, "0::/", "")
+	assertContainerId(t, "", "")
+	assertContainerId(t, "/", "")
 }
 
 func TestGetAWSMetadata(t *testing.T) {
@@ -89,18 +130,6 @@ func TestGetAWSMetadata(t *testing.T) {
 	zone := getAWSMeta(testEc2MetadataZoneURL)
 	assert.Equal(t, "us-east-7", zone)
 	assert.Equal(t, "us-east-7", zone)
-}
-
-func TestGetContainerID(t *testing.T) {
-	id := getContainerID()
-	if utils.GetLineByKeyword("/proc/self/cgroup", "/docker/") != "" ||
-		utils.GetLineByKeyword("/proc/self/cgroup", "/ecs/") != "" {
-
-		assert.NotEmpty(t, id)
-		assert.Regexp(t, regexp.MustCompile(`^[0-9a-f]+$`), id)
-	} else {
-		assert.Empty(t, id)
-	}
 }
 
 func TestGetPid(t *testing.T) {
