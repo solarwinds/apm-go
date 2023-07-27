@@ -19,13 +19,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"math"
 	"net"
 	"os"
-	"runtime"
 	"strconv"
 	"testing"
 	"time"
@@ -425,7 +425,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 		{"TotalEvents", int64(1)},
 		{"QueueLargest", int64(1)},
 	}
-	if runtime.GOOS == "linux" {
+	if utils.IsLinux {
 		testCases = append(testCases, []testCase{
 			{"Load1", float64(1)},
 			{"TotalRAM", int64(1)},

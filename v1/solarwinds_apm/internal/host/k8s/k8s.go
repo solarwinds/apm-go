@@ -21,6 +21,7 @@ import (
 	"fmt"
 	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
@@ -58,8 +59,7 @@ func (m *Metadata) ToPB() *collector.K8S {
 }
 
 func determineNamspaceFileForOS() string {
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "windows" {
+	if utils.IsWindows {
 		return windowsNamespaceFile
 	}
 	return linuxNamespaceFile
@@ -158,8 +158,7 @@ func getPodnameFromHostname() (string, error) {
 }
 
 func getPodUidFromFile(fn string) (string, error) {
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "linux" {
+	if utils.IsLinux {
 		return getPodUidFromProc(fn)
 	} else {
 		log.Debugf("Cannot determine k8s pod uid on OS %s; please set SW_K8S_POD_UID", runtime.GOOS)

@@ -17,7 +17,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -136,7 +135,7 @@ func TestDistro(t *testing.T) {
 
 	assert.NotEmpty(t, distro)
 
-	if runtime.GOOS == "linux" {
+	if utils.IsLinux {
 		assert.NotContains(t, distro, "unknown")
 	} else {
 		assert.Contains(t, distro, "unknown")

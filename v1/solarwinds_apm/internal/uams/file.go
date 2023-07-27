@@ -18,16 +18,15 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"os"
-	"runtime"
 )
 
 const linuxFilePath = "/opt/solarwinds/uamsclient/var/uamsclientid"
 const windowsFilePath = `C:\ProgramData\SolarWinds\UAMSClient\uamsclientid`
 
 func determineFileForOS() string {
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "windows" {
+	if utils.IsWindows {
 		return windowsFilePath
 	}
 	return linuxFilePath

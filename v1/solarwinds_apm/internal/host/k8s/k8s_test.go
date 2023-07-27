@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
-	"runtime"
 	"sync"
 	"testing"
 )
@@ -96,7 +96,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
-	require.Equal(t, "open /run/secrets/kubernetes.io/serviceaccount/namespace: no such file or directory", err.Error())
+	require.Equal(t, fileNotFoundMsg(determineNamspaceFileForOS()), err.Error())
 
 	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
 	md, err = requestMetadata()
@@ -120,11 +120,19 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	require.Equal(t, "my env uid", md.PodUid)
 }
 
+func fileNotFoundMsg(fn string) string {
+	if utils.IsWindows {
+		return fmt.Sprintf(`open %s: The system cannot find the path specified.`, fn)
+	} else {
+		return fmt.Sprintf(`open %s: no such file or directory`, fn)
+	}
+}
+
 func TestRequestMetadataNoNamespace(t *testing.T) {
 	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
-	require.Equal(t, fmt.Sprintf("open %s: no such file or directory", determineNamspaceFileForOS()), err.Error())
+	require.Equal(t, fileNotFoundMsg(determineNamspaceFileForOS()), err.Error())
 }
 
 func TestMetadata_ToPB(t *testing.T) {
@@ -157,9 +165,10 @@ func TestGetNamespaceFromFallbackFile(t *testing.T) {
 
 func TestGetNamespaceNoneFound(t *testing.T) {
 	require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
-	ns, err := getNamespaceFromFile("this file does not exist and should not be opened")
+	var fn = "this file does not exist and should not be opened"
+	ns, err := getNamespaceFromFile(fn)
 	require.Error(t, err)
-	require.Equal(t, "open this file does not exist and should not be opened: no such file or directory", err.Error())
+	require.Equal(t, fileNotFoundMsg(fn), err.Error())
 	require.Equal(t, "", ns)
 
 }
@@ -180,8 +189,7 @@ func TestGetPodUidFromFileFails(t *testing.T) {
 	require.NoError(t, os.Unsetenv("SW_K8S_POD_UID"))
 	uid, err := getPodUidFromFile(linuxProcMountInfo)
 	require.Error(t, err)
-	//goland:noinspection GoBoolExpressions
-	if runtime.GOOS == "linux" {
+	if utils.IsLinux {
 		require.Equal(t, "no match found in file /proc/self/mountinfo", err.Error())
 	} else {
 		require.Equal(t, "cannot determine k8s pod uid on host OS", err.Error())
