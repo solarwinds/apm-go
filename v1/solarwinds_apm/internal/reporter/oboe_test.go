@@ -124,7 +124,7 @@ func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 	require.Equal(t, expected, dec)
 }
 
-func TestOboeSampleRequestNoTTButTTOnly(t *testing.T) {
+func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
 	r := SetTestReporter(TestReporterSettingType(TriggerTraceOnlyST))
 	defer r.Close(0)
 	ttMode := ModeTriggerTraceNotPresent
