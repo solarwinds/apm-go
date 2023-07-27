@@ -58,9 +58,6 @@ type TestGRPCServer struct {
 }
 
 func StartTestGRPCServer(t *testing.T, addr string) *TestGRPCServer {
-	if utils.IsWindows && strings.HasPrefix(addr, "localhost:") {
-		addr = addr[9:]
-	}
 	lis, err := net.Listen("tcp", addr)
 	require.NoError(t, err)
 
@@ -137,7 +134,7 @@ func (s *TestGRPCServer) GetSettings(ctx context.Context, req *pb.SettingsReques
 			// Flags:     XXX,
 			// Layer:     "", // default, specifically not setting layer/service
 			// Timestamp: XXX,
-			Value:     1000000,
+			Value: 1000000,
 			Arguments: map[string][]byte{
 				//   "BucketCapacity": XXX,
 				//   "BucketRate":     XXX,
