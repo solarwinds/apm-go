@@ -58,6 +58,9 @@ type TestGRPCServer struct {
 }
 
 func StartTestGRPCServer(t *testing.T, addr string) *TestGRPCServer {
+	if utils.IsWindows && strings.HasPrefix(addr, "localhost:") {
+		addr = addr[10:]
+	}
 	lis, err := net.Listen("tcp", addr)
 	require.NoError(t, err)
 
