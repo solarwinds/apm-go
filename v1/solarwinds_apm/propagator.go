@@ -17,8 +17,8 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
-
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/xtrace"
@@ -51,19 +51,19 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 			return
 		}
 	}
-	// Note: Insert will update the key if it exists
-	traceState, err = traceState.Insert(constants.SWTraceStateKey, swVal)
+	traceState, err = swotel.SetSw(traceState, swVal)
 	if err != nil {
 		log.Debugf("could not insert vendor info into tracestate `%s`", swVal)
 		return
 	}
 
-	// TODO (NH-5731). From the python apm library: Remove any
-	// xtrace_options_response stored for ResponsePropagator
+	traceState, err = swotel.RemoveInternalState(traceState, swotel.XTraceOptResp)
+	if err != nil {
+		log.Debugf("could not remove xtrace options resp from trace state", err)
+	}
 	carrier.Set(constants.TraceState, traceState.String())
 }
 
-// TODO (NH-5731) test
 func (swp SolarwindsPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	xtraceOptionsHeader := carrier.Get(xtrace.OptionsHeaderName)
 	if xtraceOptionsHeader != "" {

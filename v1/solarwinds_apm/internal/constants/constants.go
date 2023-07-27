@@ -15,9 +15,6 @@
 package constants
 
 const (
-	// SW-specific constants
-
-	SWTraceStateKey = "sw"
 
 	// Other
 

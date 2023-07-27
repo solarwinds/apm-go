@@ -17,8 +17,8 @@ package w3cfmt
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
 	"regexp"
 
 	"go.opentelemetry.io/otel/trace"
@@ -42,7 +42,7 @@ func SwFromCtx(sc trace.SpanContext) string {
 func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
 	if ctx.IsValid() {
 		tracestate := ctx.TraceState()
-		swVal := tracestate.Get(constants.SWTraceStateKey)
+		swVal := swotel.GetSw(tracestate)
 		return ParseSwTraceState(swVal)
 	}
 	return invalidSwTraceState

@@ -162,6 +162,13 @@ func (r *TestReporter) addDefaultSetting() {
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
 }
 
+func (r *TestReporter) addSampleThrough() {
+	// add default setting with 100% sampling
+	updateSetting(int32(TYPE_DEFAULT), "",
+		[]byte("SAMPLE_START,SAMPLE_THROUGH,TRIGGER_TRACE"),
+		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
+}
+
 func (r *TestReporter) addNoTriggerTrace() {
 	updateSetting(int32(TYPE_DEFAULT), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
@@ -192,6 +199,12 @@ func (r *TestReporter) addLimitedTriggerTrace() {
 		1000000, 120, argsToMap(1000000, 1000000, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
 }
 
+func (r *TestReporter) addDisabled() {
+	updateSetting(int32(TYPE_DEFAULT), "",
+		[]byte(""),
+		0, 120, argsToMap(0, 0, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
+}
+
 // Setting types
 const (
 	DefaultST = iota
@@ -200,6 +213,8 @@ const (
 	RelaxedTriggerTraceOnlyST
 	StrictTriggerTraceOnlyST
 	LimitedTriggerTraceST
+	SampleThroughST
+	DisabledST
 	NoSettingST
 )
 
@@ -217,6 +232,10 @@ func (r *TestReporter) updateSetting() {
 		r.addStrictTriggerTraceOnly()
 	case LimitedTriggerTraceST:
 		r.addLimitedTriggerTrace()
+	case SampleThroughST:
+		r.addSampleThrough()
+	case DisabledST:
+		r.addDisabled()
 	case NoSettingST:
 		// Nothing to do
 	default:

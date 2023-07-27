@@ -17,12 +17,18 @@ package reporter
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
 	"time"
+)
+
+var (
+	sampledSwState   = w3cfmt.ParseSwTraceState("0123456789abcdef-01")
+	unsampledSwState = w3cfmt.ParseSwTraceState("0123456789abcdef-00")
 )
 
 func TestCreateInitMessage(t *testing.T) {
@@ -52,5 +58,268 @@ func TestCreateInitMessage(t *testing.T) {
 	require.Equal(t, LabelUnset, e.label)
 	require.Equal(t, "", e.layer)
 	require.False(t, e.parent.IsValid())
+}
 
+func TestOboeSampleRequestSettingsUnavailable(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(NoSettingST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		xTraceOptsRsp: "settings-not-available",
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestSettingsDisabled(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DisabledST))
+	defer r.Close(0)
+	ttMode := ModeRelaxedTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		xTraceOptsRsp: "tracing-disabled",
+		bucketCap:     1,
+		bucketRate:    1,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequest(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    true,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(true, "url", ttMode, unsampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(TriggerTraceOnlyST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          0,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       false,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(false, "url", ttMode, unsampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    true,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestThrough(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(SampleThroughST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(true, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    true,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(SampleThroughST))
+	defer r.Close(0)
+	ttMode := ModeTriggerTraceNotPresent
+	dec := oboeSampleRequest(true, "url", ttMode, unsampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "not-requested",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+// TRIGGER TRACE
+
+func TestOboeSampleRequestRelaxedTT(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeRelaxedTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "ok",
+		bucketCap:     1000000,
+		bucketRate:    1000000,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestStrictTT(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeStrictTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "ok",
+		bucketCap:     1000000,
+		bucketRate:    1000000,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestRelaxedTTDisabled(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(NoTriggerTraceST))
+	defer r.Close(0)
+	ttMode := ModeRelaxedTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "trigger-tracing-disabled",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestStrictTTDisabled(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(NoTriggerTraceST))
+	defer r.Close(0)
+	ttMode := ModeStrictTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "trigger-tracing-disabled",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(LimitedTriggerTraceST))
+	defer r.Close(0)
+	ttMode := ModeRelaxedTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "rate-exceeded",
+		bucketCap:     1,
+		bucketRate:    1,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestInvalidTT(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeInvalidTriggerTrace
+	dec := oboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         false,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+}
+
+func TestOboeSampleRequestRelaxedTTContinued(t *testing.T) {
+	r := SetTestReporter(TestReporterSettingType(DefaultST))
+	defer r.Close(0)
+	ttMode := ModeRelaxedTriggerTrace
+	dec := oboeSampleRequest(true, "url", ttMode, sampledSwState)
+	expected := SampleDecision{
+		trace:         true,
+		rate:          1000000,
+		source:        SAMPLE_SOURCE_DEFAULT,
+		enabled:       true,
+		xTraceOptsRsp: "ignored",
+		bucketCap:     0,
+		bucketRate:    0,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
 }

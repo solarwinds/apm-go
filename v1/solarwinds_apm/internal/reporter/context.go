@@ -20,6 +20,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"strconv"
 	"time"
 
@@ -30,32 +31,53 @@ import (
 // set by default to read from the crypto/rand Reader.
 var randReader = rand.Reader
 
-// Trigger trace signature authentication errors
+type AuthStatus int
+
 const (
-	ttAuthBadTimestamp   = "bad-timestamp"
-	ttAuthNoSignatureKey = "no-signature-key"
-	ttAuthBadSignature   = "bad-signature"
+	AuthOK = iota
+	AuthBadTimestamp
+	AuthNoSignatureKey
+	AuthBadSignature
 )
+
+func (a AuthStatus) IsError() bool {
+	return a != AuthOK
+}
+
+func (a AuthStatus) Msg() string {
+	switch a {
+	case AuthOK:
+		return "ok"
+	case AuthBadTimestamp:
+		return "bad-timestamp"
+	case AuthNoSignatureKey:
+		return "no-signature-key"
+	case AuthBadSignature:
+		return "bad-signature"
+	}
+	log.Debugf("could not read msg for unknown AuthStatus: %s", a)
+	return ""
+}
 
 // TODO: This could live in the `xtrace` package, except it requires
 // TODO: the ability to extract the TT Token from oboe settings.
 // TODO: Determine a clean/elegant way to clean this up.
-func ValidateXTraceOptionsSignature(signature, ts, data string) error {
+func ValidateXTraceOptionsSignature(signature, ts, data string) AuthStatus {
 	var err error
 	_, err = tsInScope(ts)
 	if err != nil {
-		return errors.New(ttAuthBadTimestamp)
+		return AuthBadTimestamp
 	}
 
 	token, err := getTriggerTraceToken()
 	if err != nil {
-		return errors.New(ttAuthNoSignatureKey)
+		return AuthNoSignatureKey
 	}
 
 	if HmacHash(token, []byte(data)) != signature {
-		return errors.New(ttAuthBadSignature)
+		return AuthBadSignature
 	}
-	return nil
+	return AuthOK
 }
 
 func HmacHashTT(data []byte) (string, error) {
