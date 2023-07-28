@@ -121,6 +121,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	processor := NewInboundMetricsSpanProcessor(isAppoptics)
 	propagator := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
+		&propagation.Baggage{},
 		&SolarwindsPropagator{},
 	)
 	otel.SetTextMapPropagator(propagator)
