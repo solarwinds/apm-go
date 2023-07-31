@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
@@ -43,8 +44,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		attribute.String("otel.scope.name", s.InstrumentationScope().Name),
 		attribute.String("otel.scope.version", s.InstrumentationScope().Version),
 	})
-	if !s.Parent().IsValid() || s.Parent().IsRemote() {
-		// root span only
+	if entryspans.IsEntrySpan(s) {
 		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s)))
 	}
 	evt.AddKVs(s.Attributes())
