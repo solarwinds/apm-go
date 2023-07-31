@@ -46,6 +46,9 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	})
 	if entryspans.IsEntrySpan(s) {
 		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s)))
+		if err := entryspans.Delete(s); err != nil {
+			log.Warningf("could not delete entry span for trace-span %s-%s", s.SpanContext().TraceID(), s.SpanContext().SpanID())
+		}
 	}
 	evt.AddKVs(s.Attributes())
 

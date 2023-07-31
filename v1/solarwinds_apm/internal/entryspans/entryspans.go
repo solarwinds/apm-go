@@ -90,19 +90,44 @@ func Push(span sdktrace.ReadOnlySpan) error {
 		return NotEntrySpan
 	}
 
-	tid := span.SpanContext().TraceID()
-	sid := span.SpanContext().SpanID()
-	fmt.Printf("push: entry span %s %s", tid, sid)
 	state.push(span.SpanContext().TraceID(), span.SpanContext().SpanID())
 	return nil
 }
 
 func Pop(tid trace.TraceID) (trace.SpanID, bool) {
 	sid, ok := state.pop(tid)
-	if ok {
-		fmt.Printf("pop: entry span %s %s", tid, sid)
-	}
 	return sid, ok
+}
+
+func (e *entrySpans) delete(tid trace.TraceID, sid trace.SpanID) error {
+	e.mut.Lock()
+	defer e.mut.Unlock()
+
+	if list, ok := e.spans[tid]; ok {
+		found := false
+		for i, elem := range list {
+			if elem.spanId == sid {
+				list = append(list[:i], list[i+1:]...)
+				found = true
+				break
+			}
+		}
+		if found {
+			e.spans[tid] = list
+			return nil
+		} else {
+			return errors.New("could not find span id")
+		}
+	} else {
+		return errors.New("could not find trace id")
+	}
+}
+
+func Delete(span sdktrace.ReadOnlySpan) error {
+	return state.delete(
+		span.SpanContext().TraceID(),
+		span.SpanContext().SpanID(),
+	)
 }
 
 func Current(tid trace.TraceID) (trace.SpanID, bool) {

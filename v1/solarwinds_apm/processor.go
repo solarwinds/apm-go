@@ -46,18 +46,24 @@ func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.R
 	}
 }
 
-func popEntrySpan(span sdktrace.ReadOnlySpan) {
-	if sid, ok := entryspans.Pop(span.SpanContext().TraceID()); !ok {
-		log.Warningf("could not pop entry span!")
-	} else if sid != span.SpanContext().SpanID() {
-		log.Warningf("span ids did not match! wanted %s, got %s", span.SpanContext().SpanID(), sid)
+func maybeClearEntrySpan(span sdktrace.ReadOnlySpan) {
+	if span.SpanContext().IsSampled() {
+		// Do not clear here. The exporter will need the added context and will
+		// clear. If we clear here, the exporter will not see the entry
+		// span state.
+		return
+	}
+	// Not sampled; the exporter will not see it, thus we must clear.
+	if err := entryspans.Delete(span); err != nil {
+		log.Warningf("could not delete entry span for trace-span %s-%s",
+			span.SpanContext().TraceID(), span.SpanContext().SpanID())
 	}
 }
 
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	if entryspans.IsEntrySpan(span) {
-		defer popEntrySpan(span)
 		recordFunc(span, s.isAppoptics)
+		maybeClearEntrySpan(span)
 	}
 }
 
