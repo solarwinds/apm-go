@@ -46,6 +46,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	})
 	if entryspans.IsEntrySpan(s) {
 		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s)))
+		// We MUST clear the entry span here. The SpanProcessor only clears entry spans when they are `RecordOnly`
 		if err := entryspans.Delete(s); err != nil {
 			log.Warningf("could not delete entry span for trace-span %s-%s", s.SpanContext().TraceID(), s.SpanContext().SpanID())
 		}
