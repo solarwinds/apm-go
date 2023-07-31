@@ -142,7 +142,8 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 }
 
-// TODO docstring, and comments throughout; this is a user-facing function
+// SetTransactionName sets the transaction name of the current entry span. If set multiple times, the last is used.
+// Returns nil on success, or error if we are unable to set the transaction name.
 func SetTransactionName(ctx context.Context, name string) error {
 	sc := trace.SpanContextFromContext(ctx)
 	if !sc.IsValid() {
