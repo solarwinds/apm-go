@@ -17,11 +17,14 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/txn"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	stdlog "log"
 	"strings"
@@ -138,4 +141,21 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}
 	}, nil
 
+}
+
+// TODO docstring, and comments throughout; this is a user-facing function
+func SetTransactionName(ctx context.Context, name string) error {
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return errors.New("could not obtain OpenTelemetry SpanContext from given context")
+	}
+	sid, ok := entryspans.Current(sc.TraceID())
+	if !ok {
+		return errors.New("could not retrieve current entry span")
+	}
+	if !sid.IsValid() {
+		return errors.New("retrieved Span ID was invalid")
+	}
+	txn.Set(sc, name)
+	return nil
 }
