@@ -24,6 +24,7 @@ import (
 	"strings"
 )
 
+// GetTransactionName retrieves the custom transaction name if it exists, otherwise calls deriveTransactionName
 func GetTransactionName(span sdktrace.ReadOnlySpan) string {
 	if txnName := entryspans.GetTransactionName(span.SpanContext().TraceID()); txnName != "" {
 		return txnName
