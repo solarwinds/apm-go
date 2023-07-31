@@ -16,7 +16,10 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -34,15 +37,29 @@ type inboundMetricsSpanProcessor struct {
 	isAppoptics bool
 }
 
-func (s *inboundMetricsSpanProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {
+func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.ReadWriteSpan) {
+	if utils.IsEntrySpan(span) {
+		if err := entryspans.Push(span); err != nil {
+			// The only error here should be if it's not an entry span, and we've guarded against that,
+			// so it's safe to log the error and move on
+			log.Warningf("could not push entry span: %s", err)
+		}
+	}
+}
+
+func popEntrySpan(span sdktrace.ReadOnlySpan) {
+	if sid, ok := entryspans.Pop(span.SpanContext().TraceID()); !ok {
+		log.Warningf("could not pop entry span!")
+	} else if sid != span.SpanContext().SpanID() {
+		log.Warningf("span ids did not match! wanted %s, got %s", span.SpanContext().SpanID(), sid)
+	}
 }
 
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
-	parent := span.Parent()
-	if parent.IsValid() && !parent.IsRemote() {
-		return
+	if utils.IsEntrySpan(span) {
+		defer popEntrySpan(span)
+		recordFunc(span, s.isAppoptics)
 	}
-	recordFunc(span, s.isAppoptics)
 }
 
 func (s *inboundMetricsSpanProcessor) Shutdown(context.Context) error {

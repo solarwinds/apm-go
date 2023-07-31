@@ -63,7 +63,7 @@ func TestCurrent(t *testing.T) {
 	require.False(t, sid.IsValid())
 
 	// this is an invalid state, but we handle it
-	state.spans[traceA] = []trace.SpanID{}
+	state.spans[traceA] = []*entrySpan{}
 	sid, ok = Current(traceA)
 	require.False(t, ok)
 	require.False(t, sid.IsValid())
@@ -79,8 +79,8 @@ func TestPush(t *testing.T) {
 	ctx, span = tr.Start(ctx, "A")
 	require.NoError(t, Push(span.(sdktrace.ReadOnlySpan)))
 	require.Equal(t,
-		[]trace.SpanID{
-			span.SpanContext().SpanID(),
+		[]*entrySpan{
+			{spanId: span.SpanContext().SpanID()},
 		},
 		state.spans[span.SpanContext().TraceID()],
 	)
@@ -121,11 +121,51 @@ func TestPop(t *testing.T) {
 	require.False(t, sid.IsValid())
 
 	// this is an invalid state, but we handle it
-	state.spans[traceA] = []trace.SpanID{}
+	state.spans[traceA] = []*entrySpan{}
 	sid, ok = Pop(traceA)
 	require.False(t, ok)
 	require.False(t, sid.IsValid())
 	// this should be cleaned up
 	_, ok = state.spans[traceA]
 	require.False(t, ok)
+}
+
+func TestSetTransactionName(t *testing.T) {
+	// reset state
+	state = &entrySpans{spans: make(map[trace.TraceID][]*entrySpan)}
+
+	err := SetTransactionName(traceA, "foo bar")
+	require.Error(t, err)
+
+	state.push(traceA, span1)
+	state.push(traceA, span2)
+
+	err = SetTransactionName(traceA, "foo bar")
+	require.Equal(t,
+		[]*entrySpan{
+			{spanId: span1},
+			{spanId: span2, txnName: "foo bar"},
+		},
+		state.spans[traceA],
+	)
+
+	require.NoError(t, err)
+	curr, ok := state.current(traceA)
+	require.True(t, ok)
+	require.Equal(t, span2, curr.spanId)
+	require.Equal(t, "foo bar", curr.txnName)
+
+	require.Equal(t, "foo bar", GetTransactionName(traceA))
+	require.Equal(t, "", GetTransactionName(traceB))
+
+	sid, ok := state.pop(traceA)
+	require.True(t, ok)
+	require.Equal(t, span2, sid)
+
+	require.Equal(t, "", GetTransactionName(traceA))
+	require.Equal(t, "", GetTransactionName(traceB))
+
+	err = SetTransactionName(traceA, "another")
+	require.Equal(t, "another", GetTransactionName(traceA))
+	require.Equal(t, "", GetTransactionName(traceB))
 }
