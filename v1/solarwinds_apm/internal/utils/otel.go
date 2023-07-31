@@ -16,6 +16,7 @@ package utils
 
 import (
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"log"
 	"net/url"
@@ -59,4 +60,9 @@ func GetTransactionName(name string, attrs []attribute.KeyValue) string {
 		txnName = txnName[:255]
 	}
 	return txnName
+}
+
+func IsEntrySpan(span sdktrace.ReadOnlySpan) bool {
+	parent := span.Parent()
+	return !parent.IsValid() || parent.IsRemote()
 }
