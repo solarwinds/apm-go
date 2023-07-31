@@ -3,8 +3,6 @@ package entryspans
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"sync"
@@ -88,13 +86,13 @@ func (e *entrySpans) currentUnsafe(tid trace.TraceID) (*entrySpan, bool) {
 }
 
 func Push(span sdktrace.ReadOnlySpan) error {
-	if !utils.IsEntrySpan(span) {
+	if !IsEntrySpan(span) {
 		return NotEntrySpan
 	}
 
 	tid := span.SpanContext().TraceID()
 	sid := span.SpanContext().SpanID()
-	log.Infof("push: entry span %s %s", tid, sid)
+	fmt.Sprintf("push: entry span %s %s", tid, sid)
 	state.push(span.SpanContext().TraceID(), span.SpanContext().SpanID())
 	return nil
 }
@@ -102,7 +100,7 @@ func Push(span sdktrace.ReadOnlySpan) error {
 func Pop(tid trace.TraceID) (trace.SpanID, bool) {
 	sid, ok := state.pop(tid)
 	if ok {
-		log.Infof("pop: entry span %s %s", tid, sid)
+		fmt.Sprintf("pop: entry span %s %s", tid, sid)
 	}
 	return sid, ok
 }
@@ -132,6 +130,10 @@ func GetTransactionName(tid trace.TraceID) string {
 	if es, ok := state.current(tid); ok {
 		return es.txnName
 	}
-	log.Debugf("could not retrieve txn name for trace id %s", tid)
 	return ""
+}
+
+func IsEntrySpan(span sdktrace.ReadOnlySpan) bool {
+	parent := span.Parent()
+	return !parent.IsValid() || parent.IsRemote()
 }

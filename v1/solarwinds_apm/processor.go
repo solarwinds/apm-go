@@ -19,7 +19,6 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -38,7 +37,7 @@ type inboundMetricsSpanProcessor struct {
 }
 
 func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.ReadWriteSpan) {
-	if utils.IsEntrySpan(span) {
+	if entryspans.IsEntrySpan(span) {
 		if err := entryspans.Push(span); err != nil {
 			// The only error here should be if it's not an entry span, and we've guarded against that,
 			// so it's safe to log the error and move on
@@ -56,7 +55,7 @@ func popEntrySpan(span sdktrace.ReadOnlySpan) {
 }
 
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
-	if utils.IsEntrySpan(span) {
+	if entryspans.IsEntrySpan(span) {
 		defer popEntrySpan(span)
 		recordFunc(span, s.isAppoptics)
 	}

@@ -1025,7 +1025,7 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils.DeriveTransactionName(span.Name(), span.Attributes())
+	txnName := utils.GetTransactionName(span)
 	swoTags["sw.transaction"] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())
