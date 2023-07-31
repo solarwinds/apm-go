@@ -42,29 +42,6 @@ func (e *entrySpans) push(tid trace.TraceID, sid trace.SpanID) {
 	e.spans[tid] = list
 }
 
-func (e *entrySpans) pop(tid trace.TraceID) (trace.SpanID, bool) {
-	e.mut.Lock()
-	defer e.mut.Unlock()
-
-	if list, ok := e.spans[tid]; ok {
-		l := len(list)
-		if l == 0 {
-			delete(e.spans, tid)
-			return nullSpanID, false
-		} else if l == 1 {
-			delete(e.spans, tid)
-			return list[0].spanId, true
-		} else {
-			item := list[l-1]
-			list = list[:l-1]
-			e.spans[tid] = list
-			return item.spanId, true
-		}
-	} else {
-		return nullSpanID, ok
-	}
-}
-
 func (e *entrySpans) current(tid trace.TraceID) (*entrySpan, bool) {
 	e.mut.Lock()
 	defer e.mut.Unlock()
@@ -92,11 +69,6 @@ func Push(span sdktrace.ReadOnlySpan) error {
 
 	state.push(span.SpanContext().TraceID(), span.SpanContext().SpanID())
 	return nil
-}
-
-func Pop(tid trace.TraceID) (trace.SpanID, bool) {
-	sid, ok := state.pop(tid)
-	return sid, ok
 }
 
 func (e *entrySpans) delete(tid trace.TraceID, sid trace.SpanID) error {

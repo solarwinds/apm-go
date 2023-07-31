@@ -15,7 +15,32 @@ var (
 
 	span1 = trace.SpanID{0x1}
 	span2 = trace.SpanID{0x2}
+	span3 = trace.SpanID{0x3}
+	span4 = trace.SpanID{0x4}
 )
+
+func (e *entrySpans) pop(tid trace.TraceID) (trace.SpanID, bool) {
+	e.mut.Lock()
+	defer e.mut.Unlock()
+
+	if list, ok := e.spans[tid]; ok {
+		l := len(list)
+		if l == 0 {
+			delete(e.spans, tid)
+			return nullSpanID, false
+		} else if l == 1 {
+			delete(e.spans, tid)
+			return list[0].spanId, true
+		} else {
+			item := list[l-1]
+			list = list[:l-1]
+			e.spans[tid] = list
+			return item.spanId, true
+		}
+	} else {
+		return nullSpanID, ok
+	}
+}
 
 func TestCurrent(t *testing.T) {
 	sid, ok := Current(traceA)
@@ -92,44 +117,6 @@ func TestPush(t *testing.T) {
 	require.Equal(t, NotEntrySpan, err)
 }
 
-func TestPop(t *testing.T) {
-	sid, ok := Pop(traceA)
-	require.False(t, ok)
-	require.False(t, sid.IsValid())
-
-	sid, ok = Pop(traceB)
-	require.False(t, ok)
-	require.False(t, sid.IsValid())
-
-	state.push(traceA, span1)
-	state.push(traceA, span2)
-
-	sid, ok = Pop(traceA)
-	require.Equal(t, span2, sid)
-	require.True(t, ok)
-
-	sid, ok = Pop(traceB)
-	require.False(t, ok)
-	require.False(t, sid.IsValid())
-
-	sid, ok = Pop(traceA)
-	require.Equal(t, span1, sid)
-	require.True(t, ok)
-
-	sid, ok = Pop(traceA)
-	require.False(t, ok)
-	require.False(t, sid.IsValid())
-
-	// this is an invalid state, but we handle it
-	state.spans[traceA] = []*entrySpan{}
-	sid, ok = Pop(traceA)
-	require.False(t, ok)
-	require.False(t, sid.IsValid())
-	// this should be cleaned up
-	_, ok = state.spans[traceA]
-	require.False(t, ok)
-}
-
 func TestSetTransactionName(t *testing.T) {
 	// reset state
 	state = &entrySpans{spans: make(map[trace.TraceID][]*entrySpan)}
@@ -169,4 +156,49 @@ func TestSetTransactionName(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "another", GetTransactionName(traceA))
 	require.Equal(t, "", GetTransactionName(traceB))
+}
+
+func TestDelete(t *testing.T) {
+	// reset state
+	state = &entrySpans{spans: make(map[trace.TraceID][]*entrySpan)}
+
+	err := state.delete(traceA, span1)
+	require.Error(t, err)
+	require.Equal(t, "could not find trace id", err.Error())
+
+	state.push(traceA, span1)
+	state.push(traceA, span2)
+	state.push(traceA, span3)
+
+	err = state.delete(traceA, span4)
+	require.Error(t, err)
+	require.Equal(t, "could not find span id", err.Error())
+
+	err = state.delete(traceA, span2)
+	require.NoError(t, err)
+	require.Equal(t,
+		[]*entrySpan{
+			{spanId: span1},
+			{spanId: span3},
+		},
+		state.spans[traceA],
+	)
+
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
+	_, s := tr.Start(context.Background(), "foo bar baz")
+	state.push(s.SpanContext().TraceID(), s.SpanContext().SpanID())
+	require.Equal(t,
+		[]*entrySpan{
+			{spanId: s.SpanContext().SpanID()},
+		},
+		state.spans[s.SpanContext().TraceID()],
+	)
+	err = Delete(s.(sdktrace.ReadOnlySpan))
+	require.NoError(t, err)
+	require.Equal(t,
+		[]*entrySpan{},
+		state.spans[s.SpanContext().TraceID()],
+	)
+
 }
