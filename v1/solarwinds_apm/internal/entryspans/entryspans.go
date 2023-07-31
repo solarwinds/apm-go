@@ -92,7 +92,7 @@ func Push(span sdktrace.ReadOnlySpan) error {
 
 	tid := span.SpanContext().TraceID()
 	sid := span.SpanContext().SpanID()
-	fmt.Sprintf("push: entry span %s %s", tid, sid)
+	fmt.Printf("push: entry span %s %s", tid, sid)
 	state.push(span.SpanContext().TraceID(), span.SpanContext().SpanID())
 	return nil
 }
@@ -100,7 +100,7 @@ func Push(span sdktrace.ReadOnlySpan) error {
 func Pop(tid trace.TraceID) (trace.SpanID, bool) {
 	sid, ok := state.pop(tid)
 	if ok {
-		fmt.Sprintf("pop: entry span %s %s", tid, sid)
+		fmt.Printf("pop: entry span %s %s", tid, sid)
 	}
 	return sid, ok
 }

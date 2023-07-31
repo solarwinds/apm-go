@@ -16,8 +16,10 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
@@ -44,8 +46,18 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
 	_, s := tracer.Start(ctx, "span name")
+
+	// must add entry span
+	es, ok := entryspans.Current(s.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s.SpanContext().SpanID(), es)
+
 	s.End()
 
+	// must remove entry span
+	es, ok = entryspans.Current(s.SpanContext().TraceID())
+	require.False(t, ok)
+	require.False(t, es.IsValid())
 	assert.True(t, mock.called)
 	assert.False(t, mock.isAppoptics)
 }
@@ -63,9 +75,19 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T)
 	sp := &inboundMetricsSpanProcessor{}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
-	ctx := context.Background()
-	ctx, _ = tracer.Start(ctx, "span name")
+	ctx, s1 := tracer.Start(context.Background(), "span name")
+
+	// must add entry span
+	es, ok := entryspans.Current(s1.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s1.SpanContext().SpanID(), es)
+
 	_, s2 := tracer.Start(ctx, "child span")
+	// s2 is *not* an entry span, so s1 should remain the current entry span
+	es, ok = entryspans.Current(s1.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s1.SpanContext().SpanID(), es)
+
 	s2.End()
 
 	assert.False(t, mock.called)

@@ -86,7 +86,7 @@ func TestPush(t *testing.T) {
 	)
 
 	var nonEntrySpan trace.Span
-	ctx, nonEntrySpan = tr.Start(ctx, "B")
+	_, nonEntrySpan = tr.Start(ctx, "B")
 	err = Push(nonEntrySpan.(sdktrace.ReadOnlySpan))
 	require.Error(t, err)
 	require.Equal(t, NotEntrySpan, err)
@@ -166,6 +166,7 @@ func TestSetTransactionName(t *testing.T) {
 	require.Equal(t, "", GetTransactionName(traceB))
 
 	err = SetTransactionName(traceA, "another")
+	require.NoError(t, err)
 	require.Equal(t, "another", GetTransactionName(traceA))
 	require.Equal(t, "", GetTransactionName(traceB))
 }

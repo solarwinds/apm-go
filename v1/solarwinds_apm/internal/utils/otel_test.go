@@ -30,7 +30,7 @@ func TestGetTransactionName(t *testing.T) {
 	defer teardown()
 
 	ctx := context.Background()
-	ctx, span := tr.Start(ctx, "derived")
+	_, span := tr.Start(ctx, "derived")
 	roSpan, ok := span.(trace.ReadOnlySpan)
 	err := entryspans.Push(roSpan)
 	require.NoError(t, err)
