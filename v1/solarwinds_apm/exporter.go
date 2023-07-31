@@ -45,7 +45,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	})
 	if !s.Parent().IsValid() || s.Parent().IsRemote() {
 		// root span only
-		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes())))
+		evt.AddKV(attribute.String("TransactionName", utils.DeriveTransactionName(s.Name(), s.Attributes())))
 	}
 	evt.AddKVs(s.Attributes())
 

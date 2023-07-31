@@ -23,8 +23,8 @@ import (
 	"strings"
 )
 
-// GetTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
-func GetTransactionName(name string, attrs []attribute.KeyValue) string {
+// DeriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
+func DeriveTransactionName(name string, attrs []attribute.KeyValue) string {
 	var httpRoute, httpUrl, txnName = "", "", ""
 	for _, attr := range attrs {
 		if attr.Key == semconv.HTTPRouteKey {
