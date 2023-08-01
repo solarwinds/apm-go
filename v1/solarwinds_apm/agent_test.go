@@ -11,12 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"os"
 	"strings"
 	"testing"
@@ -86,4 +90,24 @@ func TestCreateResource(t *testing.T) {
 	require.NotNil(t, collected["telemetry.sdk.language"])
 	require.NotNil(t, collected["telemetry.sdk.name"])
 	require.NotNil(t, collected["telemetry.sdk.version"])
+}
+
+func TestSetTransactionName(t *testing.T) {
+	err := SetTransactionName(context.Background(), "    ")
+	require.Error(t, err)
+	require.Equal(t, "invalid transaction name", err.Error())
+
+	err = SetTransactionName(context.Background(), "valid")
+	require.Error(t, err)
+	require.Equal(t, "could not obtain OpenTelemetry SpanContext from given context", err.Error())
+
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
+	ctx, s := tr.Start(context.Background(), "span name")
+	err = entryspans.Push(s.(trace.ReadOnlySpan))
+	require.NoError(t, err)
+	err = SetTransactionName(ctx, "this should work")
+	require.NoError(t, err)
+	require.Equal(t, "this should work", entryspans.GetTransactionName(s.SpanContext().TraceID()))
+
 }

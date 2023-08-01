@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
@@ -43,9 +44,16 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		attribute.String("otel.scope.name", s.InstrumentationScope().Name),
 		attribute.String("otel.scope.version", s.InstrumentationScope().Version),
 	})
-	if !s.Parent().IsValid() || s.Parent().IsRemote() {
-		// root span only
-		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s.Name(), s.Attributes())))
+	if entryspans.IsEntrySpan(s) {
+		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s)))
+		// We MUST clear the entry span here. The SpanProcessor only clears entry spans when they are `RecordOnly`
+		if err := entryspans.Delete(s); err != nil {
+			log.Warningf(
+				"could not delete entry span for trace-span %s-%s",
+				s.SpanContext().TraceID(),
+				s.SpanContext().SpanID(),
+			)
+		}
 	}
 	evt.AddKVs(s.Attributes())
 

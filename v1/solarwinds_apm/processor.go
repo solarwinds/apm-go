@@ -16,6 +16,8 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -34,15 +36,35 @@ type inboundMetricsSpanProcessor struct {
 	isAppoptics bool
 }
 
-func (s *inboundMetricsSpanProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {
+func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.ReadWriteSpan) {
+	if entryspans.IsEntrySpan(span) {
+		if err := entryspans.Push(span); err != nil {
+			// The only error here should be if it's not an entry span, and we've guarded against that,
+			// so it's safe to log the error and move on
+			log.Warningf("could not push entry span: %s", err)
+		}
+	}
+}
+
+func maybeClearEntrySpan(span sdktrace.ReadOnlySpan) {
+	if span.SpanContext().IsSampled() {
+		// Do not clear here. The exporter will need the added context and will
+		// clear. If we clear here, the exporter will not see the entry
+		// span state.
+		return
+	}
+	// Not sampled; the exporter will not see it, thus we must clear.
+	if err := entryspans.Delete(span); err != nil {
+		log.Warningf("could not delete entry span for trace-span %s-%s",
+			span.SpanContext().TraceID(), span.SpanContext().SpanID())
+	}
 }
 
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
-	parent := span.Parent()
-	if parent.IsValid() && !parent.IsRemote() {
-		return
+	if entryspans.IsEntrySpan(span) {
+		recordFunc(span, s.isAppoptics)
+		maybeClearEntrySpan(span)
 	}
-	recordFunc(span, s.isAppoptics)
 }
 
 func (s *inboundMetricsSpanProcessor) Shutdown(context.Context) error {

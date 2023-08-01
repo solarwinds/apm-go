@@ -16,8 +16,10 @@ package solarwinds_apm
 
 import (
 	"context"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/metrics"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
@@ -29,7 +31,7 @@ type recordMock struct {
 	called      bool
 }
 
-func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
+func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	mock := &recordMock{}
 	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span
@@ -40,17 +42,77 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 		recordFunc = metrics.RecordSpan
 	}()
 	sp := &inboundMetricsSpanProcessor{}
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
 	_, s := tracer.Start(ctx, "span name")
+
+	// must add entry span
+	es, ok := entryspans.Current(s.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s.SpanContext().SpanID(), es)
+
 	s.End()
 
+	// must NOT remove entry span; because it's sampled, exporter will handle deletion
+	es, ok = entryspans.Current(s.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s.SpanContext().SpanID(), es)
 	assert.True(t, mock.called)
 	assert.False(t, mock.isAppoptics)
 }
 
-func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
+type recordOnlySampler struct{}
+
+func (ro recordOnlySampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	return sdktrace.SamplingResult{
+		Decision:   sdktrace.RecordOnly,
+		Tracestate: trace.SpanContextFromContext(p.ParentContext).TraceState(),
+	}
+}
+
+func (ro recordOnlySampler) Description() string {
+	return "record only sampler"
+}
+
+func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
+	mock := &recordMock{}
+	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
+		mock.span = span
+		mock.isAppoptics = isAppoptics
+		mock.called = true
+	}
+	defer func() {
+		recordFunc = metrics.RecordSpan
+	}()
+	sp := &inboundMetricsSpanProcessor{}
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+		sdktrace.WithSampler(recordOnlySampler{}),
+	)
+	tracer := tp.Tracer("foo")
+	ctx := context.Background()
+	_, s := tracer.Start(ctx, "span name")
+
+	// must add entry span
+	es, ok := entryspans.Current(s.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s.SpanContext().SpanID(), es)
+
+	s.End()
+
+	// MUST remove entry span; because it's NOT sampled, exporter will NOT handle deletion
+	es, ok = entryspans.Current(s.SpanContext().TraceID())
+	require.False(t, ok)
+	require.False(t, es.IsValid())
+	assert.True(t, mock.called)
+	assert.False(t, mock.isAppoptics)
+}
+
+func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 	mock := &recordMock{}
 	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span
@@ -63,15 +125,25 @@ func TestSolarWindsInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T)
 	sp := &inboundMetricsSpanProcessor{}
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
-	ctx := context.Background()
-	ctx, _ = tracer.Start(ctx, "span name")
+	ctx, s1 := tracer.Start(context.Background(), "span name")
+
+	// must add entry span
+	es, ok := entryspans.Current(s1.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s1.SpanContext().SpanID(), es)
+
 	_, s2 := tracer.Start(ctx, "child span")
+	// s2 is *not* an entry span, so s1 should remain the current entry span
+	es, ok = entryspans.Current(s1.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, s1.SpanContext().SpanID(), es)
+
 	s2.End()
 
 	assert.False(t, mock.called)
 }
 
-func TestSolarWindsInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
+func TestInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
 	mock := &recordMock{}
 	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		mock.span = span

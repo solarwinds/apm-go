@@ -17,11 +17,13 @@ package solarwinds_apm
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	stdlog "log"
 	"strings"
@@ -138,4 +140,18 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}
 	}, nil
 
+}
+
+// SetTransactionName sets the transaction name of the current entry span. If set multiple times, the last is used.
+// Returns nil on success; Error if the provided name is blank, or we are unable to set the transaction name.
+func SetTransactionName(ctx context.Context, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("invalid transaction name")
+	}
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return errors.New("could not obtain OpenTelemetry SpanContext from given context")
+	}
+	return entryspans.SetTransactionName(sc.TraceID(), name)
 }

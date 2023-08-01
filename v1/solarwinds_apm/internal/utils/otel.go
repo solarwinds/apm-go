@@ -15,15 +15,26 @@
 package utils
 
 import (
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"log"
 	"net/url"
 	"strings"
 )
 
-// GetTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
-func GetTransactionName(name string, attrs []attribute.KeyValue) string {
+// GetTransactionName retrieves the custom transaction name if it exists, otherwise calls deriveTransactionName
+func GetTransactionName(span sdktrace.ReadOnlySpan) string {
+	if txnName := entryspans.GetTransactionName(span.SpanContext().TraceID()); txnName != "" {
+		return txnName
+	} else {
+		return deriveTransactionName(span.Name(), span.Attributes())
+	}
+}
+
+// deriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
+func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
 	var httpRoute, httpUrl, txnName = "", "", ""
 	for _, attr := range attrs {
 		if attr.Key == semconv.HTTPRouteKey {
