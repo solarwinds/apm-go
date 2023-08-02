@@ -29,7 +29,7 @@ type LoggableTraceContext struct {
 }
 
 // String returns a string representation that is usable in a log
-// Example: race_id=d4261c67357f99f39958b14f99da7e6c span_id=1280450002ba77b3 trace_flags=01 resource.service.name=my-service
+// Example: trace_id=d4261c67357f99f39958b14f99da7e6c span_id=1280450002ba77b3 trace_flags=01 resource.service.name=my-service
 func (l LoggableTraceContext) String() string {
 	return fmt.Sprintf(
 		"trace_id=%s span_id=%s trace_flags=%s resource.service.name=%s",
