@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"math"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -302,7 +303,7 @@ func (s SampleDecision) SampleSource() SampleSource {
 }
 
 func floatToStr(f float64) string {
-	return fmt.Sprintf("%f", f)
+	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
 type TriggerTraceMode int
@@ -415,6 +416,7 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap, diceRolled}
 	}
 
+	unsetBucketAndSampleKVs := false
 	if !continued {
 		// A new request
 		if flags&FLAG_SAMPLE_START != 0 {
@@ -428,6 +430,7 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 	} else if swState.IsValid() {
 		if swState.Flags().IsSampled() {
 			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+				unsetBucketAndSampleKVs = true
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
 				// roll the dice
@@ -446,9 +449,23 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 		rsp = ttIgnored
 	}
 
-	ttCap, ttRate := getTokenBucketSetting(setting, ModeTriggerTraceNotPresent)
+	var bucketCap, bucketRate float64
+	if unsetBucketAndSampleKVs {
+		bucketCap, bucketRate, sampleRate, source = -1, -1, -1, SAMPLE_SOURCE_UNSET
+	} else {
+		bucketCap, bucketRate = getTokenBucketSetting(setting, ModeTriggerTraceNotPresent)
+	}
 
-	return SampleDecision{retval, sampleRate, source, flags.Enabled(), rsp, ttCap, ttRate, diceRolled}
+	return SampleDecision{
+		retval,
+		sampleRate,
+		source,
+		flags.Enabled(),
+		rsp,
+		bucketCap,
+		bucketRate,
+		diceRolled,
+	}
 }
 
 func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (float64, float64) {

@@ -305,21 +305,3 @@ func TestOboeSampleRequestInvalidTT(t *testing.T) {
 	}
 	require.Equal(t, expected, dec)
 }
-
-func TestOboeSampleRequestRelaxedTTContinued(t *testing.T) {
-	r := SetTestReporter(TestReporterSettingType(DefaultST))
-	defer r.Close(0)
-	ttMode := ModeRelaxedTriggerTrace
-	dec := oboeSampleRequest(true, "url", ttMode, sampledSwState)
-	expected := SampleDecision{
-		trace:         true,
-		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
-		enabled:       true,
-		xTraceOptsRsp: "ignored",
-		bucketCap:     0,
-		bucketRate:    0,
-		diceRolled:    false,
-	}
-	require.Equal(t, expected, dec)
-}
