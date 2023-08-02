@@ -17,19 +17,45 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/reporter"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// LoggableTrace Returns a loggable trace ID from the given
-// context.Context for log injection
-func LoggableTrace(ctx context.Context) string {
+type LoggableTraceContext struct {
+	TraceID     trace.TraceID
+	SpanID      trace.SpanID
+	TraceFlags  trace.TraceFlags
+	ServiceName string
+}
+
+// String returns a string representation that is usable in a log
+// Example: race_id=d4261c67357f99f39958b14f99da7e6c span_id=1280450002ba77b3 trace_flags=01 resource.service.name=my-service
+func (l LoggableTraceContext) String() string {
+	return fmt.Sprintf(
+		"trace_id=%s span_id=%s trace_flags=%s resource.service.name=%s",
+		l.TraceID,
+		l.SpanID,
+		l.TraceFlags,
+		l.ServiceName,
+	)
+}
+
+// IsValid returns true if both TraceID and SpanID are valid
+func (l LoggableTraceContext) IsValid() bool {
+	return l.TraceID.IsValid() && l.SpanID.IsValid()
+}
+
+// LoggableTrace returns a LoggableTraceContext from a given context.Context and the configured service name
+func LoggableTrace(ctx context.Context) LoggableTraceContext {
 	return LoggableTraceFromSpanContext(trace.SpanContextFromContext(ctx))
 }
 
-func LoggableTraceFromSpanContext(ctx trace.SpanContext) string {
-	sampled := "0"
-	if ctx.IsSampled() {
-		sampled = "1"
+// LoggableTraceFromSpanContext returns a LoggableTraceContext from a given SpanContext and the configured service name
+func LoggableTraceFromSpanContext(ctx trace.SpanContext) LoggableTraceContext {
+	return LoggableTraceContext{
+		TraceID:     ctx.TraceID(),
+		SpanID:      ctx.SpanID(),
+		TraceFlags:  ctx.TraceFlags(),
+		ServiceName: reporter.GetServiceName(),
 	}
-	return fmt.Sprintf("%s-%s", ctx.TraceID().String(), sampled)
 }

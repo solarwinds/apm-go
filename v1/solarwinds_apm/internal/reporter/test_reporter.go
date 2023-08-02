@@ -87,7 +87,7 @@ func (r *TestReporter) SetServiceKey(string) error {
 }
 
 func (r *TestReporter) GetServiceName() string {
-	return ""
+	return "test-reporter-service"
 }
 
 func (r *TestReporter) resultWriter() {

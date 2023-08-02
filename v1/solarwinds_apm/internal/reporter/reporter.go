@@ -210,3 +210,7 @@ func ReportStatus(e Event) error {
 func ReportEvent(e Event) error {
 	return globalReporter.ReportEvent(e)
 }
+
+func GetServiceName() string {
+	return globalReporter.GetServiceName()
+}
