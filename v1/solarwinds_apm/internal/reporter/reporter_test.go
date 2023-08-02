@@ -17,6 +17,9 @@ package reporter
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	"go.uber.org/atomic"
 	"io"
 	stdlog "log"
 	"os"
@@ -83,7 +86,7 @@ func TestGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
-	setGlobalReporter("ssl")
+	setGlobalReporter("ssl", "")
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
@@ -176,7 +179,7 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
-	setGlobalReporter("ssl")
+	setGlobalReporter("ssl", "")
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
@@ -190,6 +193,24 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	// stop test reporter
 	server.Stop()
 	globalReporter = oldReporter
+}
+
+func TestSetServiceKey(t *testing.T) {
+	r := &grpcReporter{serviceKey: atomic.NewString("unset")}
+	err := r.SetServiceKey("foo")
+	require.Error(t, err)
+	require.Equal(t, "invalid service key format", err.Error())
+
+	err = r.SetServiceKey(TestServiceKey)
+	require.NoError(t, err)
+	require.Equal(t, TestServiceKey, r.serviceKey.Load())
+}
+
+func TestGetServiceName(t *testing.T) {
+	r := &grpcReporter{serviceKey: atomic.NewString(TestServiceKey), otelServiceName: ""}
+	require.Equal(t, "go", r.GetServiceName())
+	r = &grpcReporter{serviceKey: atomic.NewString(TestServiceKey), otelServiceName: "override"}
+	require.Equal(t, "override", r.GetServiceName())
 }
 
 func TestInvalidKey(t *testing.T) {
@@ -222,7 +243,7 @@ func TestInvalidKey(t *testing.T) {
 	oldReporter := globalReporter
 
 	log.SetLevel(log.INFO)
-	setGlobalReporter("ssl")
+	setGlobalReporter("ssl", "")
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
@@ -434,7 +455,7 @@ func TestInitReporter(t *testing.T) {
 	// Test disable agent
 	setEnv("SW_APM_DISABLED", "true")
 	config.Load()
-	initReporter()
+	initReporter(resource.Empty())
 	require.IsType(t, &nullReporter{}, globalReporter)
 
 	// Test enable agent
@@ -443,8 +464,9 @@ func TestInitReporter(t *testing.T) {
 	config.Load()
 	require.False(t, config.GetDisabled())
 
-	initReporter()
+	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")))
 	require.IsType(t, &grpcReporter{}, globalReporter)
+	require.Equal(t, "my service name", globalReporter.GetServiceName())
 }
 
 func TestCollectMetricsNextInterval(t *testing.T) {
@@ -480,7 +502,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	oldReporter := globalReporter
 	defer func() { globalReporter = oldReporter }()
 
-	setGlobalReporter("ssl")
+	setGlobalReporter("ssl", "")
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 

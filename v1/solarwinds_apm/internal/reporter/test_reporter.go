@@ -82,8 +82,12 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	return r
 }
 
-func (r *TestReporter) SetServiceKey(string) {
-	// do nothing
+func (r *TestReporter) SetServiceKey(string) error {
+	return nil
+}
+
+func (r *TestReporter) GetServiceName() string {
+	return "test-reporter-service"
 }
 
 func (r *TestReporter) resultWriter() {
