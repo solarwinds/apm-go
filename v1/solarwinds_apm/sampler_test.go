@@ -264,6 +264,12 @@ type SamplingScenario struct {
 	decision sdktrace.SamplingDecision
 }
 
+func requireAttrEqual(t *testing.T, attrs attribute.Set, key string, expected attribute.Value) {
+	val, ok := attrs.Value(attribute.Key(key))
+	require.True(t, ok)
+	require.Equal(t, expected, val, "Expected %s; got %s", expected.Emit(), val.Emit())
+}
+
 func (s SamplingScenario) test(t *testing.T) {
 	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
 	defer r.Close(0)
@@ -327,6 +333,26 @@ func (s SamplingScenario) test(t *testing.T) {
 	assert.Equal(t, s.decision, result.Decision)
 
 	attrs := attribute.NewSet(result.Attributes...)
+
+	if result.Decision == sdktrace.RecordAndSample {
+		bucketCap := "0"
+		bucketRate := bucketCap
+		sampleRate := 1000000
+		sampleSource := reporter.SAMPLE_SOURCE_DEFAULT
+		if s.triggerTrace && !s.traceStateSwSampled {
+			bucketCap = "1000000"
+			bucketRate = bucketCap
+			sampleRate = -1
+			sampleSource = reporter.SAMPLE_SOURCE_UNSET
+		}
+		if s.traceStateSwSampled {
+			bucketCap, bucketRate, sampleRate, sampleSource = "-1", "-1", -1, -1
+		}
+		requireAttrEqual(t, attrs, "BucketCapacity", attribute.StringValue(bucketCap))
+		requireAttrEqual(t, attrs, "BucketRate", attribute.StringValue(bucketRate))
+		requireAttrEqual(t, attrs, "SampleRate", attribute.IntValue(sampleRate))
+		requireAttrEqual(t, attrs, "SampleSource", attribute.IntValue(int(sampleSource)))
+	}
 
 	if s.traceStateContainsOther {
 		if result.Decision == sdktrace.RecordAndSample {
