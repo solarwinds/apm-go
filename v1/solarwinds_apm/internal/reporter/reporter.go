@@ -21,6 +21,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"math"
 	"strings"
 )
@@ -38,7 +39,12 @@ type reporter interface {
 	// WaitForReady waits until the reporter becomes ready or the context is canceled.
 	WaitForReady(context.Context) bool
 	// SetServiceKey attaches a service key to the reporter
-	SetServiceKey(key string)
+	// Returns error if service key is invalid
+	SetServiceKey(key string) error
+
+	// GetServiceName retrieves the current service name, preferring an otel `service.name` from resource attributes,
+	// falling back to the service name in the service key
+	GetServiceName() string
 }
 
 // KVs from getSettingsResult arguments
@@ -73,15 +79,16 @@ func (r *nullReporter) Shutdown(context.Context) error    { return nil }
 func (r *nullReporter) ShutdownNow()                      {}
 func (r *nullReporter) Closed() bool                      { return true }
 func (r *nullReporter) WaitForReady(context.Context) bool { return true }
-func (r *nullReporter) SetServiceKey(string)              {}
+func (r *nullReporter) SetServiceKey(string) error        { return nil }
+func (r *nullReporter) GetServiceName() string            { return "" }
 
 func Start(r *resource.Resource) {
 	log.SetLevelFromStr(config.DebugLevel())
-	initReporter()
+	initReporter(r)
 	sendInitMessage(r)
 }
 
-func initReporter() {
+func initReporter(r *resource.Resource) {
 	var rt string
 	if config.GetDisabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
@@ -89,10 +96,14 @@ func initReporter() {
 	} else {
 		rt = config.GetReporterType()
 	}
-	setGlobalReporter(rt)
+	otelServiceName := ""
+	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
+		otelServiceName = strings.TrimSpace(sn.AsString())
+	}
+	setGlobalReporter(rt, otelServiceName)
 }
 
-func setGlobalReporter(reporterType string) {
+func setGlobalReporter(reporterType string, otelServiceName string) {
 	// Close the previous reporter
 	if globalReporter != nil {
 		globalReporter.ShutdownNow()
@@ -102,7 +113,7 @@ func setGlobalReporter(reporterType string) {
 	case "none":
 		globalReporter = newNullReporter()
 	default:
-		globalReporter = newGRPCReporter()
+		globalReporter = newGRPCReporter(otelServiceName)
 	}
 }
 
@@ -188,8 +199,8 @@ func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 	return args
 }
 
-func SetServiceKey(key string) {
-	globalReporter.SetServiceKey(key)
+func SetServiceKey(key string) error {
+	return globalReporter.SetServiceKey(key)
 }
 
 func ReportStatus(e Event) error {

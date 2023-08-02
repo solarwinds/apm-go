@@ -218,7 +218,8 @@ type grpcReporter struct {
 	getSettingsInterval          int             // settings retrieval interval in seconds
 	settingsTimeoutCheckInterval int             // check interval for timed out settings in seconds
 
-	serviceKey *uatomic.String // service key
+	serviceKey      *uatomic.String // service key
+	otelServiceName string
 
 	eventMessages  chan []byte // channel for event messages (sent from agent)
 	statusMessages chan []byte // channel for status messages (sent from agent)
@@ -258,7 +259,7 @@ func getProxyCertPath() string {
 // initializes a new GRPC reporter from scratch (called once on program startup)
 //
 // returns	GRPC reporter object
-func newGRPCReporter() reporter {
+func newGRPCReporter(otelServiceName string) reporter {
 	// collector address override
 	addr := config.GetCollector()
 
@@ -295,7 +296,8 @@ func newGRPCReporter() reporter {
 		getSettingsInterval:          grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
-		serviceKey: uatomic.NewString(config.GetServiceKey()),
+		serviceKey:      uatomic.NewString(config.GetServiceKey()),
+		otelServiceName: otelServiceName,
 
 		eventMessages:  make(chan []byte, 10000),
 		statusMessages: make(chan []byte, 100),
@@ -311,8 +313,24 @@ func newGRPCReporter() reporter {
 	return r
 }
 
-func (r *grpcReporter) SetServiceKey(key string) {
-	r.serviceKey.Store(key)
+func (r *grpcReporter) SetServiceKey(key string) error {
+	if config.IsValidServiceKey(key) {
+		r.serviceKey.Store(key)
+		return nil
+	}
+	return errors.New("invalid service key format")
+}
+
+func (r *grpcReporter) GetServiceName() string {
+	if r.otelServiceName != "" {
+		return r.otelServiceName
+	}
+	s := strings.Split(r.serviceKey.Load(), ":")
+	if len(s) != 2 {
+		log.Warningf("could not extract service name from service key")
+		return ""
+	}
+	return s[1]
 }
 
 func (r *grpcReporter) isGracefully() bool {
