@@ -81,12 +81,14 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 
 	var result sdktrace.SamplingResult
 	if psc.IsValid() && !psc.IsRemote() {
+		fmt.Printf("oh skipping %s", params.Name)
 		if psc.IsSampled() {
 			result = alwaysSampler.ShouldSample(params)
 		} else {
 			result = neverSampler.ShouldSample(params)
 		}
 	} else {
+		fmt.Printf("oh choosing %s", params.Name)
 		// TODO url
 		url := ""
 		xto := xtrace.GetXTraceOptions(params.ParentContext)
@@ -121,6 +123,11 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 			if capture := swotel.Capture(ts); capture.Len() > 0 {
 				attrs = append(attrs, attribute.String("sw.w3c.tracestate", capture.String()))
 			}
+
+			attrs = append(attrs, attribute.String("BucketCapacity", traceDecision.BucketCapacityStr()))
+			attrs = append(attrs, attribute.String("BucketRate", traceDecision.BucketRateStr()))
+			attrs = append(attrs, attribute.Int("SampleRate", traceDecision.SampleRate()))
+			attrs = append(attrs, attribute.Int("SampleSource", int(traceDecision.SampleSource())))
 		}
 		result = sdktrace.SamplingResult{
 			Decision:   decision,
@@ -128,8 +135,6 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 			Attributes: attrs,
 		}
 	}
-
-	// TODO NH-43627
 	return result
 
 }

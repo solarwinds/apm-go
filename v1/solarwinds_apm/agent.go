@@ -117,7 +117,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	reporter.Start(resrc)
 
 	exprtr := NewExporter()
-	smplr := sdktrace.ParentBased(NewSampler())
+	smplr := NewSampler()
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	processor := NewInboundMetricsSpanProcessor(isAppoptics)

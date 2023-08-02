@@ -40,11 +40,11 @@ const (
 )
 
 // enums used by sampling and tracing settings
-type sampleSource int
+type SampleSource int
 
 // source of the sample value
 const (
-	SAMPLE_SOURCE_UNSET sampleSource = iota - 1
+	SAMPLE_SOURCE_UNSET SampleSource = iota - 1
 	SAMPLE_SOURCE_NONE
 	SAMPLE_SOURCE_FILE
 	SAMPLE_SOURCE_DEFAULT
@@ -81,7 +81,7 @@ type oboeSettings struct {
 	// or a new value after negotiating with local config
 	value int
 	// The sample source after negotiating with local config
-	source                    sampleSource
+	source                    SampleSource
 	ttl                       int64
 	layer                     string
 	triggerToken              []byte
@@ -254,7 +254,7 @@ func (b *tokenBucket) update(now time.Time) {
 type SampleDecision struct {
 	trace  bool
 	rate   int
-	source sampleSource // TODO: This is unused. Remove?
+	source SampleSource
 	// if the request is disabled from tracing in a per-transaction level or for
 	// the entire service.
 	enabled       bool
@@ -275,6 +275,34 @@ func (s SampleDecision) XTraceOptsRsp() string {
 
 func (s SampleDecision) Enabled() bool {
 	return s.enabled
+}
+
+func (s SampleDecision) BucketCapacity() float64 {
+	return s.bucketCap
+}
+
+func (s SampleDecision) BucketCapacityStr() string {
+	return floatToStr(s.BucketCapacity())
+}
+
+func (s SampleDecision) BucketRate() float64 {
+	return s.bucketRate
+}
+
+func (s SampleDecision) BucketRateStr() string {
+	return floatToStr(s.BucketRate())
+}
+
+func (s SampleDecision) SampleRate() int {
+	return s.rate
+}
+
+func (s SampleDecision) SampleSource() SampleSource {
+	return s.source
+}
+
+func floatToStr(f float64) string {
+	return fmt.Sprintf("%f", f)
 }
 
 type TriggerTraceMode int
@@ -511,7 +539,7 @@ func mergeLocalSetting(remote *oboeSettings) *oboeSettings {
 
 // mergeURLSetting merges the service level setting (merged from remote and local
 // settings) and the per-URL sampling flags, if any.
-func mergeURLSetting(setting *oboeSettings, url string) (int, settingFlag, sampleSource) {
+func mergeURLSetting(setting *oboeSettings, url string) (int, settingFlag, SampleSource) {
 	if url == "" {
 		return setting.value, setting.flags, setting.source
 	}
@@ -758,8 +786,8 @@ func (f settingFlag) TriggerTraceEnabled() bool {
 	return f&FLAG_TRIGGER_TRACE != 0
 }
 
-func (st settingType) toSampleSource() sampleSource {
-	var source sampleSource
+func (st settingType) toSampleSource() SampleSource {
+	var source SampleSource
 	switch st {
 	case TYPE_DEFAULT:
 		source = SAMPLE_SOURCE_DEFAULT
