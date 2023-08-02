@@ -430,6 +430,8 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 	} else if swState.IsValid() {
 		if swState.Flags().IsSampled() {
 			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+				// Conform to liboboe behavior; continue decision would result in a -1 value for the
+				// BucketCapacity, BucketRate, SampleRate and SampleSource KVs to indicate "unset".
 				unsetBucketAndSampleKVs = true
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
