@@ -81,14 +81,12 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 
 	var result sdktrace.SamplingResult
 	if psc.IsValid() && !psc.IsRemote() {
-		fmt.Printf("oh skipping %s", params.Name)
 		if psc.IsSampled() {
 			result = alwaysSampler.ShouldSample(params)
 		} else {
 			result = neverSampler.ShouldSample(params)
 		}
 	} else {
-		fmt.Printf("oh choosing %s", params.Name)
 		// TODO url
 		url := ""
 		xto := xtrace.GetXTraceOptions(params.ParentContext)
