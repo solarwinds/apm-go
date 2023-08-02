@@ -22,10 +22,10 @@ import (
 )
 
 type LoggableTraceContext struct {
-	TraceID     trace.TraceID
-	SpanID      trace.SpanID
-	TraceFlags  trace.TraceFlags
-	ServiceName string
+	TraceID     trace.TraceID    `json:"trace_id,omitempty"`
+	SpanID      trace.SpanID     `json:"span_id,omitempty"`
+	TraceFlags  trace.TraceFlags `json:"trace_flags,omitempty"`
+	ServiceName string           `json:"service_name,omitempty"`
 }
 
 // String returns a string representation that is usable in a log
