@@ -7,18 +7,14 @@
 
 ## Getting started
 
+ℹ️ Check out the [http example](examples/http/README.md) to see how easy it is
+to get started. The following code snippets are pulled directly from it.
+
 To use in your Go project:
 
 ### Initialize the library
 
 ```go
-import (
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
-)
-
 // Initialize the solarwinds_apm library	
 cb, err := solarwinds_apm.Start(
 	// Optionally add service-level resource attributes 
@@ -40,14 +36,8 @@ Many packages have instrumentation-enabled versions. We provide a simple
 wrapper for `net/http` server requests. Here's an example:
 
 ```go
-import (
-	"net/http"
-	swohttp "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/instrumentation/net/http"
-	"go.opentelemetry.io/otel/trace"
-)
-
 // Create a new handler to respond to any request with the text it was given
-h := swohttp.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+echoHandler := swohttp.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 	if text, err := io.ReadAll(req.Body); err != nil {
 		// The `trace` package is from the OpenTelemetry Go SDK. Here we
 		// retrieve the current span for this request...
@@ -89,13 +79,12 @@ Observability.
 
 The only environment variable you need to set before kicking off is the service key:
 
-| Variable Name       | Required           | Default  | Description |
-|---------------------| ------------------ | -------- | ----------- |
-| SW_APM_SERVICE_KEY  |Yes|N.A|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
-
+| Variable Name       | Required           |  Description |
+|---------------------| ------------------ |  ----------- |
+| SW_APM_SERVICE_KEY  |Yes|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
 
 ## License
 
 Copyright (C) 2023 SolarWinds, LLC
 
-Released under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+Released under [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
