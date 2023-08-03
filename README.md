@@ -2,7 +2,7 @@
 
 ## Notice
 
-⚠ This is a work-in-progress, originally forked from the
+⚠ This is a work in progress, originally forked from the
 [appoptics-apm-go](https://github.com/appoptics/appoptics-apm-go) repository.
 
 ## Getting started
