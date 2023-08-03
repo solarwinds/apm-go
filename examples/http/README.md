@@ -32,4 +32,4 @@ hello world%
 The `X-Trace` response header is in the [W3C Trace Context Traceparent Header
 ](https://www.w3.org/TR/trace-context/#traceparent-header) format. The `01` at
 the end indicates the request was sampled, meaning the trace will show up in
-your SolarWinds APM dashboard. `00` at the end will indicate _not_ sampled`.
+your SolarWinds APM dashboard. `00` at the end will indicate _not_ sampled.
