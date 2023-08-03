@@ -83,6 +83,11 @@ The only environment variable you need to set before kicking off is the service 
 |---------------------| ------------------ |  ----------- |
 | SW_APM_SERVICE_KEY  |Yes|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
 
+## Compatibility
+
+We support the same environments as
+[OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go#compatibility).
+
 ## License
 
 Copyright (C) 2023 SolarWinds, LLC
