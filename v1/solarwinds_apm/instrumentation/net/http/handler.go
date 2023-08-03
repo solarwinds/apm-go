@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strings"
@@ -27,6 +28,13 @@ const (
 	XTraceHdr         = "X-Trace"
 	XTraceOptsRespHdr = "X-Trace-Options-Response"
 )
+
+func Wrap(h http.Handler, operation string) http.Handler {
+	// Wrap with our instrumentation
+	h = NewHandler(h)
+	// Wrap with Otel
+	return otelhttp.NewHandler(h, operation)
+}
 
 func NewHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
