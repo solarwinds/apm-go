@@ -480,12 +480,11 @@ func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (capa
 		bucket = setting.triggerTraceStrictBucket
 	case ModeTriggerTraceNotPresent, ModeInvalidTriggerTrace:
 		bucket = setting.bucket
-	}
-
-	if bucket == nil {
+	default:
 		log.Warningf("Could not determine token bucket setting for invalid TriggerTraceMode: %#v", ttMode)
 		return 0, 0
 	}
+
 	return bucket.capacity, bucket.ratePerSec
 }
 
