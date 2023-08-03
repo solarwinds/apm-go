@@ -29,7 +29,6 @@ TMPFILE="$(mktemp)"
 find . -type f \
     -not -path '*/\.git*' \
     -not -path '*/go.sum' \
-    -not -path '*/go.mod' \
     -not -path './LICENSE' \
     -not -path '*/README.md' \
     -not -path './\.editorconfig' \
