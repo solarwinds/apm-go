@@ -79,9 +79,9 @@ Observability.
 
 The only environment variable you need to set before kicking off is the service key:
 
-| Variable Name       | Required           |  Description |
-|---------------------| ------------------ |  ----------- |
-| SW_APM_SERVICE_KEY  |Yes|The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``.|
+| Variable Name      | Required | Description                                                                                                                                     |
+|--------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| SW_APM_SERVICE_KEY | Yes      | The service key identifies the service being instrumented within your Organization. It should be in the form of ``<api token>:<service name>``. |
 
 ## Compatibility
 
