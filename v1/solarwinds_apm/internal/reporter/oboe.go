@@ -470,23 +470,22 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 	}
 }
 
-func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (float64, float64) {
-	var ttCap float64
-	var ttRate float64
+func getTokenBucketSetting(setting *oboeSettings, ttMode TriggerTraceMode) (capacity float64, rate float64) {
+	var bucket *tokenBucket
 
 	switch ttMode {
 	case ModeRelaxedTriggerTrace:
-		ttCap = setting.triggerTraceRelaxedBucket.capacity
-		ttRate = setting.triggerTraceRelaxedBucket.ratePerSec
+		bucket = setting.triggerTraceRelaxedBucket
 	case ModeStrictTriggerTrace:
-		ttCap = setting.triggerTraceStrictBucket.capacity
-		ttRate = setting.triggerTraceStrictBucket.ratePerSec
+		bucket = setting.triggerTraceStrictBucket
 	case ModeTriggerTraceNotPresent, ModeInvalidTriggerTrace:
+		bucket = setting.bucket
 	default:
-		ttCap = setting.bucket.capacity
-		ttRate = setting.bucket.ratePerSec
+		log.Warningf("Could not determine token bucket setting for invalid TriggerTraceMode: %#v", ttMode)
+		return 0, 0
 	}
-	return ttCap, ttRate
+
+	return bucket.capacity, bucket.ratePerSec
 }
 
 func bytesToFloat64(b []byte) (float64, error) {

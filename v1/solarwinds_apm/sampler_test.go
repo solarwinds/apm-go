@@ -335,13 +335,11 @@ func (s SamplingScenario) test(t *testing.T) {
 	attrs := attribute.NewSet(result.Attributes...)
 
 	if result.Decision == sdktrace.RecordAndSample {
-		bucketCap := "0"
+		bucketCap := "1000000"
 		bucketRate := bucketCap
 		sampleRate := 1000000
 		sampleSource := reporter.SAMPLE_SOURCE_DEFAULT
 		if s.triggerTrace && !s.traceStateSwSampled {
-			bucketCap = "1000000"
-			bucketRate = bucketCap
 			sampleRate = -1
 			sampleSource = reporter.SAMPLE_SOURCE_UNSET
 		}

@@ -99,8 +99,8 @@ func TestOboeSampleRequest(t *testing.T) {
 		source:        SAMPLE_SOURCE_DEFAULT,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    true,
 	}
 	require.Equal(t, expected, dec)
@@ -117,8 +117,8 @@ func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 		source:        SAMPLE_SOURCE_DEFAULT,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    false,
 	}
 	require.Equal(t, expected, dec)
@@ -153,8 +153,8 @@ func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
 		source:        SAMPLE_SOURCE_DEFAULT,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    true,
 	}
 	require.Equal(t, expected, dec)
@@ -171,8 +171,8 @@ func TestOboeSampleRequestThrough(t *testing.T) {
 		source:        SAMPLE_SOURCE_DEFAULT,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    true,
 	}
 	require.Equal(t, expected, dec)
@@ -189,8 +189,8 @@ func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
 		source:        SAMPLE_SOURCE_DEFAULT,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    false,
 	}
 	require.Equal(t, expected, dec)
@@ -299,9 +299,41 @@ func TestOboeSampleRequestInvalidTT(t *testing.T) {
 		source:        SAMPLE_SOURCE_UNSET,
 		enabled:       true,
 		xTraceOptsRsp: "",
-		bucketCap:     0,
-		bucketRate:    0,
+		bucketCap:     1000000,
+		bucketRate:    1000000,
 		diceRolled:    false,
 	}
 	require.Equal(t, expected, dec)
+}
+
+func TestGetTokenBucketSetting(t *testing.T) {
+	main := &tokenBucket{ratePerSec: 1, capacity: 2}
+	relaxed := &tokenBucket{ratePerSec: 3, capacity: 4}
+	strict := &tokenBucket{ratePerSec: 5, capacity: 6}
+	setting := &oboeSettings{
+		bucket:                    main,
+		triggerTraceRelaxedBucket: relaxed,
+		triggerTraceStrictBucket:  strict,
+	}
+
+	scenarios := []struct {
+		mode   TriggerTraceMode
+		bucket *tokenBucket
+	}{
+		{ModeRelaxedTriggerTrace, relaxed},
+		{ModeStrictTriggerTrace, strict},
+		{ModeTriggerTraceNotPresent, main},
+		{ModeInvalidTriggerTrace, main},
+		{99, nil},
+	}
+	for _, scen := range scenarios {
+		capacity, rate := getTokenBucketSetting(setting, scen.mode)
+		if scen.bucket == nil {
+			require.Equal(t, float64(0), capacity)
+			require.Equal(t, float64(0), rate)
+		} else {
+			require.Equal(t, scen.bucket.capacity, capacity)
+			require.Equal(t, scen.bucket.ratePerSec, rate)
+		}
+	}
 }
