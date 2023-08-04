@@ -24,6 +24,8 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"time"
@@ -182,6 +184,17 @@ func CreateExitEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelExit)
 }
 
+func EventFromOtelEvent(ctx trace.SpanContext, evt sdktrace.Event) (Event, error) {
+	if evt.Name == semconv.ExceptionEventName {
+		return CreateExceptionEvent(ctx, evt.Time)
+	}
+	return CreateInfoEvent(ctx, evt.Time)
+}
+
 func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
 	return createNonEntryEvent(ctx, t, LabelInfo)
+}
+
+func CreateExceptionEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+	return createNonEntryEvent(ctx, t, LabelError)
 }
