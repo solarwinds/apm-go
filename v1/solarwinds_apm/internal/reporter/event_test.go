@@ -40,8 +40,7 @@ var invalidSpanContext = trace.NewSpanContext(trace.SpanContextConfig{
 
 func TestEntryEventNoParent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateEntryEvent(validSpanContext, now, invalidSpanContext)
-	require.Nil(t, err)
+	e := CreateEntryEvent(validSpanContext, now, invalidSpanContext)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -73,8 +72,7 @@ func TestEntryEventWithParent(t *testing.T) {
 	now := time.Now()
 	parentSpanID := trace.SpanID{0x33}
 	parent := trace.NewSpanContext(trace.SpanContextConfig{TraceID: validTraceID, SpanID: parentSpanID})
-	e, err := CreateEntryEvent(validSpanContext, now, parent)
-	require.Nil(t, err)
+	e := CreateEntryEvent(validSpanContext, now, parent)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -106,8 +104,7 @@ func TestEntryEventWithParent(t *testing.T) {
 
 func TestExitEvent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateExitEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateExitEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -140,8 +137,7 @@ func TestExitEvent(t *testing.T) {
 
 func TestInfoEvent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateInfoEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateInfoEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -174,8 +170,7 @@ func TestInfoEvent(t *testing.T) {
 
 func TestAddKV(t *testing.T) {
 	now := time.Now()
-	e, err := CreateExitEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateExitEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -201,8 +196,7 @@ func TestEventXTraceAndSwTraceCtx(t *testing.T) {
 		SpanID:  spanID,
 	})
 
-	e, err := CreateEntryEvent(sc, time.Now(), invalidSpanContext)
-	require.Nil(t, err)
+	e := CreateEntryEvent(sc, time.Now(), invalidSpanContext)
 	require.NotNil(t, e)
 	evt, ok := e.(*event)
 	require.True(t, ok)

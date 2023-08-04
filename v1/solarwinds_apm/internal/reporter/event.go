@@ -17,12 +17,12 @@
 package reporter
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
@@ -85,19 +85,17 @@ type event struct {
 	parent trace.SpanID
 }
 
-func NewEvent(tid trace.TraceID, oid opID, t time.Time) (Event, error) {
+func NewEvent(tid trace.TraceID, oid opID, t time.Time) Event {
 	return &event{
 		taskID: tid,
 		opID:   oid,
 		t:      t,
-	}, nil
+	}
 }
 
-func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) (Event, error) {
+func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) Event {
 	oid := opID{0}
-	if _, err := rand.Reader.Read(oid[:]); err != nil {
-		return nil, err
-	}
+	utils.Random(oid[:])
 	return NewEvent(tid, oid, t)
 }
 
@@ -161,43 +159,37 @@ func (e *event) ToBson() []byte {
 	return buf.GetBuf()
 }
 
-func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (Event, error) {
-	evt, err := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
-	if err != nil {
-		return nil, err
-	}
+func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) Event {
+	evt := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
 	if parent.IsValid() {
 		evt.SetParent(parent.SpanID())
 	}
 	evt.SetLabel(LabelEntry)
-	return evt, nil
+	return evt
 }
 
-func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (Event, error) {
-	evt, err := NewEventWithRandomOpID(ctx.TraceID(), t)
-	if err != nil {
-		return nil, err
-	}
+func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) Event {
+	evt := NewEventWithRandomOpID(ctx.TraceID(), t)
 	evt.SetParent(ctx.SpanID())
 	evt.SetLabel(label)
-	return evt, nil
+	return evt
 }
 
-func CreateExitEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateExitEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelExit)
 }
 
-func EventFromOtelEvent(ctx trace.SpanContext, evt sdktrace.Event) (Event, error) {
+func EventFromOtelEvent(ctx trace.SpanContext, evt sdktrace.Event) Event {
 	if evt.Name == semconv.ExceptionEventName {
 		return CreateExceptionEvent(ctx, evt.Time)
 	}
 	return CreateInfoEvent(ctx, evt.Time)
 }
 
-func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateInfoEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelInfo)
 }
 
-func CreateExceptionEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateExceptionEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelError)
 }

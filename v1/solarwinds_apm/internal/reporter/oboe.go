@@ -166,11 +166,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
-	evt, err := NewEventWithRandomOpID(tid, time.Now())
-	if err != nil {
-		return nil, err
-	}
+func createInitMessage(tid trace.TraceID, r *resource.Resource) Event {
+	evt := NewEventWithRandomOpID(tid, time.Now())
 	evt.SetLabel(LabelUnset)
 	for _, kv := range r.Attributes() {
 		if kv.Key != semconv.ServiceNameKey {
@@ -182,7 +179,7 @@ func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
 		attribute.Bool("__Init", true),
 		attribute.String("APM.Version", utils.Version()),
 	})
-	return evt, nil
+	return evt
 }
 
 func sendInitMessage(r *resource.Resource) {
@@ -191,14 +188,8 @@ func sendInitMessage(r *resource.Resource) {
 		return
 	}
 	tid := trace.TraceID{0}
-	if _, err := randReader.Read(tid[:]); err != nil {
-		log.Error("could not generate random task id for init message", err)
-		return
-	}
-	evt, err := createInitMessage(tid, r)
-	if err != nil {
-		log.Error("could not create init event")
-	}
+	utils.Random(tid[:])
+	evt := createInitMessage(tid, r)
 	if err := ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}

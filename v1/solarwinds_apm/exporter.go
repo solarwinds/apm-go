@@ -31,11 +31,7 @@ type exporter struct {
 }
 
 func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
-	evt, err := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
-	if err != nil {
-		log.Warning("could not create entry event", err)
-		return
-	}
+	evt := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
 	evt.SetLayer(layer)
 	evt.AddKVs([]attribute.KeyValue{
@@ -58,18 +54,13 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 	evt.AddKVs(s.Attributes())
 
-	err = reporter.ReportEvent(evt)
-	if err != nil {
+	if err := reporter.ReportEvent(evt); err != nil {
 		log.Warning("cannot send entry event", err)
 		return
 	}
 
 	for _, otEvt := range s.Events() {
-		evt, err := reporter.EventFromOtelEvent(s.SpanContext(), otEvt)
-		if err != nil {
-			log.Warningf("could not create %s event: %s", s.Name(), err)
-			continue
-		}
+		evt := reporter.EventFromOtelEvent(s.SpanContext(), otEvt)
 		if otEvt.Name == semconv.ExceptionEventName {
 			set := attribute.NewSet(otEvt.Attributes...)
 			if v, ok := set.Value(semconv.ExceptionMessageKey); ok {
@@ -83,21 +74,15 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			}
 		}
 		evt.AddKVs(otEvt.Attributes)
-		err = reporter.ReportEvent(evt)
-		if err != nil {
+		if err := reporter.ReportEvent(evt); err != nil {
 			log.Warningf("could not send %s event: %s", s.Name(), err)
 			continue
 		}
 	}
 
-	evt, err = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
-	if err != nil {
-		log.Warning("could not create exit event", err)
-		return
-	}
+	evt = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
 	evt.AddKV(attribute.String(constants.Layer, layer))
-	err = reporter.ReportEvent(evt)
-	if err != nil {
+	if err := reporter.ReportEvent(evt); err != nil {
 		log.Warning("cannot send exit event", err)
 		return
 	}
