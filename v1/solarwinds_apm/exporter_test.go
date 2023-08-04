@@ -207,8 +207,7 @@ func (c *capturingReporter) Shutdown(context.Context) error {
 }
 
 func (c *capturingReporter) ShutdownNow() {
-	//TODO implement me
-	panic("implement me")
+	panic("method should not be called")
 }
 
 func (c *capturingReporter) Closed() bool {
@@ -220,13 +219,11 @@ func (c *capturingReporter) WaitForReady(context.Context) bool {
 }
 
 func (c *capturingReporter) SetServiceKey(key string) error {
-	//TODO implement me
-	panic("implement me")
+	panic("method should not be called")
 }
 
 func (c *capturingReporter) GetServiceName() string {
-	//TODO implement me
-	panic("implement me")
+	panic("method should not be called")
 }
 
 var _ reporter.Reporter = &capturingReporter{}
