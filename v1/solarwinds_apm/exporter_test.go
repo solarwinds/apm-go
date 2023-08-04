@@ -44,7 +44,7 @@ func TestExportSpan(t *testing.T) {
 	end := start.Add(time.Second)
 	infoT := start.Add(time.Millisecond)
 	errorT := start.Add(10 * time.Millisecond)
-	ctx, span = tr.Start(ctx, name, trace.WithTimestamp(start))
+	_, span = tr.Start(ctx, name, trace.WithTimestamp(start))
 	span.AddEvent("info event",
 		trace.WithAttributes(attribute.String("foo", "bar")),
 		trace.WithTimestamp(infoT),
@@ -163,7 +163,7 @@ func TestExportSpanBacktrace(t *testing.T) {
 	start := time.Now()
 	end := start.Add(time.Second)
 	errorT := start.Add(10 * time.Millisecond)
-	ctx, span = tr.Start(ctx, name, trace.WithTimestamp(start))
+	_, span = tr.Start(ctx, name, trace.WithTimestamp(start))
 	span.RecordError(
 		errors.New("this is an error"),
 		trace.WithTimestamp(errorT),
@@ -189,8 +189,7 @@ func TestExportSpanBacktrace(t *testing.T) {
 }
 
 type capturingReporter struct {
-	events   []reporter.Event
-	statuses []reporter.Event
+	events []reporter.Event
 }
 
 func (c *capturingReporter) ReportEvent(e reporter.Event) error {
