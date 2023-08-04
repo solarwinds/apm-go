@@ -198,7 +198,7 @@ func (c *capturingReporter) ReportEvent(e reporter.Event) error {
 	return nil
 }
 
-func (c *capturingReporter) ReportStatus(e reporter.Event) error {
+func (c *capturingReporter) ReportStatus(reporter.Event) error {
 	panic("method should not be called")
 }
 
@@ -218,7 +218,7 @@ func (c *capturingReporter) WaitForReady(context.Context) bool {
 	return true
 }
 
-func (c *capturingReporter) SetServiceKey(key string) error {
+func (c *capturingReporter) SetServiceKey(string) error {
 	panic("method should not be called")
 }
 
