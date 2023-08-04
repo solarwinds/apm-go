@@ -7,21 +7,17 @@ on:
       - master
 
 jobs:
-  license-check:
+  meta-checks:
     runs-on: ubuntu-latest
     name: License header check
     steps:
       - uses: actions/checkout@v3
-      - run: ./license_check.sh
-  fmt-check:
-    runs-on: ubuntu-latest
-    name: "`gofmt` check"
-    steps:
-      - uses: actions/checkout@v3
-      - uses: Jerome1337/gofmt-action@v1.0.5
-  vulncheck:
-    steps:
-    - uses: golang/govulncheck-action@v1
+      - id: license-check
+        run: ./license_check.sh
+      - id: vulncheck
+        uses: golang/govulncheck-action@v1
+      - id: gofmt-check
+        uses: Jerome1337/gofmt-action@v1.0.5
   tests:
     runs-on: ubuntu-latest
     strategy:
