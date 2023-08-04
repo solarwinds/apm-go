@@ -43,7 +43,7 @@ const (
 )
 
 var usingTestReporter = false
-var oldReporter reporter = &nullReporter{}
+var oldReporter Reporter = &nullReporter{}
 
 // TestReporterOption values may be passed to SetTestReporter.
 type TestReporterOption func(*TestReporter)
@@ -52,7 +52,15 @@ func TestReporterSettingType(tp int) TestReporterOption {
 	return func(r *TestReporter) { r.SettingType = tp }
 }
 
-// SetTestReporter sets and returns a test reporter that captures raw event bytes
+func SetGlobalReporter(r Reporter) func() {
+	old := globalReporter
+	globalReporter = r
+	return func() {
+		globalReporter = old
+	}
+}
+
+// SetTestReporter sets and returns a test Reporter that captures raw event bytes
 // for making assertions about using the graphtest package.
 func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	r := &TestReporter{

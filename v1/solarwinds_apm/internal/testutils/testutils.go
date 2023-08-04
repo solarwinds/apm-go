@@ -28,8 +28,12 @@ import (
 )
 
 func TracerSetup() (trace.Tracer, func()) {
+	return TracerWithExporter(newDummyExporter())
+}
+
+func TracerWithExporter(e sdktrace.SpanExporter) (trace.Tracer, func()) {
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(newDummyExporter()),
+		sdktrace.WithSyncer(e),
 		sdktrace.WithSampler(newDummySampler()),
 	)
 	otel.SetTracerProvider(tp)
@@ -44,6 +48,7 @@ func TracerSetup() (trace.Tracer, func()) {
 			fmt.Println(err)
 		}
 	}
+
 }
 
 type dummySampler struct{}

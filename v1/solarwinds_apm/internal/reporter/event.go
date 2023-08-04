@@ -68,6 +68,9 @@ type Event interface {
 	SetLayer(string)
 	SetParent(trace.SpanID)
 
+	GetXTrace() string
+	GetSwTraceContext() string
+
 	ToBson() []byte
 }
 
@@ -118,12 +121,12 @@ func (e *event) AddKVs(kvs []attribute.KeyValue) {
 	e.kvs = append(e.kvs, kvs...)
 }
 
-func (e *event) getSwTraceContext() string {
+func (e *event) GetSwTraceContext() string {
 	// For now the version and flags are always 00 and 01, respectively
 	return fmt.Sprintf("00-%s-%s-01", e.taskID.String(), hex.EncodeToString(e.opID[:]))
 }
 
-func (e *event) getXTrace() string {
+func (e *event) GetXTrace() string {
 	tid := strings.ToUpper(e.taskID.String())
 	oid := strings.ToUpper(hex.EncodeToString(e.opID[:]))
 	return fmt.Sprintf("2B%s00000000%s01", tid, oid)
@@ -131,8 +134,8 @@ func (e *event) getXTrace() string {
 
 func (e *event) ToBson() []byte {
 	buf := bson.NewBuffer()
-	buf.AppendString("sw.trace_context", e.getSwTraceContext())
-	buf.AppendString("X-Trace", e.getXTrace())
+	buf.AppendString("sw.trace_context", e.GetSwTraceContext())
+	buf.AppendString("X-Trace", e.GetXTrace())
 	buf.AppendInt64("Timestamp_u", e.t.UnixMicro())
 	buf.AppendString("Hostname", host.Hostname())
 	buf.AppendInt("PID", host.PID())

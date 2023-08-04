@@ -113,8 +113,7 @@ func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 }
 
 func (e *exporter) Shutdown(ctx context.Context) error {
-	Shutdown(ctx)
-	return nil
+	return Shutdown(ctx)
 }
 
 func NewExporter() sdktrace.SpanExporter {

@@ -26,19 +26,19 @@ import (
 	"strings"
 )
 
-// defines what methods a reporter should offer (internal to reporter package)
-type reporter interface {
+// defines what methods a Reporter should offer (internal to Reporter package)
+type Reporter interface {
 	ReportEvent(e Event) error
 	ReportStatus(e Event) error
-	// Shutdown closes the reporter.
+	// Shutdown closes the Reporter.
 	Shutdown(ctx context.Context) error
-	// ShutdownNow closes the reporter immediately, logs on error
+	// ShutdownNow closes the Reporter immediately, logs on error
 	ShutdownNow()
-	// Closed returns if the reporter is already closed.
+	// Closed returns if the Reporter is already closed.
 	Closed() bool
-	// WaitForReady waits until the reporter becomes ready or the context is canceled.
+	// WaitForReady waits until the Reporter becomes ready or the context is canceled.
 	WaitForReady(context.Context) bool
-	// SetServiceKey attaches a service key to the reporter
+	// SetServiceKey attaches a service key to the Reporter
 	// Returns error if service key is invalid
 	SetServiceKey(key string) error
 
@@ -63,7 +63,7 @@ const (
 )
 
 // currently used reporter
-var globalReporter reporter = &nullReporter{}
+var globalReporter Reporter = &nullReporter{}
 
 var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
