@@ -24,6 +24,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 type exporter struct {
@@ -64,15 +65,27 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 
 	for _, otEvt := range s.Events() {
-		evt, err = reporter.CreateInfoEvent(s.SpanContext(), otEvt.Time)
+		evt, err := reporter.EventFromOtelEvent(s.SpanContext(), otEvt)
 		if err != nil {
-			log.Warning("could not create info event", err)
+			log.Warningf("could not create %s event: %s", s.Name(), err)
 			continue
+		}
+		if otEvt.Name == semconv.ExceptionEventName {
+			set := attribute.NewSet(otEvt.Attributes...)
+			if v, ok := set.Value(semconv.ExceptionMessageKey); ok {
+				evt.AddKV(attribute.String("ErrorMsg", v.AsString()))
+			}
+			if v, ok := set.Value(semconv.ExceptionTypeKey); ok {
+				evt.AddKV(attribute.String("ErrorClass", v.AsString()))
+			}
+			if v, ok := set.Value(semconv.ExceptionStacktraceKey); ok {
+				evt.AddKV(attribute.String("Backtrace", v.AsString()))
+			}
 		}
 		evt.AddKVs(otEvt.Attributes)
 		err = reporter.ReportEvent(evt)
 		if err != nil {
-			log.Warning("could not send info event", err)
+			log.Warningf("could not send %s event: %s", s.Name(), err)
 			continue
 		}
 	}
