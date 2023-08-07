@@ -106,12 +106,10 @@ func TestGRPCReporter(t *testing.T) {
 	require.True(t, r.WaitForReady(ctxTm2))
 	require.True(t, r.isReady())
 
-	ev1, err := CreateInfoEvent(validSpanContext, time.Now())
+	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
-	require.NoError(t, err)
-	ev2, err := CreateInfoEvent(validSpanContext, time.Now())
+	ev2 := CreateInfoEvent(validSpanContext, time.Now())
 	ev2.SetLayer("layer2")
-	require.NoError(t, err)
 
 	require.Error(t, r.ReportEvent(nil))
 	require.Error(t, r.ReportEvent(nil))
@@ -154,7 +152,7 @@ func TestGRPCReporter(t *testing.T) {
 	require.Len(t, server.status[0].Messages, 1)
 
 	dec1, dec2 := mbson.M{}, mbson.M{}
-	err = mbson.Unmarshal(server.events[0].Messages[0], &dec1)
+	err := mbson.Unmarshal(server.events[0].Messages[0], &dec1)
 	require.NoError(t, err)
 	err = mbson.Unmarshal(server.status[0].Messages[0], &dec2)
 	require.NoError(t, err)
@@ -247,7 +245,7 @@ func TestInvalidKey(t *testing.T) {
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
-	ev1, _ := CreateInfoEvent(validSpanContext, time.Now())
+	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("hello-from-invalid-key")
 	require.NoError(t, r.ReportEvent(ev1))
 
@@ -522,10 +520,10 @@ func testProxy(t *testing.T, proxyUrl string) {
 	require.True(t, r.WaitForReady(ctxTm2))
 	require.True(t, r.isReady())
 
-	ev1, err := CreateInfoEvent(validSpanContext, time.Now())
+	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
 	require.NoError(t, err)
-	ev2, err := CreateInfoEvent(validSpanContext, time.Now())
+	ev2 := CreateInfoEvent(validSpanContext, time.Now())
 	ev2.SetLayer("layer2")
 	require.NoError(t, err)
 

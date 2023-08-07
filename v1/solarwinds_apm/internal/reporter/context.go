@@ -16,7 +16,6 @@ package reporter
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -26,10 +25,6 @@ import (
 
 	"github.com/pkg/errors"
 )
-
-// randReader provides random IDs, and can be overridden for testing.
-// set by default to read from the crypto/rand Reader.
-var randReader = rand.Reader
 
 type AuthStatus int
 

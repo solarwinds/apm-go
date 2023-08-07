@@ -40,7 +40,7 @@ func TestCreateInitMessage(t *testing.T) {
 	))
 	require.NoError(t, err)
 	a := time.Now()
-	evt, err := createInitMessage(tid, r)
+	evt := createInitMessage(tid, r)
 	b := time.Now()
 	require.NoError(t, err)
 	require.NotNil(t, evt)

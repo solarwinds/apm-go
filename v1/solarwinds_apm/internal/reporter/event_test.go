@@ -40,8 +40,7 @@ var invalidSpanContext = trace.NewSpanContext(trace.SpanContextConfig{
 
 func TestEntryEventNoParent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateEntryEvent(validSpanContext, now, invalidSpanContext)
-	require.Nil(t, err)
+	e := CreateEntryEvent(validSpanContext, now, invalidSpanContext)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -64,8 +63,8 @@ func TestEntryEventNoParent(t *testing.T) {
 	require.Equal(t, constants.EntryLabel, m["Label"])
 	require.Equal(t, host.PID(), m["PID"])
 	require.Equal(t, now.UnixMicro(), m["Timestamp_u"])
-	require.Equal(t, evt.getXTrace(), m["X-Trace"])
-	require.Equal(t, evt.getSwTraceContext(), m["sw.trace_context"])
+	require.Equal(t, evt.GetXTrace(), m["X-Trace"])
+	require.Equal(t, evt.GetSwTraceContext(), m["sw.trace_context"])
 	require.Equal(t, "bar", m["foo"])
 }
 
@@ -73,8 +72,7 @@ func TestEntryEventWithParent(t *testing.T) {
 	now := time.Now()
 	parentSpanID := trace.SpanID{0x33}
 	parent := trace.NewSpanContext(trace.SpanContextConfig{TraceID: validTraceID, SpanID: parentSpanID})
-	e, err := CreateEntryEvent(validSpanContext, now, parent)
-	require.Nil(t, err)
+	e := CreateEntryEvent(validSpanContext, now, parent)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -99,15 +97,14 @@ func TestEntryEventWithParent(t *testing.T) {
 	require.Equal(t, constants.EntryLabel, m["Label"])
 	require.Equal(t, host.PID(), m["PID"])
 	require.Equal(t, now.UnixMicro(), m["Timestamp_u"])
-	require.Equal(t, evt.getXTrace(), m["X-Trace"])
-	require.Equal(t, evt.getSwTraceContext(), m["sw.trace_context"])
+	require.Equal(t, evt.GetXTrace(), m["X-Trace"])
+	require.Equal(t, evt.GetSwTraceContext(), m["sw.trace_context"])
 	require.Equal(t, "bar", m["foo"])
 }
 
 func TestExitEvent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateExitEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateExitEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -133,15 +130,14 @@ func TestExitEvent(t *testing.T) {
 	require.Equal(t, constants.ExitLabel, m["Label"])
 	require.Equal(t, host.PID(), m["PID"])
 	require.Equal(t, now.UnixMicro(), m["Timestamp_u"])
-	require.Equal(t, evt.getXTrace(), m["X-Trace"])
-	require.Equal(t, evt.getSwTraceContext(), m["sw.trace_context"])
+	require.Equal(t, evt.GetXTrace(), m["X-Trace"])
+	require.Equal(t, evt.GetSwTraceContext(), m["sw.trace_context"])
 	require.Equal(t, "bar", m["foo"])
 }
 
 func TestInfoEvent(t *testing.T) {
 	now := time.Now()
-	e, err := CreateInfoEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateInfoEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -167,15 +163,14 @@ func TestInfoEvent(t *testing.T) {
 	require.Equal(t, constants.InfoLabel, m["Label"])
 	require.Equal(t, host.PID(), m["PID"])
 	require.Equal(t, now.UnixMicro(), m["Timestamp_u"])
-	require.Equal(t, evt.getXTrace(), m["X-Trace"])
-	require.Equal(t, evt.getSwTraceContext(), m["sw.trace_context"])
+	require.Equal(t, evt.GetXTrace(), m["X-Trace"])
+	require.Equal(t, evt.GetSwTraceContext(), m["sw.trace_context"])
 	require.Equal(t, "bar", m["foo"])
 }
 
 func TestAddKV(t *testing.T) {
 	now := time.Now()
-	e, err := CreateExitEvent(validSpanContext, now)
-	require.Nil(t, err)
+	e := CreateExitEvent(validSpanContext, now)
 	require.NotNil(t, e)
 
 	evt, ok := e.(*event)
@@ -201,16 +196,15 @@ func TestEventXTraceAndSwTraceCtx(t *testing.T) {
 		SpanID:  spanID,
 	})
 
-	e, err := CreateEntryEvent(sc, time.Now(), invalidSpanContext)
-	require.Nil(t, err)
+	e := CreateEntryEvent(sc, time.Now(), invalidSpanContext)
 	require.NotNil(t, e)
 	evt, ok := e.(*event)
 	require.True(t, ok)
-	x := evt.getXTrace()
+	x := evt.GetXTrace()
 	require.Len(t, x, 60)
 	require.Equal(t, "2BAABBCCDD00000000000000000000000000000000FFEEDDCC0000000001", x)
 
-	s := evt.getSwTraceContext()
+	s := evt.GetSwTraceContext()
 	require.Len(t, s, 55)
 	require.Equal(t, "00-aabbccdd000000000000000000000000-ffeeddcc00000000-01", s)
 }

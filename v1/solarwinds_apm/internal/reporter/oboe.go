@@ -17,13 +17,13 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/rand"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/w3cfmt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"math"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -158,19 +158,8 @@ var triggerTraceRelaxedBucket = &tokenBucket{}
 // The token bucket exclusively for trigger trace from unauthenticated clients
 var triggerTraceStrictBucket = &tokenBucket{}
 
-func init() {
-	// TODO Remove this when we deprecate support of Go versions < 1.20
-	// Go >= 1.20 "automatically seeds the global random number generator"
-	// Read more here: https://tip.golang.org/doc/go1.20
-	//lint:ignore SA1019 See reason above
-	rand.Seed(time.Now().UnixNano())
-}
-
-func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
-	evt, err := NewEventWithRandomOpID(tid, time.Now())
-	if err != nil {
-		return nil, err
-	}
+func createInitMessage(tid trace.TraceID, r *resource.Resource) Event {
+	evt := NewEventWithRandomOpID(tid, time.Now())
 	evt.SetLabel(LabelUnset)
 	for _, kv := range r.Attributes() {
 		if kv.Key != semconv.ServiceNameKey {
@@ -182,7 +171,7 @@ func createInitMessage(tid trace.TraceID, r *resource.Resource) (Event, error) {
 		attribute.Bool("__Init", true),
 		attribute.String("APM.Version", utils.Version()),
 	})
-	return evt, nil
+	return evt
 }
 
 func sendInitMessage(r *resource.Resource) {
@@ -191,14 +180,8 @@ func sendInitMessage(r *resource.Resource) {
 		return
 	}
 	tid := trace.TraceID{0}
-	if _, err := randReader.Read(tid[:]); err != nil {
-		log.Error("could not generate random task id for init message", err)
-		return
-	}
-	evt, err := createInitMessage(tid, r)
-	if err != nil {
-		log.Error("could not create init event")
-	}
+	rand.Random(tid[:])
+	evt := createInitMessage(tid, r)
 	if err := ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}
@@ -691,9 +674,7 @@ func hasDefaultSetting() bool {
 }
 
 func shouldSample(sampleRate int) bool {
-	retval := sampleRate == maxSamplingRate || rand.Intn(maxSamplingRate) <= sampleRate
-	// log.Debugf("shouldSample(%v) => %v", sampleRate, retval)
-	return retval
+	return sampleRate == maxSamplingRate || rand.RandIntn(maxSamplingRate) <= sampleRate
 }
 
 func flagStringToBin(flagString string) settingFlag {

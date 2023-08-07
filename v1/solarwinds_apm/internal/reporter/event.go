@@ -17,12 +17,12 @@
 package reporter
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/rand"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
@@ -68,6 +68,9 @@ type Event interface {
 	SetLayer(string)
 	SetParent(trace.SpanID)
 
+	GetXTrace() string
+	GetSwTraceContext() string
+
 	ToBson() []byte
 }
 
@@ -82,19 +85,17 @@ type event struct {
 	parent trace.SpanID
 }
 
-func NewEvent(tid trace.TraceID, oid opID, t time.Time) (Event, error) {
+func NewEvent(tid trace.TraceID, oid opID, t time.Time) Event {
 	return &event{
 		taskID: tid,
 		opID:   oid,
 		t:      t,
-	}, nil
+	}
 }
 
-func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) (Event, error) {
+func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) Event {
 	oid := opID{0}
-	if _, err := rand.Reader.Read(oid[:]); err != nil {
-		return nil, err
-	}
+	rand.Random(oid[:])
 	return NewEvent(tid, oid, t)
 }
 
@@ -118,12 +119,12 @@ func (e *event) AddKVs(kvs []attribute.KeyValue) {
 	e.kvs = append(e.kvs, kvs...)
 }
 
-func (e *event) getSwTraceContext() string {
+func (e *event) GetSwTraceContext() string {
 	// For now the version and flags are always 00 and 01, respectively
 	return fmt.Sprintf("00-%s-%s-01", e.taskID.String(), hex.EncodeToString(e.opID[:]))
 }
 
-func (e *event) getXTrace() string {
+func (e *event) GetXTrace() string {
 	tid := strings.ToUpper(e.taskID.String())
 	oid := strings.ToUpper(hex.EncodeToString(e.opID[:]))
 	return fmt.Sprintf("2B%s00000000%s01", tid, oid)
@@ -131,8 +132,8 @@ func (e *event) getXTrace() string {
 
 func (e *event) ToBson() []byte {
 	buf := bson.NewBuffer()
-	buf.AppendString("sw.trace_context", e.getSwTraceContext())
-	buf.AppendString("X-Trace", e.getXTrace())
+	buf.AppendString("sw.trace_context", e.GetSwTraceContext())
+	buf.AppendString("X-Trace", e.GetXTrace())
 	buf.AppendInt64("Timestamp_u", e.t.UnixMicro())
 	buf.AppendString("Hostname", host.Hostname())
 	buf.AppendInt("PID", host.PID())
@@ -158,43 +159,37 @@ func (e *event) ToBson() []byte {
 	return buf.GetBuf()
 }
 
-func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) (Event, error) {
-	evt, err := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
-	if err != nil {
-		return nil, err
-	}
+func CreateEntryEvent(ctx trace.SpanContext, t time.Time, parent trace.SpanContext) Event {
+	evt := NewEvent(ctx.TraceID(), opID(ctx.SpanID()), t)
 	if parent.IsValid() {
 		evt.SetParent(parent.SpanID())
 	}
 	evt.SetLabel(LabelEntry)
-	return evt, nil
+	return evt
 }
 
-func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) (Event, error) {
-	evt, err := NewEventWithRandomOpID(ctx.TraceID(), t)
-	if err != nil {
-		return nil, err
-	}
+func createNonEntryEvent(ctx trace.SpanContext, t time.Time, label Label) Event {
+	evt := NewEventWithRandomOpID(ctx.TraceID(), t)
 	evt.SetParent(ctx.SpanID())
 	evt.SetLabel(label)
-	return evt, nil
+	return evt
 }
 
-func CreateExitEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateExitEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelExit)
 }
 
-func EventFromOtelEvent(ctx trace.SpanContext, evt sdktrace.Event) (Event, error) {
+func EventFromOtelEvent(ctx trace.SpanContext, evt sdktrace.Event) Event {
 	if evt.Name == semconv.ExceptionEventName {
 		return CreateExceptionEvent(ctx, evt.Time)
 	}
 	return CreateInfoEvent(ctx, evt.Time)
 }
 
-func CreateInfoEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateInfoEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelInfo)
 }
 
-func CreateExceptionEvent(ctx trace.SpanContext, t time.Time) (Event, error) {
+func CreateExceptionEvent(ctx trace.SpanContext, t time.Time) Event {
 	return createNonEntryEvent(ctx, t, LabelError)
 }

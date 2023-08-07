@@ -258,8 +258,8 @@ func getProxyCertPath() string {
 
 // initializes a new GRPC reporter from scratch (called once on program startup)
 //
-// returns	GRPC reporter object
-func newGRPCReporter(otelServiceName string) reporter {
+// returns	GRPC Reporter object
+func newGRPCReporter(otelServiceName string) Reporter {
 	// collector address override
 	addr := config.GetCollector()
 
