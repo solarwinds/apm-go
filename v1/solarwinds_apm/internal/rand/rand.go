@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package rand
 
 import (
 	cryptorand "crypto/rand"
@@ -38,4 +38,10 @@ func Random(bytes []byte) {
 	entropy.Lock()
 	defer entropy.Unlock()
 	_, _ = entropy.rng.Read(bytes)
+}
+
+func RandIntn(n int) int {
+	entropy.Lock()
+	defer entropy.Unlock()
+	return entropy.rng.Intn(n)
 }

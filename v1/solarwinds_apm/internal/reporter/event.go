@@ -22,7 +22,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/rand"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
@@ -95,7 +95,7 @@ func NewEvent(tid trace.TraceID, oid opID, t time.Time) Event {
 
 func NewEventWithRandomOpID(tid trace.TraceID, t time.Time) Event {
 	oid := opID{0}
-	utils.Random(oid[:])
+	rand.Random(oid[:])
 	return NewEvent(tid, oid, t)
 }
 
