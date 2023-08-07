@@ -27,6 +27,10 @@ type entropySource struct {
 }
 
 var entropy = func() *entropySource {
+	// To create a random seed, we use crypto/rand instead of
+	// time.Now().UnixNano() because the latter is deterministic.
+	// Once the seed is generated, we use the faster math/rand to generate
+	// random data.
 	var seed int64
 	_ = binary.Read(cryptorand.Reader, binary.LittleEndian, &seed)
 	return &entropySource{
