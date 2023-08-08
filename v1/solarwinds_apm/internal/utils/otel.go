@@ -16,9 +16,9 @@ package utils
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"log"
 	"net/url"
 	"strings"

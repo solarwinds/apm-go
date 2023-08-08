@@ -17,10 +17,10 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel/semconv"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"os"
 	"runtime"
 	"sync"

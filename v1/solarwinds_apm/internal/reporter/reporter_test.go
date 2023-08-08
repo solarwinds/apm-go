@@ -17,8 +17,8 @@ package reporter
 import (
 	"context"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/constants"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.uber.org/atomic"
 	"io"
 	stdlog "log"

@@ -17,7 +17,6 @@ package metrics
 import (
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"os"
 	"runtime"
@@ -33,6 +32,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/hdrhist"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/swotel/semconv"
 	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/internal/utils"
 )
 
