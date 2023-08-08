@@ -21,11 +21,26 @@ import (
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 )
+
+const SpanIdHex = "0123456789abcdef"
+const TraceIdHex = "44444444444444443333333333333333"
+
+var SpanID, err1 = trace.SpanIDFromHex(SpanIdHex)
+var TraceID, err2 = trace.TraceIDFromHex(TraceIdHex)
+
+func init() {
+	for _, err := range []error{err1, err2} {
+		if err != nil {
+			log.Fatal("Fatal error: ", err)
+		}
+	}
+}
 
 func TracerSetup() (trace.Tracer, func()) {
 	return TracerWithExporter(newDummyExporter())

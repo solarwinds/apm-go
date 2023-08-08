@@ -16,9 +16,9 @@ package solarwinds_apm
 import (
 	"context"
 	"fmt"
+	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/testutils"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/xtrace"
 	"github.com/stretchr/testify/require"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,19 +26,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const spanIdHex = "0123456789abcdef"
-const traceIdHex = "44444444444444443333333333333333"
-
-var spanId, err1 = trace.SpanIDFromHex(spanIdHex)
-var traceId, err2 = trace.TraceIDFromHex(traceIdHex)
-
-func init() {
-	for _, err := range []error{err1, err2} {
-		if err != nil {
-			log.Fatal("Fatal error: ", err)
-		}
-	}
-}
+var (
+	traceId   = testutils.TraceID
+	spanId    = testutils.SpanID
+	spanIdHex = testutils.SpanIdHex
+)
 
 func TestInjectInvalidSpanContext(t *testing.T) {
 	sc := trace.SpanContext{}

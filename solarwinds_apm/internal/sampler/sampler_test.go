@@ -11,12 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package solarwinds_apm
+package sampler
 
 import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/swotel"
+	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/testutils"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/xtrace"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -28,6 +29,12 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/reporter"
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
+
+var (
+	traceId   = testutils.TraceID
+	spanId    = testutils.SpanID
+	spanIdHex = testutils.SpanIdHex
 )
 
 func TestDescription(t *testing.T) {

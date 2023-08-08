@@ -20,6 +20,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/exporter"
 	processor2 "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/processor"
+	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/sampler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -119,7 +120,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	reporter.Start(resrc)
 
 	exprtr := exporter.NewExporter()
-	smplr := NewSampler()
+	smplr := sampler.NewSampler()
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	processor := processor2.NewInboundMetricsSpanProcessor(isAppoptics)
