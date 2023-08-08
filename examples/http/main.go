@@ -16,7 +16,7 @@ package main
 
 import (
 	swohttp "github.com/solarwindscloud/solarwinds-apm-go/instrumentation/net/http"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm"
+	"github.com/solarwindscloud/solarwinds-apm-go/swo"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
@@ -25,8 +25,8 @@ import (
 )
 
 func main() {
-	// Initialize the solarwinds_apm library
-	cb, err := solarwinds_apm.Start(
+	// Initialize the swo library
+	cb, err := swo.Start(
 		// Optionally add service-level resource attributes
 		semconv.ServiceName("my-service"),
 		semconv.ServiceVersion("v0.0.1"),

@@ -47,7 +47,7 @@ func initInstallDir() string {
 	prevPath := string(os.PathSeparator)
 	for path != prevPath {
 		base := filepath.Base(path)
-		if base == "solarwinds_apm" {
+		if base == "swo" {
 			return path
 		}
 		prevPath = path

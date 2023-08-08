@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package solarwinds_apm
+package swo
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
