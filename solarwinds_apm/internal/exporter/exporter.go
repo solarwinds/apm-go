@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package solarwinds_apm
+package exporter
 
 import (
 	"context"
@@ -90,7 +90,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	WaitForReady(ctx)
+	reporter.WaitForReady(ctx)
 	for _, s := range spans {
 		exportSpan(ctx, s)
 	}
@@ -98,7 +98,7 @@ func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 }
 
 func (e *exporter) Shutdown(ctx context.Context) error {
-	return Shutdown(ctx)
+	return reporter.Shutdown(ctx)
 }
 
 func NewExporter() sdktrace.SpanExporter {
