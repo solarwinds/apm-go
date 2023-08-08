@@ -20,7 +20,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/constants"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	reporter2 "github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,7 +31,7 @@ type exporter struct {
 }
 
 func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
-	evt := reporter2.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
+	evt := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
 	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
 	evt.SetLayer(layer)
 	evt.AddKVs([]attribute.KeyValue{
@@ -54,13 +54,13 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 	evt.AddKVs(s.Attributes())
 
-	if err := reporter2.ReportEvent(evt); err != nil {
+	if err := reporter.ReportEvent(evt); err != nil {
 		log.Warning("cannot send entry event", err)
 		return
 	}
 
 	for _, otEvt := range s.Events() {
-		evt := reporter2.EventFromOtelEvent(s.SpanContext(), otEvt)
+		evt := reporter.EventFromOtelEvent(s.SpanContext(), otEvt)
 		if otEvt.Name == semconv.ExceptionEventName {
 			set := attribute.NewSet(otEvt.Attributes...)
 			if v, ok := set.Value(semconv.ExceptionMessageKey); ok {
@@ -74,15 +74,15 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			}
 		}
 		evt.AddKVs(otEvt.Attributes)
-		if err := reporter2.ReportEvent(evt); err != nil {
+		if err := reporter.ReportEvent(evt); err != nil {
 			log.Warningf("could not send %s event: %s", s.Name(), err)
 			continue
 		}
 	}
 
-	evt = reporter2.CreateExitEvent(s.SpanContext(), s.EndTime())
+	evt = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
 	evt.AddKV(attribute.String(constants.Layer, layer))
-	if err := reporter2.ReportEvent(evt); err != nil {
+	if err := reporter.ReportEvent(evt); err != nil {
 		log.Warning("cannot send exit event", err)
 		return
 	}
@@ -90,7 +90,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	reporter2.WaitForReady(ctx)
+	reporter.WaitForReady(ctx)
 	for _, s := range spans {
 		exportSpan(ctx, s)
 	}
@@ -98,7 +98,7 @@ func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 }
 
 func (e *exporter) Shutdown(ctx context.Context) error {
-	return reporter2.Shutdown(ctx)
+	return reporter.Shutdown(ctx)
 }
 
 func NewExporter() sdktrace.SpanExporter {

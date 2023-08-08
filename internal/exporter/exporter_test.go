@@ -19,7 +19,7 @@ import (
 	"errors"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
-	reporter2 "github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -33,7 +33,7 @@ import (
 
 func TestExportSpan(t *testing.T) {
 	r := &capturingReporter{}
-	defer reporter2.SetGlobalReporter(r)()
+	defer reporter.SetGlobalReporter(r)()
 	tr, cb := testutils.TracerWithExporter(NewExporter())
 	defer cb()
 
@@ -153,7 +153,7 @@ func TestExportSpan(t *testing.T) {
 
 func TestExportSpanBacktrace(t *testing.T) {
 	r := &capturingReporter{}
-	defer reporter2.SetGlobalReporter(r)()
+	defer reporter.SetGlobalReporter(r)()
 	tr, cb := testutils.TracerWithExporter(NewExporter())
 	defer cb()
 
@@ -189,15 +189,15 @@ func TestExportSpanBacktrace(t *testing.T) {
 }
 
 type capturingReporter struct {
-	events []reporter2.Event
+	events []reporter.Event
 }
 
-func (c *capturingReporter) ReportEvent(e reporter2.Event) error {
+func (c *capturingReporter) ReportEvent(e reporter.Event) error {
 	c.events = append(c.events, e)
 	return nil
 }
 
-func (c *capturingReporter) ReportStatus(reporter2.Event) error {
+func (c *capturingReporter) ReportStatus(reporter.Event) error {
 	panic("method should not be called")
 }
 
@@ -225,4 +225,4 @@ func (c *capturingReporter) GetServiceName() string {
 	panic("method should not be called")
 }
 
-var _ reporter2.Reporter = &capturingReporter{}
+var _ reporter.Reporter = &capturingReporter{}

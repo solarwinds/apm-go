@@ -21,7 +21,7 @@ package xtrace
 import (
 	"context"
 	"fmt"
-	reporter2 "github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"testing"
 	"time"
 
@@ -30,13 +30,13 @@ import (
 
 func TestGetXTraceOptions(t *testing.T) {
 	// We set the test reporter which will set the TT Token used for HMAC verification
-	r := reporter2.SetTestReporter(reporter2.TestReporterSettingType(reporter2.DefaultST))
+	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
 	defer r.Close(0)
 	ctx := context.Background()
 	// Timestamp required in signature validation
 	opts := fmt.Sprintf("sw-keys=check-id:check-1013,website-id;booking-demo;ts=%d", time.Now().Unix())
 	ctx = context.WithValue(ctx, OptionsKey, opts)
-	sig, err := reporter2.HmacHashTT([]byte(opts))
+	sig, err := reporter.HmacHashTT([]byte(opts))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,7 +17,7 @@ package sampler
 import (
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	reporter2 "github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/w3cfmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/xtrace"
@@ -93,7 +93,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := reporter2.ShouldTraceRequestWithURL(swState.IsValid(), url, ttMode, swState)
+		traceDecision := reporter.ShouldTraceRequestWithURL(swState.IsValid(), url, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
 			decision = sdktrace.Drop
@@ -137,17 +137,17 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 
 }
 
-func getTtMode(xto xtrace.Options) reporter2.TriggerTraceMode {
+func getTtMode(xto xtrace.Options) reporter.TriggerTraceMode {
 	if xto.TriggerTrace() {
 		switch xto.SignatureState() {
 		case xtrace.ValidSignature:
-			return reporter2.ModeRelaxedTriggerTrace
+			return reporter.ModeRelaxedTriggerTrace
 		case xtrace.InvalidSignature:
-			return reporter2.ModeInvalidTriggerTrace
+			return reporter.ModeInvalidTriggerTrace
 		default:
-			return reporter2.ModeStrictTriggerTrace
+			return reporter.ModeStrictTriggerTrace
 		}
 	} else {
-		return reporter2.ModeTriggerTraceNotPresent
+		return reporter.ModeTriggerTraceNotPresent
 	}
 }
