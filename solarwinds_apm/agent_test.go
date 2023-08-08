@@ -16,8 +16,10 @@ package solarwinds_apm
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/entryspans"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/testutils"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -26,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

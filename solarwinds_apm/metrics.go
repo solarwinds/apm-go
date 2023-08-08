@@ -15,7 +15,7 @@
 package solarwinds_apm
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/metrics"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
 )
 
 // MetricOptions is a struct for the optional parameters of a measurement.

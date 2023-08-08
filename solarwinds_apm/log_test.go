@@ -16,7 +16,7 @@ package solarwinds_apm
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
 	"testing"

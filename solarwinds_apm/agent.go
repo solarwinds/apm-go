@@ -16,12 +16,14 @@ package solarwinds_apm
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/entryspans"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/exporter"
-	processor2 "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/processor"
-	propagator2 "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/propagator"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/sampler"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/exporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	processor2 "github.com/solarwindscloud/solarwinds-apm-go/internal/processor"
+	propagator2 "github.com/solarwindscloud/solarwinds-apm-go/internal/propagator"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/sampler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -33,8 +35,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/reporter"
 )
 
 var (
