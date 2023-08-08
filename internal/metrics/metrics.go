@@ -16,11 +16,11 @@ package metrics
 
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
-	hdrhist2 "github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
-	host2 "github.com/solarwindscloud/solarwinds-apm-go/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
-	utils2 "github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -151,7 +151,7 @@ func NewMeasurements(isCustom bool, maxCount int32) *Measurements {
 
 // a single histogram
 type histogram struct {
-	hist *hdrhist2.Hist    // internal representation of a histogram (see hdrhist package)
+	hist *hdrhist.Hist     // internal representation of a histogram (see hdrhist package)
 	tags map[string]string // map of KVs
 }
 
@@ -496,7 +496,7 @@ func addRuntimeMetrics(bbuf *bson.Buffer, index *int) {
 	addMetricsValue(bbuf, index, "trace.go.runtime.NumCgoCall", runtime.NumCgoCall())
 
 	var mem runtime.MemStats
-	host2.Mem(&mem)
+	host.Mem(&mem)
 	// category gc
 	addMetricsValue(bbuf, index, "trace.go.gc.LastGC", int64(mem.LastGC))
 	addMetricsValue(bbuf, index, "trace.go.gc.NextGC", int64(mem.NextGC))
@@ -597,18 +597,18 @@ func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
 // append host ID to a BSON buffer
 // bbuf	the BSON buffer to append the KVs to
 func appendHostId(bbuf *bson.Buffer) {
-	if host2.ConfiguredHostname() != "" {
-		bbuf.AppendString("ConfiguredHostname", host2.ConfiguredHostname())
+	if host.ConfiguredHostname() != "" {
+		bbuf.AppendString("ConfiguredHostname", host.ConfiguredHostname())
 	}
 	appendUname(bbuf)
-	bbuf.AppendString("Distro", host2.Distro())
+	bbuf.AppendString("Distro", host.Distro())
 	appendIPAddresses(bbuf)
 }
 
 // gets and appends IP addresses to a BSON buffer
 // bbuf	the BSON buffer to append the KVs to
 func appendIPAddresses(bbuf *bson.Buffer) {
-	addrs := host2.IPAddresses()
+	addrs := host.IPAddresses()
 	if addrs == nil {
 		return
 	}
@@ -698,16 +698,16 @@ func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 	tagsList = append(tagsList, primaryTags)
 
 	// secondary keys: HttpMethod, HttpStatus, Errors
-	withMethodTags := utils2.CopyMap(&primaryTags)
+	withMethodTags := utils.CopyMap(&primaryTags)
 	withMethodTags["HttpMethod"] = s.Method
 	tagsList = append(tagsList, withMethodTags)
 
-	withStatusTags := utils2.CopyMap(&primaryTags)
+	withStatusTags := utils.CopyMap(&primaryTags)
 	withStatusTags["HttpStatus"] = strconv.Itoa(s.Status)
 	tagsList = append(tagsList, withStatusTags)
 
 	if s.HasError {
-		withErrorTags := utils2.CopyMap(&primaryTags)
+		withErrorTags := utils.CopyMap(&primaryTags)
 		withErrorTags["Errors"] = "true"
 		tagsList = append(tagsList, withErrorTags)
 	}
@@ -822,7 +822,7 @@ func (hi *histograms) recordHistogram(name string, duration time.Duration) {
 	// create a new histogram if it doesn't exist
 	if h, ok = histograms[id]; !ok {
 		h = &histogram{
-			hist: hdrhist2.WithConfig(hdrhist2.Config{
+			hist: hdrhist.WithConfig(hdrhist.Config{
 				LowestDiscernible: 1,
 				HighestTrackable:  3600000000,
 				SigFigs:           int32(hi.precision),
@@ -873,7 +873,7 @@ func addMeasurementToBSON(bbuf *bson.Buffer, index *int, m *Measurement) {
 // h		histogram to be added
 func addHistogramToBSON(bbuf *bson.Buffer, index *int, h *histogram) {
 	// get 64-base encoded representation of the histogram
-	data, err := hdrhist2.EncodeCompressed(h.hist)
+	data, err := hdrhist.EncodeCompressed(h.hist)
 	if err != nil {
 		log.Errorf("Failed to encode histogram: %v", err)
 		return
@@ -1025,7 +1025,7 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils2.GetTransactionName(span)
+	txnName := utils.GetTransactionName(span)
 	swoTags["sw.transaction"] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())

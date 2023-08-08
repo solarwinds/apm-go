@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
-	hdrhist2 "github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
-	host2 "github.com/solarwindscloud/solarwinds-apm-go/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
@@ -64,13 +64,13 @@ func TestAppendIPAddresses(t *testing.T) {
 	bbuf.Finish()
 	m := bsonToMap(bbuf)
 
-	ifaces, _ := host2.FilteredIfaces()
+	ifaces, _ := host.FilteredIfaces()
 	var addresses []string
 
 	for _, iface := range ifaces {
 		addrs, _ := iface.Addrs()
 		for _, addr := range addrs {
-			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && host2.IsPhysicalInterface(iface.Name) {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && host.IsPhysicalInterface(iface.Name) {
 				addresses = append(addresses, ipnet.IP.String())
 			}
 		}
@@ -89,20 +89,20 @@ func TestAppendIPAddresses(t *testing.T) {
 }
 
 func TestAppendMACAddresses(t *testing.T) {
-	host2.Start()
+	host.Start()
 
 	bbuf := bson.NewBuffer()
-	appendMACAddresses(bbuf, host2.CurrentID().MAC())
+	appendMACAddresses(bbuf, host.CurrentID().MAC())
 	bbuf.Finish()
 	m := bsonToMap(bbuf)
 
-	ifaces, _ := host2.FilteredIfaces()
+	ifaces, _ := host.FilteredIfaces()
 	var macs []string
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
-		if !host2.IsPhysicalInterface(iface.Name) {
+		if !host.IsPhysicalInterface(iface.Name) {
 			continue
 		}
 		if mac := iface.HardwareAddr.String(); mac != "" {
@@ -254,14 +254,14 @@ func TestRecordHistogram(t *testing.T) {
 	assert.NotNil(t, hi.histograms[""])
 	h := hi.histograms[""]
 	assert.Empty(t, h.tags["TransactionName"])
-	encoded, _ := hdrhist2.EncodeCompressed(h.hist)
+	encoded, _ := hdrhist.EncodeCompressed(h.hist)
 	assert.Equal(t, "HISTFAAAACR42pJpmSzMwMDAxIAKGEHEtclLGOw/QASYmAABAAD//1njBIo=", string(encoded))
 
 	hi.recordHistogram("hist1", time.Duration(453122))
 	assert.NotNil(t, hi.histograms["hist1"])
 	h = hi.histograms["hist1"]
 	assert.Equal(t, "hist1", h.tags["TransactionName"])
-	encoded, _ = hdrhist2.EncodeCompressed(h.hist)
+	encoded, _ = hdrhist.EncodeCompressed(h.hist)
 	assert.Equal(t, "HISTFAAAACR42pJpmSzMwMDAxIAKGEHEtclLGOw/QAQEmQABAAD//1oBBJk=", string(encoded))
 
 	var buf bytes.Buffer
@@ -342,7 +342,7 @@ func TestAddHistogramToBSON(t *testing.T) {
 	tags2[veryLongTagName] = veryLongTagValue
 
 	h1 := &histogram{
-		hist: hdrhist2.WithConfig(hdrhist2.Config{
+		hist: hdrhist.WithConfig(hdrhist.Config{
 			LowestDiscernible: 1,
 			HighestTrackable:  3600000000,
 			SigFigs:           3,
@@ -351,7 +351,7 @@ func TestAddHistogramToBSON(t *testing.T) {
 	}
 	h1.hist.Record(34532123)
 	h2 := &histogram{
-		hist: hdrhist2.WithConfig(hdrhist2.Config{
+		hist: hdrhist.WithConfig(hdrhist.Config{
 			LowestDiscernible: 1,
 			HighestTrackable:  3600000000,
 			SigFigs:           3,
@@ -400,7 +400,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	assert.False(t, ok)
 	_, ok = m[""]
 	assert.False(t, ok)
-	assert.Equal(t, host2.Distro(), m["Distro"])
+	assert.Equal(t, host.Distro(), m["Distro"])
 	assert.True(t, m["Timestamp_u"].(int64) > 1509053785684891)
 
 	mts := m["measurements"].([]interface{})

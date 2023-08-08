@@ -21,14 +21,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/google/uuid"
-	config2 "github.com/solarwindscloud/solarwinds-apm-go/internal/config"
-	host2 "github.com/solarwindscloud/solarwinds-apm-go/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host/azure"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host/k8s"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/uams"
-	utils2 "github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
 	"io"
 	"math"
 	"net"
@@ -248,11 +248,11 @@ var (
 )
 
 func getProxy() string {
-	return config2.GetProxy()
+	return config.GetProxy()
 }
 
 func getProxyCertPath() string {
-	return config2.GetProxyCertPath()
+	return config.GetProxyCertPath()
 }
 
 // initializes a new GRPC reporter from scratch (called once on program startup)
@@ -260,11 +260,11 @@ func getProxyCertPath() string {
 // returns	GRPC Reporter object
 func newGRPCReporter(otelServiceName string) Reporter {
 	// collector address override
-	addr := config2.GetCollector()
+	addr := config.GetCollector()
 
 	var opts []GrpcConnOpt
 	// certificate override
-	if certPath := config2.GetTrustedPath(); certPath != "" {
+	if certPath := config.GetTrustedPath(); certPath != "" {
 		var err error
 		cert, err := os.ReadFile(certPath)
 		if err != nil {
@@ -274,7 +274,7 @@ func newGRPCReporter(otelServiceName string) Reporter {
 		opts = append(opts, WithCert(string(cert)))
 	}
 
-	opts = append(opts, WithMaxReqBytes(config2.ReporterOpts().GetMaxReqBytes()))
+	opts = append(opts, WithMaxReqBytes(config.ReporterOpts().GetMaxReqBytes()))
 
 	if proxy := getProxy(); proxy != "" {
 		opts = append(opts, WithProxy(proxy))
@@ -295,7 +295,7 @@ func newGRPCReporter(otelServiceName string) Reporter {
 		getSettingsInterval:          grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
-		serviceKey:      uatomic.NewString(config2.GetServiceKey()),
+		serviceKey:      uatomic.NewString(config.GetServiceKey()),
 		otelServiceName: otelServiceName,
 
 		eventMessages:  make(chan []byte, 10000),
@@ -308,12 +308,12 @@ func newGRPCReporter(otelServiceName string) Reporter {
 	r.start()
 
 	log.Warningf("The reporter (%v, v%v, go%v) is initialized. Waiting for the dynamic settings.",
-		r.done, utils2.Version(), utils2.GoVersion())
+		r.done, utils.Version(), utils.GoVersion())
 	return r
 }
 
 func (r *grpcReporter) SetServiceKey(key string) error {
-	if config2.IsValidServiceKey(key) {
+	if config.IsValidServiceKey(key) {
 		r.serviceKey.Store(key)
 		return nil
 	}
@@ -346,7 +346,7 @@ func (r *grpcReporter) setGracefully(flag bool) {
 
 func (r *grpcReporter) start() {
 	// start up the host observer
-	host2.Start()
+	host.Start()
 	uams.Start()
 	// start up long-running goroutine eventSender() which listens on the events message channel
 	// and reports incoming events to the collector using GRPC
@@ -402,7 +402,7 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 
 			r.closeConns()
 			r.setReady(false)
-			host2.Stop()
+			host.Stop()
 			uams.Stop()
 			log.Warning("SolarWinds Observability APM agent is stopped.")
 		})
@@ -687,7 +687,7 @@ func (r *grpcReporter) eventSender() {
 
 	go r.eventBatchSender(batches)
 
-	opts := config2.ReporterOpts()
+	opts := config.ReporterOpts()
 	hwm := int(opts.GetMaxReqBytes())
 	if hwm <= 0 {
 		log.Warningf("The event sender is disabled by setting hwm=%d", hwm)
@@ -810,7 +810,7 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 	var messages [][]byte
 	// generate a new metrics message
 	builtin := metrics.BuildBuiltinMetricsMessage(metrics.ApmMetrics.CopyAndReset(i),
-		r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config2.GetRuntimeMetrics())
+		r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
@@ -881,7 +881,7 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		atomic.StoreInt32(&r.collectMetricInterval, mi)
 
 		// update events flush interval
-		o := config2.ReporterOpts()
+		o := config.ReporterOpts()
 		ei := parseInt32(s.Arguments, kvEventsFlushInterval, int32(o.GetEventFlushInterval()))
 		o.SetEventFlushInterval(int64(ei))
 
@@ -1178,7 +1178,7 @@ func (c *grpcConnection) isFlushed() bool {
 	}
 }
 
-func newHostID(id *host2.ID) *collector.HostID {
+func newHostID(id *host.ID) *collector.HostID {
 	gid := &collector.HostID{}
 
 	gid.Hostname = id.Hostname()
@@ -1209,13 +1209,13 @@ func newHostID(id *host2.ID) *collector.HostID {
 
 // buildIdentity builds the HostID struct from current host metadata
 func buildIdentity() *collector.HostID {
-	return newHostID(host2.CurrentID())
+	return newHostID(host.CurrentID())
 }
 
 // buildBestEffortIdentity builds the HostID with the best effort
 func buildBestEffortIdentity() *collector.HostID {
-	hid := newHostID(host2.BestEffortCurrentID())
-	hid.Hostname = host2.Hostname()
+	hid := newHostID(host.BestEffortCurrentID())
+	hid.Hostname = host.Hostname()
 	return hid
 }
 
@@ -1392,7 +1392,7 @@ func printRPCMsg(m Method) {
 
 	msgs := m.Message()
 	for _, msg := range msgs {
-		str = append(str, utils2.SPrintBson(msg))
+		str = append(str, utils.SPrintBson(msg))
 	}
 	log.Debugf("%s", str)
 }

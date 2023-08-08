@@ -17,7 +17,7 @@ package reporter
 import (
 	"encoding/binary"
 	"fmt"
-	config2 "github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/rand"
@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	maxSamplingRate = config2.MaxSampleRate
+	maxSamplingRate = config.MaxSampleRate
 )
 
 // enums used by sampling and tracing settings
@@ -518,21 +518,21 @@ func parseInt32(args map[string][]byte, key string, fb int32) int32 {
 //
 // Note: This function modifies the argument in place.
 func mergeLocalSetting(remote *oboeSettings) *oboeSettings {
-	if remote.hasOverrideFlag() && config2.SamplingConfigured() {
+	if remote.hasOverrideFlag() && config.SamplingConfigured() {
 		// Choose the lower sample rate and merge the flags
-		if remote.value > config2.GetSampleRate() {
-			remote.value = config2.GetSampleRate()
+		if remote.value > config.GetSampleRate() {
+			remote.value = config.GetSampleRate()
 			remote.source = SAMPLE_SOURCE_FILE
 		}
-		remote.flags &= newTracingMode(config2.GetTracingMode()).toFlags()
-	} else if config2.SamplingConfigured() {
+		remote.flags &= newTracingMode(config.GetTracingMode()).toFlags()
+	} else if config.SamplingConfigured() {
 		// Use local sample rate and tracing mode config
-		remote.value = config2.GetSampleRate()
-		remote.flags = newTracingMode(config2.GetTracingMode()).toFlags()
+		remote.value = config.GetSampleRate()
+		remote.flags = newTracingMode(config.GetTracingMode()).toFlags()
 		remote.source = SAMPLE_SOURCE_FILE
 	}
 
-	if !config2.GetTriggerTrace() {
+	if !config.GetTriggerTrace() {
 		remote.flags = remote.flags &^ (1 << FlagTriggerTraceOffset)
 	}
 	return remote
@@ -709,11 +709,11 @@ const (
 )
 
 // newTracingMode creates a tracing mode object from a string
-func newTracingMode(mode config2.TracingMode) tracingMode {
+func newTracingMode(mode config.TracingMode) tracingMode {
 	switch mode {
-	case config2.DisabledTracingMode:
+	case config.DisabledTracingMode:
 		return TraceDisabled
-	case config2.EnabledTracingMode:
+	case config.EnabledTracingMode:
 		return TraceEnabled
 	default:
 	}
@@ -737,11 +737,11 @@ func (tm tracingMode) toFlags() settingFlag {
 func (tm tracingMode) ToString() string {
 	switch tm {
 	case TraceEnabled:
-		return string(config2.EnabledTracingMode)
+		return string(config.EnabledTracingMode)
 	case TraceDisabled:
-		return string(config2.DisabledTracingMode)
+		return string(config.DisabledTracingMode)
 	default:
-		return string(config2.UnknownTracingMode)
+		return string(config.UnknownTracingMode)
 	}
 }
 

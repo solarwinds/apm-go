@@ -14,7 +14,7 @@
 package reporter
 
 import (
-	config2 "github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"path/filepath"
 	"regexp"
@@ -28,13 +28,13 @@ var urls *urlFilters
 
 func init() {
 	urls = newURLFilters()
-	urls.LoadConfig(config2.GetTransactionFiltering())
+	urls.LoadConfig(config.GetTransactionFiltering())
 }
 
 // ReloadURLsConfig reloads the configuration and build the transaction filtering
 // filters and cache.
 // This function is used for testing purpose only. It's not thread-safe.
-func ReloadURLsConfig(filters []config2.TransactionFilter) {
+func ReloadURLsConfig(filters []config.TransactionFilter) {
 	urls.LoadConfig(filters)
 	urls.cache.Clear()
 }
@@ -58,7 +58,7 @@ func (c *urlCache) getURLTrace(url string) (tracingMode, error) {
 		return TraceUnknown, err
 	}
 
-	return newTracingMode(config2.TracingMode(string(traceStr))), nil
+	return newTracingMode(config.TracingMode(string(traceStr))), nil
 }
 
 // urlFilter defines a URL filter
@@ -131,11 +131,11 @@ func newURLFilters() *urlFilters {
 }
 
 // LoadConfig reads transaction filtering settings from the global configuration
-func (f *urlFilters) LoadConfig(filters []config2.TransactionFilter) {
+func (f *urlFilters) LoadConfig(filters []config.TransactionFilter) {
 	f.loadConfig(filters)
 }
 
-func (f *urlFilters) loadConfig(filters []config2.TransactionFilter) {
+func (f *urlFilters) loadConfig(filters []config.TransactionFilter) {
 	f.filters = nil
 
 	for _, filter := range filters {

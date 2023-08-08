@@ -20,8 +20,8 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/exporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	processor2 "github.com/solarwindscloud/solarwinds-apm-go/internal/processor"
-	propagator2 "github.com/solarwindscloud/solarwinds-apm-go/internal/propagator"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/processor"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/propagator"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/sampler"
 	"go.opentelemetry.io/otel"
@@ -124,11 +124,11 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	smplr := sampler.NewSampler()
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	processor := processor2.NewInboundMetricsSpanProcessor(isAppoptics)
+	processor := processor.NewInboundMetricsSpanProcessor(isAppoptics)
 	propagator := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
-		&propagator2.SolarwindsPropagator{},
+		&propagator.SolarwindsPropagator{},
 	)
 	otel.SetTextMapPropagator(propagator)
 	tp := sdktrace.NewTracerProvider(
