@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	// Initialize the swo library
+	// Initialize the SolarWinds APM library
 	cb, err := swo.Start(
 		// Optionally add service-level resource attributes
 		semconv.ServiceName("my-service"),

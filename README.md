@@ -15,7 +15,7 @@ To use in your Go project:
 ### Initialize the library
 
 ```go
-// Initialize the Solarwinds APM library	
+// Initialize the SolarWinds APM library
 cb, err := swo.Start(
 	// Optionally add service-level resource attributes 
 	semconv.ServiceName("my-service"),
