@@ -32,9 +32,8 @@ import (
 )
 
 var (
-	traceId   = testutils.TraceID
-	spanId    = testutils.SpanID
-	spanIdHex = testutils.SpanIdHex
+	traceId = testutils.TraceID
+	spanId  = testutils.SpanID
 )
 
 func TestDescription(t *testing.T) {
