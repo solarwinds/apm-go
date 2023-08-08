@@ -20,6 +20,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/entryspans"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/exporter"
 	processor2 "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/processor"
+	propagator2 "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/propagator"
 	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/internal/sampler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -127,7 +128,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	propagator := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
-		&SolarwindsPropagator{},
+		&propagator2.SolarwindsPropagator{},
 	)
 	otel.SetTextMapPropagator(propagator)
 	tp := sdktrace.NewTracerProvider(
