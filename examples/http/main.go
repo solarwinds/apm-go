@@ -15,8 +15,8 @@
 package main
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm"
-	swohttp "github.com/solarwindscloud/solarwinds-apm-go/v1/solarwinds_apm/instrumentation/net/http"
+	"github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm"
+	swohttp "github.com/solarwindscloud/solarwinds-apm-go/solarwinds_apm/instrumentation/net/http"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
