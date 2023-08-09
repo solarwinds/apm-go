@@ -33,7 +33,16 @@ const (
 	K8SPodNameKey       = otelconv.K8SPodNameKey
 	K8SPodUIDKey        = otelconv.K8SPodUIDKey
 
+	OTelStatusDescriptionKey = otelconv.OTelStatusDescriptionKey
+
 	ServiceNameKey = otelconv.ServiceNameKey
+)
+
+// Attributes
+
+var (
+	OTelStatusCodeOk    = otelconv.OTelStatusCodeOk
+	OTelStatusCodeError = otelconv.OTelStatusCodeError
 )
 
 // Functions

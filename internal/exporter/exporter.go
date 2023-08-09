@@ -24,6 +24,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -52,6 +53,18 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			)
 		}
 	}
+
+	if s.Status().Code != codes.Unset {
+		if s.Status().Code == codes.Ok {
+			evt.AddKV(semconv.OTelStatusCodeOk)
+		} else {
+			evt.AddKV(semconv.OTelStatusCodeError)
+		}
+		if s.Status().Description != "" {
+			evt.AddKV(semconv.OTelStatusDescriptionKey.String(s.Status().Description))
+		}
+	}
+
 	evt.AddKVs(s.Attributes())
 
 	if err := reporter.ReportEvent(evt); err != nil {
