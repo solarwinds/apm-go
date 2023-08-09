@@ -38,7 +38,7 @@ const (
 	ServiceNameKey = otelconv.ServiceNameKey
 )
 
-// Attributes
+// KeyValues
 
 var (
 	OTelStatusCodeOk    = otelconv.OTelStatusCodeOk
