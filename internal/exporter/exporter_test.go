@@ -23,6 +23,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	mbson "gopkg.in/mgo.v2/bson"
@@ -45,6 +46,7 @@ func TestExportSpan(t *testing.T) {
 	infoT := start.Add(time.Millisecond)
 	errorT := start.Add(10 * time.Millisecond)
 	_, span = tr.Start(ctx, name, trace.WithTimestamp(start))
+	span.SetStatus(codes.Ok, "")
 	span.AddEvent("info event",
 		trace.WithAttributes(attribute.String("foo", "bar")),
 		trace.WithTimestamp(infoT),
@@ -85,6 +87,7 @@ func TestExportSpan(t *testing.T) {
 			"X-Trace":            entry.GetXTrace(),
 			"otel.scope.name":    "foo123",
 			"otel.scope.version": "123",
+			"otel.status_code":   "OK",
 			"sw.span_kind":       "internal",
 			"sw.span_name":       "foo",
 			"sw.trace_context":   entry.GetSwTraceContext(),
@@ -186,6 +189,68 @@ func TestExportSpanBacktrace(t *testing.T) {
 	// https://github.com/open-telemetry/opentelemetry-go/blob/248413d6544479f8576a4b68107cb9c78c40f1df/sdk/trace/trace_test.go#L1299-L1300
 	require.True(t, strings.HasPrefix(lines[1], "go.opentelemetry.io/otel/sdk/trace.recordStackTrace"))
 	require.True(t, strings.HasPrefix(lines[3], "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError"))
+}
+
+func getBsonFromEvent(t *testing.T, event reporter.Event) map[string]interface{} {
+	result := make(map[string]interface{})
+	require.NoError(t, mbson.Unmarshal(event.ToBson(), result))
+	return result
+}
+
+func TestExportSpanStatusCodes(t *testing.T) {
+	r := &capturingReporter{}
+	defer reporter.SetGlobalReporter(r)()
+	tr, cb := testutils.TracerWithExporter(NewExporter())
+	defer cb()
+
+	permutations := []struct {
+		code        codes.Code
+		description string
+	}{
+		{codes.Ok, ""},
+		{codes.Ok, "foo"},
+		{codes.Error, ""},
+		{codes.Error, "bar"},
+		{codes.Unset, ""},
+		{codes.Unset, "baz"},
+	}
+
+	for _, p := range permutations {
+		_, span := tr.Start(context.Background(), "foo")
+		span.SetStatus(p.code, p.description)
+		span.End()
+	}
+
+	// permutation 0
+	require.Len(t, r.events, len(permutations)*2)
+	evt := getBsonFromEvent(t, r.events[0])
+	require.Equal(t, "OK", evt["otel.status_code"])
+	require.Nil(t, evt["otel.status_description"])
+
+	// permutation 1
+	evt = getBsonFromEvent(t, r.events[2])
+	require.Equal(t, "OK", evt["otel.status_code"])
+	require.Nil(t, evt["otel.status_description"])
+
+	// permutation 2
+	evt = getBsonFromEvent(t, r.events[4])
+	require.Equal(t, "ERROR", evt["otel.status_code"])
+	require.Nil(t, evt["otel.status_description"])
+
+	// permutation 3
+	evt = getBsonFromEvent(t, r.events[6])
+	require.Equal(t, "ERROR", evt["otel.status_code"])
+	require.Equal(t, "bar", evt["otel.status_description"])
+
+	// permutation 4
+	evt = getBsonFromEvent(t, r.events[8])
+	require.Nil(t, evt["otel.status_code"])
+	require.Nil(t, evt["otel.status_description"])
+
+	// permutation 5
+	evt = getBsonFromEvent(t, r.events[10])
+	require.Nil(t, evt["otel.status_code"])
+	require.Nil(t, evt["otel.status_description"])
 }
 
 type capturingReporter struct {

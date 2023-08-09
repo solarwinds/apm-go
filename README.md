@@ -44,6 +44,7 @@ echoHandler := swohttp.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *ht
 		span := trace.SpanFromContext(req.Context())
 		// ...so that we can record the error.
 		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to read body"))
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		// If no error, we simply echo back.

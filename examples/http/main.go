@@ -18,6 +18,7 @@ import (
 	"github.com/solarwindscloud/solarwinds-apm-go/instrumentation/net/http/swohttp"
 	"github.com/solarwindscloud/solarwinds-apm-go/swo"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"io"
@@ -47,6 +48,7 @@ func main() {
 			span := trace.SpanFromContext(req.Context())
 			// ...so that we can record the error.
 			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to read body")
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			// If no error, we simply echo back.
