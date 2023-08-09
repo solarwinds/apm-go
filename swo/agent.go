@@ -124,18 +124,18 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	smplr := sampler.NewSampler()
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	processor := processor.NewInboundMetricsSpanProcessor(isAppoptics)
-	propagator := propagation.NewCompositeTextMapPropagator(
+	proc := processor.NewInboundMetricsSpanProcessor(isAppoptics)
+	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
 		&propagator.SolarwindsPropagator{},
 	)
-	otel.SetTextMapPropagator(propagator)
+	otel.SetTextMapPropagator(prop)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exprtr),
 		sdktrace.WithResource(resrc),
 		sdktrace.WithSampler(smplr),
-		sdktrace.WithSpanProcessor(processor),
+		sdktrace.WithSpanProcessor(proc),
 	)
 	otel.SetTracerProvider(tp)
 	return func() {
