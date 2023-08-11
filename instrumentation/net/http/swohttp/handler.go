@@ -29,14 +29,20 @@ const (
 	XTraceOptsRespHdr = "X-Trace-Options-Response"
 )
 
-func Wrap(h http.Handler, operation string) http.Handler {
+// WrapBaseHandler wraps a handler with our instrumentation, as well as
+// otelhttp instrumentation. It is intended for use with the base handler as
+// provided to a mux. Individual route handlers should use
+// `otelhttp.WithRouteTag` instead.
+func WrapBaseHandler(h http.Handler, operation string) http.Handler {
 	// Wrap with our instrumentation
-	h = NewHandler(h)
+	h = NewBaseHandler(h)
 	// Wrap with Otel
 	return otelhttp.NewHandler(h, operation)
 }
 
-func NewHandler(h http.Handler) http.Handler {
+// NewBaseHandler wraps a handler with our instrumentation. It is expected to
+// wrap or be wrapped by `otelhttp` instrumentation (see WrapBaseHandler).
+func NewBaseHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ctx := trace.SpanContextFromContext(r.Context()); ctx.IsValid() {
 			flags := "00"
