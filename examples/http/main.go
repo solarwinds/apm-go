@@ -17,6 +17,7 @@ package main
 import (
 	"github.com/solarwindscloud/solarwinds-apm-go/instrumentation/net/http/swohttp"
 	"github.com/solarwindscloud/solarwinds-apm-go/swo"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -41,7 +42,7 @@ func main() {
 	defer cb()
 
 	// Create a new handler to respond to any request with the text it was given
-	echoHandler := swohttp.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	echoHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if text, err := io.ReadAll(req.Body); err != nil {
 			// The `trace` package is from the OpenTelemetry Go SDK. Here we
 			// retrieve the current span for this request...
@@ -54,9 +55,10 @@ func main() {
 			// If no error, we simply echo back.
 			_, _ = w.Write(text)
 		}
-	}), "echo")
-	server := &http.Server{Addr: ":8080"}
-	http.Handle("/echo", echoHandler)
-
-	server.ListenAndServe()
+	})
+	mux := http.NewServeMux()
+	// Wrap the route handler with otelhttp instrumentation, adding the route tag
+	mux.Handle("/echo", otelhttp.WithRouteTag("/echo", echoHandler))
+	// Wrap the mux (base handler) with our instrumentation
+	http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
 }

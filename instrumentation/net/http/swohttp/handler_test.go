@@ -70,7 +70,7 @@ func doRequest(t *testing.T, xtOpts string) *http.Response {
 		_, err := w.Write([]byte("foo bar baz"))
 		require.NoError(t, err)
 	})
-	handler = NewHandler(handler)
+	handler = NewBaseHandler(handler)
 	handler = otelhttp.NewHandler(handler, "foobar")
 
 	recorder := httptest.NewRecorder()
