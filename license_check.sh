@@ -31,6 +31,8 @@ find . -type f \
     -not -path '*/go.sum' \
     -not -path './LICENSE' \
     -not -path '*/README.md' \
+    -not -path './CONTRIBUTING.md' \
+    -not -path './CODEOWNERS' \
     -not -path './\.editorconfig' \
     -not -path './\.codecov.yaml' \
     -not -path './\.idea/*' \
