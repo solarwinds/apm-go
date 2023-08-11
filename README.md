@@ -37,24 +37,25 @@ wrapper for `net/http` server requests. Here's an example:
 
 ```go
 // Create a new handler to respond to any request with the text it was given
-echoHandler := swohttp.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+echoHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 	if text, err := io.ReadAll(req.Body); err != nil {
 		// The `trace` package is from the OpenTelemetry Go SDK. Here we
 		// retrieve the current span for this request...
 		span := trace.SpanFromContext(req.Context())
 		// ...so that we can record the error.
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "failed to read body"))
+		span.SetStatus(codes.Error, "failed to read body")
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		// If no error, we simply echo back.
 		_, _ = w.Write(text)
 	}
-}), "echo")
-server := &http.Server{Addr: ":8080"}
-http.Handle("/echo", echoHandler)
-
-server.ListenAndServe()
+})
+mux := http.NewServeMux()
+// Wrap the route handler with otelhttp instrumentation, adding the route tag
+mux.Handle("/echo", otelhttp.WithRouteTag("/echo", echoHandler))
+// Wrap the mux (base handler) with our instrumentation
+http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
 ```
 
 There are many instrumented libraries available. Here are the libraries we
