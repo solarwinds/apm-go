@@ -63,7 +63,7 @@ const (
 	envSolarWindsAPMHistogramPrecision    = "SW_APM_HISTOGRAM_PRECISION"
 	envSolarWindsAPMEventsFlushInterval   = "SW_APM_EVENTS_FLUSH_INTERVAL"
 	envSolarWindsAPMMaxReqBytes           = "SW_APM_MAX_REQUEST_BYTES"
-	envSolarWindsAPMDisabled              = "SW_APM_DISABLED"
+	envSolarWindsAPMEnabled               = "SW_APM_ENABLED"
 	envSolarWindsAPMConfigFile            = "SW_APM_CONFIG_FILE"
 	envSolarWindsAPMServerlessServiceName = "SW_APM_SERVICE_NAME"
 	envSolarWindsAPMTokenBucketCap        = "SW_APM_TOKEN_BUCKET_CAPACITY"
@@ -116,7 +116,7 @@ type Config struct {
 	// The transaction filtering config
 	TransactionSettings []TransactionFilter `yaml:"TransactionSettings,omitempty"`
 
-	Disabled bool `yaml:"Disabled,omitempty" env:"SW_APM_DISABLED"`
+	Enabled bool `yaml:"Enabled,omitempty" env:"SW_APM_ENABLED" default:"true"`
 
 	// EC2 metadata retrieval timeout in milliseconds
 	Ec2MetadataTimeout int `yaml:"Ec2MetadataTimeout,omitempty" env:"SW_APM_EC2_METADATA_TIMEOUT" default:"1000"`
@@ -438,7 +438,7 @@ func (c *Config) Load(opts ...Option) *Config {
 		opt(c)
 	}
 
-	if c.Disabled {
+	if !c.Enabled {
 		return c.resetThenDisable()
 	}
 
@@ -452,7 +452,7 @@ func (c *Config) Load(opts ...Option) *Config {
 
 func (c *Config) resetThenDisable() *Config {
 	c.reset()
-	c.Disabled = true
+	c.Enabled = false
 	return c
 }
 
@@ -828,11 +828,11 @@ func (c *Config) GetPrecision() int {
 	return c.Precision
 }
 
-// GetDisabled returns if the agent is disabled
-func (c *Config) GetDisabled() bool {
+// GetEnabled returns if the agent is enabled
+func (c *Config) GetEnabled() bool {
 	c.RLock()
 	defer c.RUnlock()
-	return c.Disabled
+	return c.Enabled
 }
 
 // GetReporter returns the reporter options struct

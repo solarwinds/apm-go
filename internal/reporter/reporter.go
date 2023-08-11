@@ -90,7 +90,7 @@ func Start(r *resource.Resource) {
 
 func initReporter(r *resource.Resource) {
 	var rt string
-	if config.GetDisabled() {
+	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
 		rt = "none"
 	} else {

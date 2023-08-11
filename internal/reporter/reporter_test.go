@@ -451,16 +451,16 @@ func TestInvokeRPC(t *testing.T) {
 
 func TestInitReporter(t *testing.T) {
 	// Test disable agent
-	setEnv("SW_APM_DISABLED", "true")
+	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
 	initReporter(resource.Empty())
 	require.IsType(t, &nullReporter{}, globalReporter)
 
 	// Test enable agent
-	require.NoError(t, os.Unsetenv("SW_APM_DISABLED"))
+	require.NoError(t, os.Unsetenv("SW_APM_ENABLED"))
 	setEnv("SW_APM_REPORTER", "ssl")
 	config.Load()
-	require.False(t, config.GetDisabled())
+	require.True(t, config.GetEnabled())
 
 	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")))
 	require.IsType(t, &grpcReporter{}, globalReporter)

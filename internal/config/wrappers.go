@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package config
 
 import (
@@ -49,8 +50,8 @@ var GetHostAlias = conf.GetHostAlias
 // GetPrecision is a wrapper to the method of the global config
 var GetPrecision = conf.GetPrecision
 
-// GetDisabled is a wrapper to the method of the global config
-var GetDisabled = conf.GetDisabled
+// GetEnabled is a wrapper to the method of the global config
+var GetEnabled = conf.GetEnabled
 
 // ReporterOpts is a wrapper to the method of the global config
 var ReporterOpts = conf.GetReporter
@@ -91,7 +92,7 @@ var Load = conf.Load
 var GetDelta = conf.GetDelta
 
 func init() {
-	if !conf.GetDisabled() {
+	if conf.GetEnabled() {
 		log.Warningf("Accepted config items: \n%s", conf.GetDelta())
 	}
 }
