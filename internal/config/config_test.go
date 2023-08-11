@@ -42,21 +42,21 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv(envSolarWindsAPMPrependDomain, "true")
 	os.Setenv(envSolarWindsAPMHistogramPrecision, "2")
 	os.Setenv(envSolarWindsAPMServiceKey, key1)
-	os.Setenv(envSolarWindsAPMDisabled, "false")
+	os.Setenv(envSolarWindsAPMEnabled, "true")
 
 	c := NewConfig()
 	assert.Equal(t, "example.com:12345", c.GetCollector())
 	assert.Equal(t, true, c.PrependDomain)
 	assert.Equal(t, 2, c.Precision)
-	assert.Equal(t, false, c.Disabled)
+	assert.Equal(t, true, c.Enabled)
 
 	os.Setenv(envSolarWindsAPMCollector, "test.abc:8080")
-	os.Setenv(envSolarWindsAPMDisabled, "false")
+	os.Setenv(envSolarWindsAPMEnabled, "true")
 	os.Setenv(envSolarWindsAPMTracingMode, "always")
 
 	c.Load()
 	assert.Equal(t, "test.abc:8080", c.GetCollector())
-	assert.Equal(t, false, c.Disabled)
+	assert.Equal(t, true, c.Enabled)
 	assert.Equal(t, "enabled", string(c.GetTracingMode()))
 
 	c = NewConfig(
@@ -68,7 +68,7 @@ func TestLoadConfig(t *testing.T) {
 	os.Setenv(envSolarWindsAPMServiceKey, key1)
 	os.Setenv(envSolarWindsAPMHostnameAlias, "test")
 	os.Setenv(envSolarWindsAPMTrustedPath, "test.crt")
-	os.Setenv(envSolarWindsAPMDisabled, "invalidValue")
+	os.Setenv(envSolarWindsAPMEnabled, "invalidValue")
 	os.Setenv(envSolarWindsAPMServerlessServiceName, "AWSLambda")
 	os.Setenv(envSolarWindsAPMTokenBucketCap, "2.0")
 	os.Setenv(envSolarWindsAPMTokenBucketRate, "1.0")
@@ -80,7 +80,7 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, ToServiceKey(key1), c.GetServiceKey())
 	assert.Equal(t, "test", c.GetHostAlias())
 	assert.Equal(t, "test.crt", filepath.Base(c.GetTrustedPath()))
-	assert.Equal(t, false, c.GetDisabled())
+	assert.Equal(t, true, c.GetEnabled())
 	assert.Equal(t, "", c.GetTransactionName()) // ignore it in non-lambda mode
 }
 
@@ -157,7 +157,7 @@ func TestConfigInit(t *testing.T) {
 			MaxRetries:              20,
 		},
 		SQLSanitize:        0,
-		Disabled:           false,
+		Enabled:            true,
 		Ec2MetadataTimeout: 1000,
 		DebugLevel:         "warn",
 		TriggerTrace:       true,
@@ -235,7 +235,7 @@ func TestEnvsLoading(t *testing.T) {
 		"SW_APM_HISTOGRAM_PRECISION=4",
 		"SW_APM_EVENTS_FLUSH_INTERVAL=4",
 		"SW_APM_MAX_REQUEST_BYTES=4096000",
-		"SW_APM_DISABLED=false",
+		"SW_APM_ENABLED=true",
 		"SW_APM_SQL_SANITIZE=0",
 		"SW_APM_EC2_METADATA_TIMEOUT=2000",
 		"SW_APM_TRIGGER_TRACE=false",
@@ -278,7 +278,7 @@ func TestEnvsLoading(t *testing.T) {
 			MaxRetries:              20,
 		},
 		SQLSanitize:        0,
-		Disabled:           false,
+		Enabled:            true,
 		Ec2MetadataTimeout: 2000,
 		DebugLevel:         "warn",
 		TriggerTrace:       false,
@@ -329,7 +329,7 @@ func TestYamlConfig(t *testing.T) {
 			{"url", "", []string{".jpg"}, "disabled"},
 		},
 		SQLSanitize:        2,
-		Disabled:           false,
+		Enabled:            true,
 		Ec2MetadataTimeout: 1500,
 		DebugLevel:         "info",
 		TriggerTrace:       false,
@@ -368,7 +368,7 @@ func TestYamlConfig(t *testing.T) {
 		"SW_APM_HISTOGRAM_PRECISION=4",
 		"SW_APM_EVENTS_FLUSH_INTERVAL=4",
 		"SW_APM_MAX_REQUEST_BYTES=4096000",
-		"SW_APM_DISABLED=false",
+		"SW_APM_ENABLED=true",
 		"SW_APM_SQL_SANITIZE=3",
 		"SW_APM_SERVICE_NAME=LambdaEnv",
 		"SW_APM_TOKEN_BUCKET_CAPACITY=8",
@@ -412,7 +412,7 @@ func TestYamlConfig(t *testing.T) {
 			{"url", "", []string{".jpg"}, "disabled"},
 		},
 		SQLSanitize:        3,
-		Disabled:           false,
+		Enabled:            true,
 		Ec2MetadataTimeout: 1500,
 		DebugLevel:         "info",
 		TriggerTrace:       false,
@@ -516,7 +516,7 @@ func TestInvalidConfig(t *testing.T) {
 			RetryLogThreshold:       10,
 			MaxRetries:              20,
 		},
-		Disabled:           true,
+		Enabled:            false,
 		Ec2MetadataTimeout: 5000,
 		DebugLevel:         "info",
 	}
