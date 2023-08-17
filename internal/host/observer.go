@@ -16,23 +16,14 @@ package host
 
 import (
 	"bufio"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"io"
-	"net"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 )
 
-// EC2 Metadata URLs
 const (
-	// the url to fetch EC2 metadata
-	ec2IDURL   = "http://169.254.169.254/latest/meta-data/instance-id"
-	ec2ZoneURL = "http://169.254.169.254/latest/meta-data/placement/availability-zone"
-
 	// the interval to update the metadata periodically
 	observeInterval = time.Minute
 
@@ -121,8 +112,6 @@ func updateHostID(lh *lockedID) {
 	// compare and fallback if error happens
 	hostname := getOrFallback(getHostname, old.hostname)
 	pid := PID()
-	ec2Id := getOrFallback(getEC2ID, old.ec2Id)
-	ec2Zone := getOrFallback(getEC2Zone, old.ec2Zone)
 	cid := getOrFallback(getContainerID, old.containerId)
 	herokuId := getOrFallback(getHerokuDynoId, old.herokuId)
 	azureId := getOrFallback(getAzureAppInstId, old.azureAppInstId)
@@ -135,8 +124,6 @@ func updateHostID(lh *lockedID) {
 	setters := []IDSetter{
 		withHostname(hostname),
 		withPid(pid),
-		withEC2Id(ec2Id),
-		withEC2Zone(ec2Zone),
 		withContainerId(cid),
 		withMAC(mac),
 		withHerokuId(herokuId),
@@ -159,67 +146,6 @@ func getHostname() string {
 
 func getPid() int {
 	return os.Getpid()
-}
-
-// getAWSMeta fetches the metadata from a specific AWS URL and cache it into
-// a provided variable.
-func getAWSMeta(url string) (meta string) {
-	timeout := config.GetEc2MetadataTimeout()
-	if timeout == 0 {
-		log.Warning("EC2 metadata retrieval disabled.")
-		return
-	}
-	// Fetch it from the specified URL if the cache is uninitialized or no
-	// cache at all. This request requires no proxy (and shouldn't).
-	t := &http.Transport{
-		Proxy: nil,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-
-	client := http.Client{Transport: t, Timeout: time.Millisecond * time.Duration(timeout)}
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Debugf("Failed to get AWS metadata from %s", url)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		log.Debugf("Failed to read AWS metadata: expected 200 status, got %s", resp.Status)
-		return
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Debugf("Failed to read AWS metadata response: %s", url)
-		return
-	}
-
-	meta = string(body)
-	return
-}
-
-// gets the AWS instance ID (or empty string if not an AWS instance)
-func getEC2ID() string {
-	ec2IdOnce.Do(func() {
-		ec2Id = getAWSMeta(ec2IDURL)
-		log.Debugf("Got and cached ec2Id: %s", ec2Id)
-	})
-	return ec2Id
-}
-
-// gets the AWS instance zone (or empty string if not an AWS instance)
-func getEC2Zone() string {
-	ec2ZoneOnce.Do(func() {
-		ec2Zone = getAWSMeta(ec2ZoneURL)
-		log.Debugf("Got and cached ec2Zone: %s", ec2Zone)
-	})
-	return ec2Zone
 }
 
 // getContainerID fetches the container ID by reading '/proc/self/cgroup'

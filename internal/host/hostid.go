@@ -45,12 +45,6 @@ var (
 	containerId     string
 	containerIdOnce sync.Once
 
-	ec2Id     string
-	ec2IdOnce sync.Once
-
-	ec2Zone     string
-	ec2ZoneOnce sync.Once
-
 	// the Heroku DYNO id
 	dyno     string
 	dynoOnce sync.Once
@@ -90,8 +84,6 @@ func (h *ID) copy() *ID {
 	c.update(
 		withHostname(h.hostname),
 		withPid(h.pid), // pid doesn't change, but we fullUpdate it anyways
-		withEC2Id(h.ec2Id),
-		withEC2Zone(h.ec2Zone),
 		withContainerId(h.containerId),
 		withMAC(h.mac),
 		withHerokuId(h.herokuId),
@@ -160,12 +152,6 @@ type ID struct {
 	// process ID
 	pid int
 
-	// EC2 instance ID
-	ec2Id string
-
-	// EC2 availability zone
-	ec2Zone string
-
 	// container ID
 	containerId string
 
@@ -187,16 +173,6 @@ func (h *ID) Hostname() string {
 // Pid returns the pid field of ID
 func (h *ID) Pid() int {
 	return h.pid
-}
-
-// EC2Id returns ec2id field of ID
-func (h *ID) EC2Id() string {
-	return h.ec2Id
-}
-
-// EC2Zone returns the ec2ZoneURL field of ID
-func (h *ID) EC2Zone() string {
-	return h.ec2Zone
 }
 
 // ContainerId returns the containerId field of ID
@@ -236,18 +212,6 @@ func withHostname(hostname string) IDSetter {
 func withPid(pid int) IDSetter {
 	return func(h *ID) {
 		h.pid = pid
-	}
-}
-
-func withEC2Id(id string) IDSetter {
-	return func(h *ID) {
-		h.ec2Id = id
-	}
-}
-
-func withEC2Zone(zone string) IDSetter {
-	return func(h *ID) {
-		h.ec2Zone = zone
 	}
 }
 

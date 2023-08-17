@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
+	"github.com/solarwindscloud/solarwinds-apm-go/internal/host/aws"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host/azure"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/host/k8s"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
@@ -1184,8 +1185,8 @@ func newHostID(id *host.ID) *collector.HostID {
 	gid.Hostname = id.Hostname()
 
 	gid.Pid = int32(id.Pid())
-	gid.Ec2InstanceID = id.EC2Id()
-	gid.Ec2AvailabilityZone = id.EC2Zone()
+	gid.Ec2InstanceID = aws.InstanceID()
+	gid.Ec2AvailabilityZone = aws.AvailabilityZone()
 	gid.DockerContainerID = id.ContainerId()
 	gid.MacAddresses = id.MAC()
 	gid.HerokuDynoID = id.HerokuId()
@@ -1202,6 +1203,10 @@ func newHostID(id *host.ID) *collector.HostID {
 	if md := k8s.MemoizeMetadata(); md != nil {
 		gid.K8SMetadata = md.ToPB()
 		log.Debugf("sending k8s metadata %+v", gid.K8SMetadata)
+	}
+	if md := aws.MemoizeMetadata(); md != nil {
+		gid.AwsMetadata = md.ToPB()
+		log.Debugf("sending aws metadata %+v", gid.AwsMetadata)
 	}
 
 	return gid

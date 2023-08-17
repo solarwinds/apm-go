@@ -16,17 +16,12 @@ package host
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"net"
-	"net/http"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func assertContainerId(t *testing.T, filetext string, expectedContainerId string) {
@@ -100,38 +95,6 @@ func TestGetContainerId(t *testing.T) {
 	assertContainerId(t, "/", "")
 }
 
-func TestGetAWSMetadata(t *testing.T) {
-	testEc2MetadataZoneURL := "http://localhost:8880/latest/meta-data/placement/availability-zone"
-	testEc2MetadataInstanceIDURL := "http://localhost:8880/latest/meta-data/instance-id"
-
-	sm := http.NewServeMux()
-	sm.HandleFunc("/latest/meta-data/instance-id", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "i-12345678")
-	})
-	sm.HandleFunc("/latest/meta-data/placement/availability-zone", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "us-east-7")
-	})
-
-	addr := "localhost:8880"
-	ln, err := net.Listen("tcp", addr)
-	require.NoError(t, err)
-
-	s := &http.Server{Addr: addr, Handler: sm}
-	// change EC2 MD URLs
-	go s.Serve(ln)
-	defer func() { // restore old URLs
-		ln.Close()
-	}()
-	time.Sleep(50 * time.Millisecond)
-
-	id := getAWSMeta(testEc2MetadataInstanceIDURL)
-	assert.Equal(t, "i-12345678", id)
-	assert.Equal(t, "i-12345678", id)
-	zone := getAWSMeta(testEc2MetadataZoneURL)
-	assert.Equal(t, "us-east-7", zone)
-	assert.Equal(t, "us-east-7", zone)
-}
-
 func TestGetPid(t *testing.T) {
 	assert.Equal(t, os.Getpid(), getPid())
 }
@@ -151,8 +114,6 @@ func TestUpdateHostId(t *testing.T) {
 	host, _ := os.Hostname()
 	assert.Equal(t, host, h.Hostname())
 	assert.Equal(t, os.Getpid(), h.Pid())
-	assert.Equal(t, getEC2ID(), h.EC2Id())
-	assert.Equal(t, getEC2Zone(), h.EC2Zone())
 	assert.Equal(t, getContainerID(), h.ContainerId())
 	assert.Equal(t, strings.Join(getMACAddressList(), ""),
 		strings.Join(h.MAC(), ""))
