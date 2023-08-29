@@ -16,6 +16,7 @@ package reporter
 
 import (
 	"crypto/subtle"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
@@ -242,4 +243,10 @@ func forward(dst io.WriteCloser, src io.ReadCloser) {
 		src.Close()
 	}()
 	io.Copy(dst, src)
+}
+
+func TestAppopticsCertificate(t *testing.T) {
+	certPool := x509.NewCertPool()
+	cert := []byte(legacyAOcertificate)
+	require.True(t, certPool.AppendCertsFromPEM(cert))
 }
