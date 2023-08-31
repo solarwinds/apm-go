@@ -116,7 +116,9 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
-		return nil, err
+		return func() {
+			// return a no-op func so that we don't cause a nil-deref for the end-user
+		}, err
 	}
 	reporter.Start(resrc)
 
