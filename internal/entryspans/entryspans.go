@@ -99,7 +99,11 @@ func (e *entrySpans) delete(tid trace.TraceID, sid trace.SpanID) error {
 			}
 		}
 		if found {
-			e.spans[tid] = list
+			if len(list) == 0 {
+				delete(e.spans, tid)
+			} else {
+				e.spans[tid] = list
+			}
 			return nil
 		} else {
 			return errors.New("could not find span id")
