@@ -210,9 +210,6 @@ func TestDelete(t *testing.T) {
 	)
 	err = Delete(s.(sdktrace.ReadOnlySpan))
 	require.NoError(t, err)
-	require.Equal(t,
-		[]*entrySpan{},
-		state.spans[s.SpanContext().TraceID()],
-	)
-
+	_, ok := state.spans[s.SpanContext().TraceID()]
+	require.False(t, ok)
 }
