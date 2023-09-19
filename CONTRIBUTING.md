@@ -1,6 +1,6 @@
-# Contributing to solarwinds-apm-go
+# Contributing to solarwinds/apm-go
 
-Thank you for contributing and helping us improve `solarwinds-apm-go`.
+Thank you for contributing and helping us improve `solarwinds/apm-go`.
 
 ----
 
