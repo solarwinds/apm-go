@@ -16,8 +16,8 @@ package reporter
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter/mocks"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/reporter/mocks"
 	"testing"
 
 	"github.com/pkg/errors"

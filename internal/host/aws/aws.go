@@ -18,9 +18,9 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwindscloud/apm-proto/go/collectorpb"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
 	"sync"
 )
 

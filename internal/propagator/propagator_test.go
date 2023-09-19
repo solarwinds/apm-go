@@ -16,8 +16,8 @@ package propagator
 import (
 	"context"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/xtrace"
+	"github.com/solarwinds/apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/xtrace"
 	"github.com/stretchr/testify/require"
 	"testing"
 

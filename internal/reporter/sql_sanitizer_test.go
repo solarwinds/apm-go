@@ -15,7 +15,7 @@ package reporter
 
 import (
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/config"
 	"os"
 	"strconv"
 	"testing"

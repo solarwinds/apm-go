@@ -15,7 +15,7 @@ package log
 
 import (
 	"bytes"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
 	"math/rand"
 	"os"

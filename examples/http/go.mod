@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module github.com/solarwindscloud/solarwinds-apm-go/examples/http
+module github.com/solarwinds/apm-go/examples/http
 
 go 1.20
 
 // TODO don't use the local repo
-replace github.com/solarwindscloud/solarwinds-apm-go => ../..
+replace github.com/solarwinds/apm-go => ../..
 
 require (
-	github.com/solarwindscloud/solarwinds-apm-go v0.0.0-00010101000000-000000000000
+	github.com/solarwinds/apm-go v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel v1.17.0
 	go.opentelemetry.io/otel/trace v1.17.0
 )

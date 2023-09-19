@@ -18,12 +18,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/hdrhist"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
+	"github.com/solarwinds/apm-go/internal/testutils"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"math"
@@ -167,8 +167,8 @@ func TestGetTransactionFromURL(t *testing.T) {
 	}
 	var test = []record{
 		{
-			"/solarwindscloud/solarwinds-apm-go/blob/metrics/reporter.go#L867",
-			"/solarwindscloud/solarwinds-apm-go",
+			"/solarwinds/apm-go/blob/metrics/reporter.go#L867",
+			"/solarwinds/apm-go",
 		},
 		{
 			"/librato",
@@ -179,15 +179,15 @@ func TestGetTransactionFromURL(t *testing.T) {
 			"/",
 		},
 		{
-			"/solarwindscloud/solarwinds-apm-go/blob",
-			"/solarwindscloud/solarwinds-apm-go",
+			"/solarwinds/apm-go/blob",
+			"/solarwinds/apm-go",
 		},
 		{
-			"/solarwindscloud/solarwinds-apm-go/blob",
-			"/solarwindscloud/solarwinds-apm-go",
+			"/solarwinds/apm-go/blob",
+			"/solarwinds/apm-go",
 		},
 		{
-			"http://test.com/solarwindscloud/solarwinds-apm-go/blob",
+			"http://test.com/solarwinds/apm-go/blob",
 			"http://test.com",
 		},
 		{

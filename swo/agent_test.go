@@ -16,10 +16,10 @@ package swo
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/entryspans"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"

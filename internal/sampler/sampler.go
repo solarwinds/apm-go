@@ -16,11 +16,11 @@ package sampler
 
 import (
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/w3cfmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/xtrace"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/swotel"
+	"github.com/solarwinds/apm-go/internal/w3cfmt"
+	"github.com/solarwinds/apm-go/internal/xtrace"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"

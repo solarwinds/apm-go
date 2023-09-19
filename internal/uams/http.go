@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/log"
 	"io"
 	"net/http"
 )

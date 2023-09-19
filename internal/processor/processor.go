@@ -16,9 +16,9 @@ package processor
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/entryspans"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/entryspans"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/metrics"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

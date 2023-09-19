@@ -15,7 +15,7 @@ at [psirt@solarwinds.com](mailto:psirt@solarwinds.com).
 ### All other issues
 
 For non-security issues, please submit your ideas, questions, or problems
-as [GitHub issues](https://github.com/solarwindscloud/solarwinds-apm-go/issues).
+as [GitHub issues](https://github.com/solarwinds/apm-go/issues).
 Please add as much information as you can, such as: Go version, platform,
 installed dependencies and their version numbers, hosting, code examples or
 gists, steps to reproduce, stack traces, and logs. SolarWinds project
@@ -27,7 +27,7 @@ maintainers may ask for clarification or more context after submission.
 
 Any changes to this project must be made through a pull request to `main`. Major
 changes should be linked to an
-existing [GitHub issue](https://github.com/solarwindscloud/solarwinds-apm-go/issues).
+existing [GitHub issue](https://github.com/solarwinds/apm-go/issues).
 Smaller contributions like typo corrections don't require an issue.
 
 A PR is ready to merge when all tests pass, any major feedback has been

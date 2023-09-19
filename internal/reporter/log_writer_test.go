@@ -14,7 +14,7 @@
 package reporter
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

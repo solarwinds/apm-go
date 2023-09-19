@@ -16,7 +16,7 @@ package entryspans
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"

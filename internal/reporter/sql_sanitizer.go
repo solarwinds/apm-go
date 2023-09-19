@@ -14,7 +14,7 @@
 package reporter
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/config"
 	"strings"
 	"unicode"
 	"unicode/utf8"
