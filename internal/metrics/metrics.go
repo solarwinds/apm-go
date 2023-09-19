@@ -15,12 +15,12 @@
 package metrics
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/hdrhist"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel/semconv"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/hdrhist"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -676,7 +676,7 @@ func addMetricsValue(bbuf *bson.Buffer, index *int, name string, value interface
 
 // GetTransactionFromPath performs fingerprinting on a given escaped path to extract the transaction name
 // We can get the path so there is no need to parse the full URL.
-// e.g. Escaped Path path: /solarwindscloud/solarwinds-apm-go/blob/metrics becomes /solarwindscloud/solarwinds-apm-go
+// e.g. Escaped Path path: /solarwinds/apm-go/blob/metrics becomes /solarwinds/apm-go
 func GetTransactionFromPath(path string) string {
 	if path == "" || path == "/" {
 		return "/"

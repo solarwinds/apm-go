@@ -16,8 +16,8 @@
 package metrics
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"strings"
 	"syscall"
 	"testing"

@@ -16,7 +16,7 @@ package host
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"

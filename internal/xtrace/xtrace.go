@@ -16,8 +16,8 @@ package xtrace
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/reporter"
 	"regexp"
 	"strconv"
 	"strings"

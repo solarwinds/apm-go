@@ -16,11 +16,11 @@ package propagator
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/constants"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/w3cfmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/xtrace"
+	"github.com/solarwinds/apm-go/internal/constants"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel"
+	"github.com/solarwinds/apm-go/internal/w3cfmt"
+	"github.com/solarwinds/apm-go/internal/xtrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )

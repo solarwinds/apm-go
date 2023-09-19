@@ -15,8 +15,8 @@
 package reporter
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/constants"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/constants"
+	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

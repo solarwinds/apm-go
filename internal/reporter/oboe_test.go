@@ -16,8 +16,8 @@ package reporter
 
 import (
 	"context"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/w3cfmt"
+	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"

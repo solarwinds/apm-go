@@ -16,7 +16,7 @@ package uams
 
 import (
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/log"
 	"sync"
 	"time"
 )

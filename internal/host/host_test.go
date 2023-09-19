@@ -14,9 +14,9 @@
 package host
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/config"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
 	"net"
 	"os"

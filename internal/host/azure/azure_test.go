@@ -15,7 +15,7 @@
 package azure
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"

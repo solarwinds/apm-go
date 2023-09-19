@@ -17,7 +17,7 @@ package swo
 import (
 	"context"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/reporter"
 	"go.opentelemetry.io/otel/trace"
 )
 

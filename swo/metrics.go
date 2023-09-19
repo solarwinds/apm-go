@@ -15,7 +15,7 @@
 package swo
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/metrics"
 )
 
 // MetricOptions is a struct for the optional parameters of a measurement.

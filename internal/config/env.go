@@ -16,7 +16,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/log"
 	"os"
 	"reflect"
 	"strconv"

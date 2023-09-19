@@ -17,7 +17,7 @@ package uams
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/testutils"
+	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"

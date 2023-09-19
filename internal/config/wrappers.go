@@ -15,7 +15,7 @@
 package config
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 var conf = NewConfig()

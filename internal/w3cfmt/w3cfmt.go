@@ -17,8 +17,8 @@ package w3cfmt
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/log"
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/swotel"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel"
 	"regexp"
 
 	"go.opentelemetry.io/otel/trace"

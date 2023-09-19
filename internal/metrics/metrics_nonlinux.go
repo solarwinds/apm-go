@@ -16,7 +16,7 @@
 package metrics
 
 import (
-	"github.com/solarwindscloud/solarwinds-apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/bson"
 )
 
 func appendUname(bbuf *bson.Buffer) {}
