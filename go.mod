@@ -25,7 +25,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/solarwindscloud/apm-proto v0.0.0-20230710230936-94bf6d5ee68a
 	github.com/stretchr/testify v1.8.4
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.43.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0
 	go.uber.org/atomic v1.11.0
 	google.golang.org/grpc v1.58.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
