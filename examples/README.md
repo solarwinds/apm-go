@@ -6,11 +6,8 @@ libraries.
 
 Current examples:
 
- - [http](http)
- - [db](http) &ndash; The database example is located within the [http](http)
-   example as it shows how to pass the trace data down the stack via 
-   [`context.Context`](https://pkg.go.dev/context#Context)
- - [grpc](grpc)
+ - [http service with a database](http)
+ - [grpc client and server](grpc)
 
 For each of these examples, you must provide a `SW_APM_SERVICE_KEY` (as 
 documented in the top-level [README](../README.md)), or the library will be 
