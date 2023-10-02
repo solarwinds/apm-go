@@ -27,6 +27,7 @@ require (
 )
 
 require (
+	github.com/XSAM/otelsql v0.25.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.21.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.11 // indirect
 	github.com/aws/smithy-go v1.14.2 // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.3.1 // indirect
+	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/solarwindscloud/apm-proto v0.0.0-20230710230936-94bf6d5ee68a // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect

@@ -1,4 +1,4 @@
-# Instrumented HTTP Example
+# Instrumented HTTP and Database Example
 
 [`main.go`](main.go) shows how simple it is to get started.
 
