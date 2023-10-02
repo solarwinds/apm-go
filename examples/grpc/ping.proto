@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option go_package = "./;main";
+
+message PingRequest {}
+message PingResponse {}
+
+service Pinger {
+  rpc Ping(PingRequest) returns(PingResponse);
+}
