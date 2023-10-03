@@ -16,5 +16,5 @@ If the agent successfully connects, you will see a log line like this:
 ```
 
 This is a trivial service that only calls itself. If you provided a valid 
-service key, you should see traces that show the gRPC client calling the 
+service key, you should see traces in SWO that show the gRPC client calling the 
 gRPC server.

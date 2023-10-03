@@ -1,7 +1,7 @@
 # Examples
 
 In this directory you will find examples of how to instrument your code using
-this library, as well at _de facto_ standard OpenTelemetry instrumentation 
+this library, as well as _de facto_ standard OpenTelemetry instrumentation 
 libraries.
 
 Current examples:
