@@ -1,6 +1,11 @@
-# Instrumented HTTP Example
+# Instrumented HTTP and Database Example
 
-[`main.go`](main.go) shows how simple it is to get started.
+[`main.go`](main.go) shows how simple it is to get started. It contains an 
+example instrumented web server in which we query a database. This example 
+shows how trace context is propagated using the request's `context.Context`. 
+Additionally, it shows how to bootstrap the instrumentation for the database 
+layer, especially the SQL Commenter which allows SWO to associate database 
+queries with traces. 
 
 To run, set the `SW_APM_SERVICE_KEY` environment variable, then run `go run .`
 in this directory. For example:

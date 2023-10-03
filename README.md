@@ -7,8 +7,9 @@
 
 ## Getting started
 
-ℹ️ Check out the [http example](examples/http/README.md) to see how easy it is
-to get started. The following code snippets are pulled directly from it.
+ℹ️ Check out the [usage examples](examples) to see how easy it is to get 
+started. The following code snippets are adapted from the [http 
+example](examples/http).
 
 To use in your Go project:
 
