@@ -48,7 +48,7 @@ import (
 
 	"context"
 
-	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	uatomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

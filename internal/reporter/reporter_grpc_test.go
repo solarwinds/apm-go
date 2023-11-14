@@ -32,7 +32,7 @@ import (
 
 	"context"
 	"github.com/pkg/errors"
-	pb "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	pb "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"

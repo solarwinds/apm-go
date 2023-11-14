@@ -38,7 +38,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/solarwindscloud/apm-proto v0.0.0-20231107001908-432e697887b6 // indirect
+	github.com/solarwinds/apm-proto v0.0.0-20231107001908-432e697887b6 // indirect
 	go.opentelemetry.io/otel/metric v1.20.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.20.0 // indirect
 	go.opentelemetry.io/otel/trace v1.20.0 // indirect

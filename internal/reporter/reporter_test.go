@@ -34,7 +34,7 @@ import (
 
 	"strings"
 
-	pb "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	pb "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"

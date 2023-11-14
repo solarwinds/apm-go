@@ -15,7 +15,7 @@
 
 package mocks
 
-import collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+import collector "github.com/solarwinds/apm-proto/go/collectorpb"
 
 // FIX: gRPC generated file use x/net/context - import context "context"
 import "context"

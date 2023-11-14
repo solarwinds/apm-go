@@ -18,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/solarwinds/apm-go/internal/host"
-	"github.com/solarwindscloud/apm-proto/go/collectorpb"
+	"github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
