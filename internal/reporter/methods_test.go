@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

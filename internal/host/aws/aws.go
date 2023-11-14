@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwindscloud/apm-proto/go/collectorpb"
+	"github.com/solarwinds/apm-proto/go/collectorpb"
 	"sync"
 )
 

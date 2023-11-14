@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"os"
 	"regexp"

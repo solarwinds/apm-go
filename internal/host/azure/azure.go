@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/log"
-	collector "github.com/solarwindscloud/apm-proto/go/collectorpb"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"io"
 	"net/http"
 	"sync"
