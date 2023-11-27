@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	// The SolarWinds Observability Go agent version
-	version = "0.1" // TODO
+	// The SolarWinds Observability Go APM library version
+	version = "0.2.0"
 
 	// The Go version
 	goVersion = strings.TrimPrefix(runtime.Version(), "go")
