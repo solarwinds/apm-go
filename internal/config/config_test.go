@@ -114,7 +114,7 @@ func TestPrintDelta(t *testing.T) {
 	changed.ReporterProperties.EventFlushInterval = 100
 
 	assert.Equal(t,
-		` - Collector (SW_APM_COLLECTOR) = test.com:443 (default: apm.collector.cloud.solarwinds.com:443)
+		` - Collector (SW_APM_COLLECTOR) = test.com:443 (default: apm.collector.na-01.cloud.solarwinds.com:443)
  - PrependDomain (SW_APM_PREPEND_DOMAIN) = true (default: false)
  - ReporterProperties.EventFlushInterval (SW_APM_EVENTS_FLUSH_INTERVAL) = 100 (default: 2)`,
 		getDelta(newConfig().reset(), changed, "").sanitize().String())
