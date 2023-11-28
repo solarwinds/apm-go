@@ -45,7 +45,7 @@ const (
 	// max config file size = 1MB
 	maxConfigFileSize = 1024 * 1024
 	// the default collector url
-	defaultSSLCollector    = "apm.collector.cloud.solarwinds.com:443"
+	defaultSSLCollector    = "apm.collector.na-01.cloud.solarwinds.com:443"
 	maxTokenBucketCapacity = 8
 	maxTokenBucketRate     = 4
 )
@@ -85,7 +85,7 @@ type Config struct {
 	sync.RWMutex `yaml:"-"`
 
 	// Collector defines the host and port of the SolarWinds Observability collector
-	Collector string `yaml:"Collector,omitempty" env:"SW_APM_COLLECTOR" default:"apm.collector.cloud.solarwinds.com:443"`
+	Collector string `yaml:"Collector,omitempty" env:"SW_APM_COLLECTOR" default:"apm.collector.na-01.cloud.solarwinds.com:443"`
 
 	// ServiceKey defines the service key and service name
 	ServiceKey string `yaml:"ServiceKey,omitempty" env:"SW_APM_SERVICE_KEY"`
