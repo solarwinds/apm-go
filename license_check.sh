@@ -30,8 +30,7 @@ find . -type f \
     -not -path '*/\.git*' \
     -not -path '*/go.sum' \
     -not -path './LICENSE' \
-    -not -path '*/README.md' \
-    -not -path './CONTRIBUTING.md' \
+    -not -path '*/*.md' \
     -not -path './CODEOWNERS' \
     -not -path './\.editorconfig' \
     -not -path './\.codecov.yaml' \
