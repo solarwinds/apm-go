@@ -47,6 +47,7 @@ func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
 		slog.Info("getSw", "sw", swVal)
 		return ParseSwTraceState(swVal)
 	}
+	slog.Info("invalid span context")
 	return invalidSwTraceState
 }
 
