@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
 	"math"
 	"strconv"
 	"strings"
@@ -411,13 +412,16 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 			}
 		}
 	} else if swState.IsValid() {
+		slog.Info("valid swstate", "is sampled", swState.Flags().IsSampled())
 		if swState.Flags().IsSampled() {
 			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+				slog.Info("THROUGH ALWAYS")
 				// Conform to liboboe behavior; continue decision would result in a -1 value for the
 				// BucketCapacity, BucketRate, SampleRate and SampleSource KVs to indicate "unset".
 				unsetBucketAndSampleKVs = true
 				retval = true
 			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+				slog.Info("JUST THROUGH!")
 				// roll the dice
 				diceRolled = true
 				retval = shouldSample(sampleRate)
