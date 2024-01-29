@@ -17,6 +17,7 @@ package swotel
 import (
 	"fmt"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
 	"strings"
 )
 
@@ -42,6 +43,7 @@ func GetSw(ts trace.TraceState) string {
 }
 
 func SetSw(ts trace.TraceState, val string) (trace.TraceState, error) {
+	slog.Info("inserting tracestate", sw, "val")
 	return ts.Insert(sw, val)
 }
 
