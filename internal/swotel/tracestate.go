@@ -43,7 +43,7 @@ func GetSw(ts trace.TraceState) string {
 }
 
 func SetSw(ts trace.TraceState, val string) (trace.TraceState, error) {
-	slog.Info("inserting tracestate", sw, "val")
+	slog.Info("inserting tracestate", sw, val)
 	return ts.Insert(sw, val)
 }
 
