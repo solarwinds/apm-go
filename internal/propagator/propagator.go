@@ -23,6 +23,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/xtrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
 )
 
 type SolarwindsPropagator struct{}
@@ -51,6 +52,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 		}
 	}
 	traceState, err = swotel.SetSw(traceState, swVal)
+	slog.Info("trace state is now", "ts", traceState.String())
 	if err != nil {
 		log.Debugf("could not insert vendor info into tracestate `%s`", swVal)
 		return
