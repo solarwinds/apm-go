@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel"
+	"log/slog"
 	"regexp"
 
 	"go.opentelemetry.io/otel/trace"
@@ -43,6 +44,7 @@ func GetSwTraceState(ctx trace.SpanContext) SwTraceState {
 	if ctx.IsValid() {
 		tracestate := ctx.TraceState()
 		swVal := swotel.GetSw(tracestate)
+		slog.Info("getSw", "sw", swVal)
 		return ParseSwTraceState(swVal)
 	}
 	return invalidSwTraceState
