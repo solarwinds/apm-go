@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
 )
 
 type sampler struct {
@@ -93,6 +94,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
+		slog.Info("swState is", "flags", swState.Flags(), "is valid", swState.IsValid(), "span id", swState.SpanId())
 		traceDecision := reporter.ShouldTraceRequestWithURL(swState.IsValid(), url, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
