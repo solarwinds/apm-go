@@ -59,6 +59,7 @@ func (swp SolarwindsPropagator) Inject(ctx context.Context, carrier propagation.
 	}
 
 	traceState, err = swotel.RemoveInternalState(traceState, swotel.XTraceOptResp)
+	slog.Info("post state removal", "ts", traceState.String())
 	if err != nil {
 		log.Debugf("could not remove xtrace options resp from trace state", err)
 	}
