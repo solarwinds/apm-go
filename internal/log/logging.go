@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -95,7 +96,7 @@ func ToLogLevel(level string) (LogLevel, bool) {
 
 	// Accept integers for backward-compatibility.
 	if i, err := strconv.Atoi(level); err == nil {
-		if i < len(LevelStr) {
+		if i >= 0 && i <= math.MaxInt8 && i < len(LevelStr) {
 			lvl = LogLevel(i)
 		} else {
 			return lvl, false
