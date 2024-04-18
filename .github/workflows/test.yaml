@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goversion: ['1.20', '1.21']
+        goversion: ['1.21', '1.22']
     name: Go ${{ matrix.goversion }} tests
     env:
       SW_APM_DEBUG_LEVEL: 1
@@ -43,7 +43,7 @@ jobs:
       - name: Run tests
         run: make test
       - uses: dominikh/staticcheck-action@v1.2.0
-        if: matrix.goversion == '1.20'
+        if: matrix.goversion == '1.21'
         with:
           install-go: false
           cache-key: ${{ matrix.goversion }}

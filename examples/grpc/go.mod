@@ -14,7 +14,7 @@
 
 module github.com/solarwinds/apm-go/examples/grpc
 
-go 1.20
+go 1.21
 
 // TODO don't use the local repo
 replace github.com/solarwinds/apm-go => ../..
