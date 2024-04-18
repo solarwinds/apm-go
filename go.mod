@@ -14,7 +14,7 @@
 
 module github.com/solarwinds/apm-go
 
-go 1.20
+go 1.21
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.23.1
