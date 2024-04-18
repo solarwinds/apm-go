@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goversion: ['1.22', '1.21']
+        goversion: ['1.21', '1.22']
     name: Go ${{ matrix.goversion }} tests
     env:
       SW_APM_DEBUG_LEVEL: 1
