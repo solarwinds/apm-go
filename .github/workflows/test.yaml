@@ -19,6 +19,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Jerome1337/gofmt-action@v1.0.5
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.54
   tests:
     runs-on: ubuntu-latest
     strategy:
