@@ -92,8 +92,12 @@ func (l *LogWriter) writeHist(h *Hist, start time.Time, end time.Time) error {
 		float64(end.Sub(start)/1e6)/1e3,
 		float64(max)/MaxValueUnitRatio)
 	b64w := base64.NewEncoder(base64.StdEncoding, &l.buf)
-	encodeCompressed(h, b64w, max) // not writing to disk yet, won't fail
-	b64w.Close()
+	if err := encodeCompressed(h, b64w, max); err != nil {
+		return err
+	}
+	if err := b64w.Close(); err != nil {
+		return err
+	}
 	l.buf.WriteString("\n")
 	_, err := l.buf.WriteTo(l.w)
 	return errors.Wrap(err, "unable to write hist")

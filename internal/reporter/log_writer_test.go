@@ -15,6 +15,7 @@ package reporter
 
 import (
 	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,14 +24,16 @@ import (
 func TestLogWriter(t *testing.T) {
 	sb := &utils.SafeBuffer{}
 	eventWriter := newLogWriter(false, sb, 1e6)
-	eventWriter.Write(EventWT, []byte("hello event"))
+	_, err := eventWriter.Write(EventWT, []byte("hello event"))
+	require.NoError(t, err)
 	assert.Equal(t, 0, sb.Len())
-	eventWriter.Flush()
+	require.NoError(t, eventWriter.Flush())
 	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8gZXZlbnQ=\"]}}\n", sb.String())
 
 	sb.Reset()
 	metricWriter := newLogWriter(true, sb, 1e6)
-	metricWriter.Write(MetricWT, []byte("hello metric"))
+	_, err = metricWriter.Write(MetricWT, []byte("hello metric"))
+	require.NoError(t, err)
 	assert.Equal(t, "{\"apm-data\":{\"metrics\":[\"aGVsbG8gbWV0cmlj\"]}}\n", sb.String())
 	assert.NotNil(t, metricWriter.Flush())
 
@@ -40,12 +43,14 @@ func TestLogWriter(t *testing.T) {
 	assert.Zero(t, n)
 	assert.Error(t, err)
 
-	writer.Write(EventWT, []byte("hello"))
+	_, err = writer.Write(EventWT, []byte("hello"))
+	require.NoError(t, err)
 	assert.Zero(t, sb.Len())
-	writer.Write(EventWT, []byte(" event"))
+	_, err = writer.Write(EventWT, []byte(" event"))
+	require.NoError(t, err)
 	assert.Equal(t, 37, sb.Len())
 	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8=\"]}}\n", sb.String())
-	writer.Flush()
+	require.NoError(t, writer.Flush())
 	assert.Equal(t, "{\"apm-data\":{\"events\":[\"aGVsbG8=\"]}}\n{\"apm-data\":{\"events\":[\"IGV2ZW50\"]}}\n",
 		sb.String())
 

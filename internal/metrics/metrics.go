@@ -985,7 +985,6 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 	}
 	if ttTraced != 0 {
 		bbuf.AppendString(strconv.Itoa(i), "Triggered")
-		i++
 	}
 
 	bbuf.AppendFinishObject(start)
@@ -1038,7 +1037,7 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		Method:          method,
 	}
 
-	var tagsList []map[string]string = nil
+	var tagsList []map[string]string
 	var metricName string
 	if !isAppoptics {
 		tagsList = []map[string]string{swoTags}

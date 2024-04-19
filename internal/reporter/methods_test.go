@@ -152,7 +152,7 @@ func TestGenericMethod(t *testing.T) {
 	err := errors.New("err connection aborted")
 	mockTC.On("Ping", mock.Anything, mock.Anything).
 		Return(nil, err)
-	pe.Call(context.Background(), mockTC)
+	_ = pe.Call(context.Background(), mockTC)
 	assert.Contains(t, pe.CallSummary(), err.Error())
 
 }

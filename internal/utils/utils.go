@@ -29,7 +29,10 @@ import (
 // SPrintBson prints the BSON message. It's not concurrent-safe and is for testing only
 func SPrintBson(message []byte) string {
 	m := make(map[string]interface{})
-	bson.Unmarshal(message, m)
+	if err := bson.Unmarshal(message, m); err != nil {
+		// Since this is only used in testing/debug, we'll just return the error message
+		return err.Error()
+	}
 	b, _ := json.MarshalIndent(m, "", "  ")
 	return string(b)
 }

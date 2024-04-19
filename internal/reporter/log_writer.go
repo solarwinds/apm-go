@@ -132,7 +132,7 @@ func (lr *logWriter) flush() error {
 	}
 
 	if file, ok := lr.dest.(*os.File); ok {
-		file.Sync()
+		return file.Sync()
 	}
 
 	return nil

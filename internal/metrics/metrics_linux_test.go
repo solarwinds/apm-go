@@ -29,7 +29,8 @@ func TestAppendUname(t *testing.T) {
 	bbuf := bson.NewBuffer()
 	appendUname(bbuf)
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	var sysname, release string
 

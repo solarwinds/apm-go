@@ -24,6 +24,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/testutils"
+	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"math"
@@ -38,10 +39,12 @@ import (
 	mbson "gopkg.in/mgo.v2/bson"
 )
 
-func bsonToMap(bbuf *bson.Buffer) map[string]interface{} {
+func bsonToMap(bbuf *bson.Buffer) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
-	mbson.Unmarshal(bbuf.GetBuf(), m)
-	return m
+	if err := mbson.Unmarshal(bbuf.GetBuf(), m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func round(val float64, roundOn float64, places int) (newVal float64) {
@@ -62,7 +65,8 @@ func TestAppendIPAddresses(t *testing.T) {
 	bbuf := bson.NewBuffer()
 	appendIPAddresses(bbuf)
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	ifaces, _ := host.FilteredIfaces()
 	var addresses []string
@@ -94,7 +98,8 @@ func TestAppendMACAddresses(t *testing.T) {
 	bbuf := bson.NewBuffer()
 	appendMACAddresses(bbuf, host.CurrentID().MAC())
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	ifaces, _ := host.FilteredIfaces()
 	var macs []string
@@ -131,7 +136,8 @@ func TestAddMetricsValue(t *testing.T) {
 	addMetricsValue(bbuf, &index, "name4", float64(444.44))
 	addMetricsValue(bbuf, &index, "name5", "hello")
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	assert.NotZero(t, m["0"])
 	m2 := m["0"].(map[string]interface{})
@@ -223,8 +229,10 @@ func TestRecordMeasurement(t *testing.T) {
 	t1 := make(map[string]string)
 	t1["t1"] = "tag1"
 	t1["t2"] = "tag2"
-	me.recordWithSoloTags("name1", t1, 111.11, 1, false)
-	me.recordWithSoloTags("name1", t1, 222, 1, false)
+	err := me.recordWithSoloTags("name1", t1, 111.11, 1, false)
+	require.NoError(t, err)
+	err = me.recordWithSoloTags("name1", t1, 222, 1, false)
+	require.NoError(t, err)
 	assert.NotNil(t, me.m["name1&false&t1:tag1&t2:tag2&"])
 	m := me.m["name1&false&t1:tag1&t2:tag2&"]
 	assert.Equal(t, "tag1", m.Tags["t1"])
@@ -235,7 +243,8 @@ func TestRecordMeasurement(t *testing.T) {
 
 	t2 := make(map[string]string)
 	t2["t3"] = "tag3"
-	me.recordWithSoloTags("name2", t2, 123.456, 3, true)
+	err = me.recordWithSoloTags("name2", t2, 123.456, 3, true)
+	require.NoError(t, err)
 	assert.NotNil(t, me.m["name2&true&t3:tag3&"])
 	m = me.m["name2&true&t3:tag3&"]
 	assert.Equal(t, "tag3", m.Tags["t3"])
@@ -305,7 +314,8 @@ func TestAddMeasurementToBSON(t *testing.T) {
 	addMeasurementToBSON(bbuf, &index, measurement1)
 	addMeasurementToBSON(bbuf, &index, measurement2)
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	assert.NotZero(t, m["0"])
 	m1 := m["0"].(map[string]interface{})
@@ -365,7 +375,8 @@ func TestAddHistogramToBSON(t *testing.T) {
 	addHistogramToBSON(bbuf, &index, h1)
 	addHistogramToBSON(bbuf, &index, h2)
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	assert.NotZero(t, m["0"])
 	m1 := m["0"].(map[string]interface{})
@@ -392,7 +403,8 @@ func TestGenerateMetricsMessage(t *testing.T) {
 			RCRegular:             {10, 2, 5, 5, 1},
 			RCRelaxedTriggerTrace: {3, 0, 1, 2, 0},
 			RCStrictTriggerTrace:  {4, 0, 3, 1, 0}}, true))
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	_, ok := m["Hostname"]
 	assert.False(t, ok)
@@ -477,8 +489,9 @@ func TestGenerateMetricsMessage(t *testing.T) {
 		}
 	}
 
-	m = bsonToMap(bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
+	m, err = bsonToMap(bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
 		map[string]*RateCounts{RCRegular: {}, RCRelaxedTriggerTrace: {}, RCStrictTriggerTrace: {}}, true)))
+	require.NoError(t, err)
 
 	assert.NotNil(t, m["TransactionNameOverflow"])
 	assert.True(t, m["TransactionNameOverflow"].(bool))
