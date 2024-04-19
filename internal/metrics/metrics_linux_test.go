@@ -18,6 +18,7 @@ package metrics
 import (
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"syscall"
 	"testing"
