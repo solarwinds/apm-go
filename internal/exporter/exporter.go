@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"strings"
 )
 
 type exporter struct {
@@ -33,7 +34,7 @@ type exporter struct {
 
 func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	evt := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
-	layer := fmt.Sprintf("%s:%s", s.SpanKind().String(), s.Name())
+	layer := fmt.Sprintf("%s:%s", strings.ToUpper(s.SpanKind().String()), s.Name())
 	evt.SetLayer(layer)
 	evt.AddKVs([]attribute.KeyValue{
 		attribute.String("sw.span_name", s.Name()),
