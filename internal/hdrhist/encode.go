@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package hdrhist
 
 import (
@@ -27,10 +28,13 @@ func EncodeCompressed(h *Hist) ([]byte, error) {
 	var buf bytes.Buffer
 	b64w := base64.NewEncoder(base64.StdEncoding, &buf)
 	if err := encodeCompressed(h, b64w, h.Max()); err != nil {
-		b64w.Close()
+		_ = b64w.Close()
 		return nil, errors.Wrap(err, "unable to encode histogram")
 	}
-	b64w.Close() // DO NOT defer this close, otherwise that could prevent bytes from getting flushed
+	// DO NOT defer this close, otherwise that could prevent bytes from getting flushed
+	if err := b64w.Close(); err != nil {
+		return nil, err
+	}
 	return buf.Bytes(), nil
 }
 
@@ -39,15 +43,22 @@ func encodeCompressed(h *Hist, w io.Writer, histMax int64) error {
 	var buf bytes.Buffer
 
 	var cookie int32 = compressedEncodingCookie
-	binary.Write(&buf, binary.BigEndian, cookie)
+	err := binary.Write(&buf, binary.BigEndian, cookie)
+	if err != nil {
+		return err
+	}
 	buf.WriteString("\x00\x00\x00\x00")
 	preCompressed := buf.Len()
 	zw, _ := zlib.NewWriterLevel(&buf, zlib.BestCompression)
-	encodeInto(h, zw, histMax) // won't error, not io device
-	zw.Close()
+	if err = encodeInto(h, zw, histMax); err != nil {
+		return err
+	}
+	if err = zw.Close(); err != nil {
+		return err
+	}
 	binary.BigEndian.PutUint32(buf.Bytes()[4:], uint32(buf.Len()-preCompressed))
 
-	_, err := buf.WriteTo(w)
+	_, err = buf.WriteTo(w)
 	return errors.Wrap(err, "unable to write compressed hist")
 }
 
@@ -57,13 +68,21 @@ func encodeInto(h *Hist, w io.Writer, max int64) error {
 	importantLen := h.b.countsIndex(max) + 1
 	var buf bytes.Buffer
 	var cookie int32 = encodingCookie
-	binary.Write(&buf, binary.BigEndian, cookie)
+	if err := binary.Write(&buf, binary.BigEndian, cookie); err != nil {
+		return err
+	}
 	buf.WriteString("\x00\x00\x00\x00") // length will go here
 	buf.WriteString("\x00\x00\x00\x00") // normalizing index offset
 	cfg := h.Config()
-	binary.Write(&buf, binary.BigEndian, int32(cfg.SigFigs))
-	binary.Write(&buf, binary.BigEndian, int64(cfg.LowestDiscernible))
-	binary.Write(&buf, binary.BigEndian, int64(cfg.HighestTrackable))
+	if err := binary.Write(&buf, binary.BigEndian, cfg.SigFigs); err != nil {
+		return err
+	}
+	if err := binary.Write(&buf, binary.BigEndian, cfg.LowestDiscernible); err != nil {
+		return err
+	}
+	if err := binary.Write(&buf, binary.BigEndian, cfg.HighestTrackable); err != nil {
+		return err
+	}
 	// int to double conversion ratio
 	buf.WriteString("\x3f\xf0\x00\x00\x00\x00\x00\x00")
 	payloadStart := buf.Len()

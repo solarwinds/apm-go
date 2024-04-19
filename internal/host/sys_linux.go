@@ -68,7 +68,7 @@ func initDistro() (distro string) {
 	distro = utils.GetStrByKeyword(SUSE, "PRETTY_NAME")
 	if distro != "" {
 		// TODO
-		//lint:ignore SA1024 This is untested so until we have coverage I'm not inclined to fix this
+		//nolint:staticcheck // This is untested so until we have coverage I'm not inclined to fix this
 		distro = strings.TrimLeft(distro, "PRETTY_NAME=")
 		distro = strings.Trim(distro, "\"")
 		return distro

@@ -53,7 +53,7 @@ Run all tests with `make test`.
 
 We enforce the following in CI:
 
-* [`staticcheck ./...`](https://staticcheck.dev/docs/)
+* [`golangci-lint run`](https://golangci-lint.run/)
 * [`go vet ./...`](https://pkg.go.dev/cmd/vet)
 * [`gofmt`](https://pkg.go.dev/cmd/gofmt)
  

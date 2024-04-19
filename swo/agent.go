@@ -92,8 +92,8 @@ func SetLogOutput(w io.Writer) {
 }
 
 // SetServiceKey sets the service key of the agent
-func SetServiceKey(key string) {
-	reporter.SetServiceKey(key)
+func SetServiceKey(key string) error {
+	return reporter.SetServiceKey(key)
 }
 
 func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {

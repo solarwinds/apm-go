@@ -191,11 +191,7 @@ func (b *buckets) valueFor(i int) int64 {
 
 func (b *buckets) sizeOfEquivalentValueRange(v int64) int64 {
 	bi := bucketIndex(v, b.subMask, b.leadZeroCountBase)
-	sbi := subBucketIndex(v, bi, b.unitMag)
 	t := bi
-	if sbi >= int(b.subCount) {
-		bi++
-	}
 	nextDist := int64(1) << uint64(int64(b.unitMag)+int64(t))
 	return nextDist
 }
