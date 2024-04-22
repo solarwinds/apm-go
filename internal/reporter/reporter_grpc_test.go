@@ -74,7 +74,9 @@ func StartTestGRPCServer(t *testing.T, addr string) *TestGRPCServer {
 	pb.RegisterTraceCollectorServer(grpcServer, testServer)
 	require.NoError(t, err)
 
-	go grpcServer.Serve(lis)
+	go func() {
+		_ = grpcServer.Serve(lis)
+	}()
 	return testServer
 }
 
@@ -176,10 +178,14 @@ func (p *TestProxyServer) Start() error {
 	}
 	switch p.url.Scheme {
 	case "http":
-		go srv.ListenAndServe()
+		go func() {
+			_ = srv.ListenAndServe()
+		}()
 		p.closeFunc = closeFunc
 	case "https":
-		go srv.ListenAndServeTLS(p.pemFile, p.keyFile)
+		go func() {
+			_ = srv.ListenAndServeTLS(p.pemFile, p.keyFile)
+		}()
 		p.closeFunc = closeFunc
 	// TODO: case "socks5":
 	default:
@@ -211,7 +217,9 @@ func (p *TestProxyServer) proxyHttpHandler(w http.ResponseWriter, r *http.Reques
 		subtle.ConstantTimeCompare([]byte(pwd), []byte(expectedPwd)) != 1 {
 		w.Header().Set("WWW-Authenticate", `Basic realm="wrong auth"`)
 		w.WriteHeader(401)
-		w.Write([]byte("Unauthorised.\n"))
+		if _, err := w.Write([]byte("Unauthorised.\n")); err != nil {
+			panic(err)
+		}
 		return
 	}
 
@@ -231,7 +239,10 @@ func (p *TestProxyServer) proxyHttpHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
+	_, err = clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
+	if err != nil {
+		panic(err)
+	}
 
 	go forward(serverConn, clientConn)
 	go forward(clientConn, serverConn)
@@ -239,10 +250,10 @@ func (p *TestProxyServer) proxyHttpHandler(w http.ResponseWriter, r *http.Reques
 
 func forward(dst io.WriteCloser, src io.ReadCloser) {
 	defer func() {
-		dst.Close()
-		src.Close()
+		_ = dst.Close()
+		_ = src.Close()
 	}()
-	io.Copy(dst, src)
+	_, _ = io.Copy(dst, src)
 }
 
 func TestAppopticsCertificate(t *testing.T) {

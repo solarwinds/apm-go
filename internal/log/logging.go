@@ -193,7 +193,7 @@ func logIt(level LogLevel, msg string, args []interface{}) {
 
 	buffer.WriteString(pre)
 
-	s := msg
+	var s string
 	if msg == "" {
 		s = fmt.Sprint(args...)
 	} else {

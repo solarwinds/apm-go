@@ -18,6 +18,7 @@ package metrics
 import (
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"syscall"
 	"testing"
@@ -29,7 +30,8 @@ func TestAppendUname(t *testing.T) {
 	bbuf := bson.NewBuffer()
 	appendUname(bbuf)
 	bbuf.Finish()
-	m := bsonToMap(bbuf)
+	m, err := bsonToMap(bbuf)
+	require.NoError(t, err)
 
 	var sysname, release string
 

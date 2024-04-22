@@ -44,11 +44,11 @@ func TestSetGetLogLevel(t *testing.T) {
 	newLevel := GetLogLevel()
 	assert.Equal(t, newLevel, nl)
 
-	SetLogLevel(oldLevel)
+	require.NoError(t, SetLogLevel(oldLevel))
 }
 
 func TestShutdown(t *testing.T) {
-	Shutdown(context.Background())
+	require.NoError(t, Shutdown(context.Background()))
 	assert.True(t, Closed())
 	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*24)
 	defer cancel()
@@ -58,7 +58,9 @@ func TestShutdown(t *testing.T) {
 func TestSetLogOutput(t *testing.T) {
 	oldLevel := GetLogLevel()
 	_ = SetLogLevel("DEBUG")
-	defer SetLogLevel(oldLevel)
+	defer func() {
+		require.NoError(t, SetLogLevel(oldLevel))
+	}()
 
 	var buf utils.SafeBuffer
 	log.SetOutput(&buf)
