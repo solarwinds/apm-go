@@ -7,5 +7,5 @@ Release checklist
  - Create a [Github Release](https://github.com/solarwinds/apm-go/releases/new)
 
 Future consideration: add another step, after the release is complete, to update
-`version.go` with a prerelease name. If you released `v0.2.0`, perhaps the next
-prerelease version would be `v0.2.1-beta`.
+`version.go` with a prerelease name. If you released `v1.0.0`, perhaps the next
+prerelease version would be `v1.0.1-beta`.
