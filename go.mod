@@ -23,7 +23,7 @@ require (
 	github.com/coocood/freecache v1.2.4
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/solarwinds/apm-proto v0.0.0-20231107001908-432e697887b6
+	github.com/solarwinds/apm-proto v1.0.3
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.uber.org/atomic v1.11.0
