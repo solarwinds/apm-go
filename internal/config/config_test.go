@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"path/filepath"
@@ -86,21 +87,21 @@ func TestLoadConfig(t *testing.T) {
 
 func TestConfig_HasLocalSamplingConfig(t *testing.T) {
 	// Set tracing mode
-	_ = os.Setenv(envSolarWindsAPMTracingMode, "disabled")
+	require.NoError(t, os.Setenv(envSolarWindsAPMTracingMode, "disabled"))
 	Load()
 	assert.True(t, SamplingConfigured())
 	assert.Equal(t, "disabled", string(GetTracingMode()))
 	assert.Equal(t, ToInteger(getFieldDefaultValue(&SamplingConfig{}, "SampleRate")), GetSampleRate())
 
 	// No local sampling config
-	_ = os.Unsetenv(envSolarWindsAPMTracingMode)
+	require.NoError(t, os.Unsetenv(envSolarWindsAPMTracingMode))
 	Load()
 	assert.False(t, SamplingConfigured())
 	assert.Equal(t, getFieldDefaultValue(&SamplingConfig{}, "TracingMode"), string(GetTracingMode()))
 	assert.Equal(t, ToInteger(getFieldDefaultValue(&SamplingConfig{}, "SampleRate")), GetSampleRate())
 
 	// Set sample rate to 10000
-	_ = os.Setenv(envSolarWindsAPMSampleRate, "10000")
+	require.NoError(t, os.Setenv(envSolarWindsAPMSampleRate, "10000"))
 	Load()
 	assert.True(t, SamplingConfigured())
 	assert.Equal(t, getFieldDefaultValue(&SamplingConfig{}, "TracingMode"), string(GetTracingMode()))
@@ -461,10 +462,11 @@ func TestInvalidConfigFile(t *testing.T) {
 	ClearEnvs()
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
 	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.json")
-	_ = os.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644)
+	require.NoError(t, os.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644))
 
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), ErrUnsupportedFormat.Error())
+	// OK to ignore this error because we're just making sure this file doesn't exist for the logic below
 	_ = os.Remove("/tmp/file-not-exist.yaml")
 
 	buf.Reset()
