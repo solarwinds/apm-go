@@ -35,6 +35,6 @@ vet:
 clean:
 	@go clean -testcache ./...
 
-sure: clean test examples contrib vet
+sure: clean test examples vet
 
-.PHONY: certgen test removecert examples vet contrib clean
+.PHONY: certgen test removecert examples vet clean
