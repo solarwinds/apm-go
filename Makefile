@@ -33,7 +33,7 @@ vet:
 	@go vet -composites=false ./... && echo "Go vet analysis passed."
 
 clean:
-	@go clean -testcache ./...
+	@go clean -testcache
 
 sure: clean test examples vet
 
