@@ -15,14 +15,15 @@ package config
 
 import (
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/utils"
-	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -454,6 +455,7 @@ func TestInvalidConfigFile(t *testing.T) {
 	writers = append(writers, os.Stderr)
 
 	log.SetOutput(io.MultiWriter(writers...))
+	log.SetLevel(log.INFO)
 
 	defer func() {
 		log.SetOutput(os.Stderr)
