@@ -79,10 +79,12 @@ func TestConfiguredHostname(t *testing.T) {
 	writers = append(writers, &buf)
 
 	log.SetOutput(io.MultiWriter(writers...))
+	oldLevel := log.Level()
 	log.SetLevel(log.INFO)
 
 	defer func() {
 		log.SetOutput(os.Stderr)
+		log.SetLevel(oldLevel)
 	}()
 
 	var old string
