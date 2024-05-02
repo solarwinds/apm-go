@@ -174,15 +174,15 @@ func createInitMessage(tid trace.TraceID, r *resource.Resource) Event {
 	return evt
 }
 
-func sendInitMessage(r *resource.Resource) {
-	if Closed() {
+func sendInitMessage(r Reporter, rsrc *resource.Resource) {
+	if r.Closed() {
 		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
 		return
 	}
 	tid := trace.TraceID{0}
 	rand.Random(tid[:])
-	evt := createInitMessage(tid, r)
-	if err := ReportStatus(evt); err != nil {
+	evt := createInitMessage(tid, rsrc)
+	if err := r.ReportStatus(evt); err != nil {
 		log.Error("could not send init message", err)
 	}
 }
@@ -348,13 +348,14 @@ func (tm TriggerTraceMode) Requested() bool {
 }
 
 func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	if usingTestReporter {
-		if r, ok := globalReporter.(*TestReporter); ok {
-			if !r.UseSettings {
-				return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0, false} // trace tests
-			}
-		}
-	}
+	// TODO: ick!
+	//if usingTestReporter {
+	//	if r, ok := globalReporter.(*TestReporter); ok {
+	//		if !r.UseSettings {
+	//			return SampleDecision{r.ShouldTrace, 0, SAMPLE_SOURCE_NONE, true, ttEmpty, 0, 0, false} // trace tests
+	//		}
+	//	}
+	//}
 
 	var setting *oboeSettings
 	var ok bool

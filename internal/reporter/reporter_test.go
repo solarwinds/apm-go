@@ -85,13 +85,8 @@ func TestGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	oldReporter := globalReporter
 	registry := metrics.NewLegacyRegistry()
-	setGlobalReporter("ssl", "", registry)
-
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	r := newGRPCReporter("myservice", registry).(*grpcReporter)
 
 	// Test WaitForReady
 	// The reporter is not ready when there is no default setting.
@@ -141,7 +136,6 @@ func TestGRPCReporter(t *testing.T) {
 
 	// stop test reporter
 	server.Stop()
-	globalReporter = oldReporter
 
 	// assert data received
 	require.Len(t, server.events, 1)
@@ -177,13 +171,8 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	oldReporter := globalReporter
 	registry := metrics.NewLegacyRegistry()
-	setGlobalReporter("ssl", "", registry)
-
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	r := newGRPCReporter("myservice", registry).(*grpcReporter)
 	r.ShutdownNow()
 
 	require.Equal(t, true, r.Closed())
@@ -192,7 +181,6 @@ func TestShutdownGRPCReporter(t *testing.T) {
 
 	// stop test reporter
 	server.Stop()
-	globalReporter = oldReporter
 }
 
 func TestSetServiceKey(t *testing.T) {
@@ -240,14 +228,11 @@ func TestInvalidKey(t *testing.T) {
 
 	// set gRPC reporter
 	config.Load()
-	oldReporter := globalReporter
 
 	log.SetLevel(log.INFO)
 	registry := metrics.NewLegacyRegistry()
-	setGlobalReporter("ssl", "", registry)
-	require.IsType(t, &grpcReporter{}, globalReporter)
 
-	r := globalReporter.(*grpcReporter)
+	r := newGRPCReporter("myservice", registry).(*grpcReporter)
 	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("hello-from-invalid-key")
 	require.NoError(t, r.ReportEvent(ev1))
@@ -261,7 +246,6 @@ func TestInvalidKey(t *testing.T) {
 
 	// Tear down everything.
 	server.Stop()
-	globalReporter = oldReporter
 	setEnv("SW_APM_SERVICE_KEY", oldKey)
 
 	patterns := []string{
@@ -457,8 +441,8 @@ func TestInitReporter(t *testing.T) {
 	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
 	registry := metrics.NewLegacyRegistry()
-	initReporter(resource.Empty(), registry)
-	require.IsType(t, &nullReporter{}, globalReporter)
+	r := initReporter(resource.Empty(), registry)
+	require.IsType(t, &nullReporter{}, r)
 
 	// Test enable agent
 	require.NoError(t, os.Unsetenv("SW_APM_ENABLED"))
@@ -466,9 +450,9 @@ func TestInitReporter(t *testing.T) {
 	config.Load()
 	require.True(t, config.GetEnabled())
 
-	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry)
-	require.IsType(t, &grpcReporter{}, globalReporter)
-	require.Equal(t, "my service name", globalReporter.GetServiceName())
+	r = initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry)
+	require.IsType(t, &grpcReporter{}, r)
+	require.Equal(t, "my service name", r.GetServiceName())
 }
 
 func TestCollectMetricsNextInterval(t *testing.T) {
@@ -501,14 +485,9 @@ func testProxy(t *testing.T, proxyUrl string) {
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
-	oldReporter := globalReporter
-	defer func() { globalReporter = oldReporter }()
 	registry := metrics.NewLegacyRegistry()
-	setGlobalReporter("ssl", "", registry)
 
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	r := newGRPCReporter("myservice", registry).(*grpcReporter)
 
 	// Test WaitForReady
 	// The reporter is not ready when there is no default setting.

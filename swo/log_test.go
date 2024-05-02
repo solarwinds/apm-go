@@ -29,10 +29,10 @@ func TestLoggableTraceIDFromContext(t *testing.T) {
 	ctx := context.Background()
 	lt := LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:     trace.TraceID{},
-		SpanID:      trace.SpanID{},
-		TraceFlags:  0,
-		ServiceName: "test-reporter-service",
+		TraceID:    trace.TraceID{},
+		SpanID:     trace.SpanID{},
+		TraceFlags: 0,
+		//		ServiceName: "test-reporter-service",
 	}, lt)
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x22},
@@ -41,20 +41,20 @@ func TestLoggableTraceIDFromContext(t *testing.T) {
 	})
 	require.False(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=00000000000000000000000000000000 span_id=0000000000000000 trace_flags=00 resource.service.name=test-reporter-service",
+		"trace_id=00000000000000000000000000000000 span_id=0000000000000000 trace_flags=00",
 		lt.String())
 
 	ctx = trace.ContextWithSpanContext(ctx, sc)
 	lt = LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:     sc.TraceID(),
-		SpanID:      sc.SpanID(),
-		TraceFlags:  sc.TraceFlags(),
-		ServiceName: "test-reporter-service",
+		TraceID:    sc.TraceID(),
+		SpanID:     sc.SpanID(),
+		TraceFlags: sc.TraceFlags(),
+		//ServiceName: "test-reporter-service",
 	}, lt)
 	require.True(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=22000000000000000000000000000000 span_id=1100000000000000 trace_flags=01 resource.service.name=test-reporter-service",
+		"trace_id=22000000000000000000000000000000 span_id=1100000000000000 trace_flags=01",
 		lt.String())
 
 	sc = trace.NewSpanContext(trace.SpanContextConfig{
@@ -65,13 +65,13 @@ func TestLoggableTraceIDFromContext(t *testing.T) {
 	ctx = trace.ContextWithSpanContext(ctx, sc)
 	lt = LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:     sc.TraceID(),
-		SpanID:      sc.SpanID(),
-		TraceFlags:  sc.TraceFlags(),
-		ServiceName: "test-reporter-service",
+		TraceID:    sc.TraceID(),
+		SpanID:     sc.SpanID(),
+		TraceFlags: sc.TraceFlags(),
+		//ServiceName: "test-reporter-service",
 	}, lt)
 	require.True(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=33000000000000000000000000000000 span_id=aa00000000000000 trace_flags=01 resource.service.name=test-reporter-service",
+		"trace_id=33000000000000000000000000000000 span_id=aa00000000000000 trace_flags=01",
 		lt.String())
 }

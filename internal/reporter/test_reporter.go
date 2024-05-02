@@ -52,14 +52,6 @@ func TestReporterSettingType(tp int) TestReporterOption {
 	return func(r *TestReporter) { r.SettingType = tp }
 }
 
-func SetGlobalReporter(r Reporter) func() {
-	old := globalReporter
-	globalReporter = r
-	return func() {
-		globalReporter = old
-	}
-}
-
 // SetTestReporter sets and returns a test Reporter that captures raw event bytes
 // for making assertions about using the graphtest package.
 func SetTestReporter(options ...TestReporterOption) *TestReporter {
@@ -76,10 +68,6 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	r.wg.Add(1)
 	go r.resultWriter()
 
-	if _, ok := oldReporter.(*nullReporter); ok {
-		oldReporter = globalReporter
-	}
-	globalReporter = r
 	usingTestReporter = true
 
 	// start with clean slate
@@ -134,7 +122,6 @@ func (r *TestReporter) Close(numBufs int) {
 	}
 	usingTestReporter = false
 	if _, ok := oldReporter.(*nullReporter); !ok {
-		globalReporter = oldReporter
 		oldReporter = &nullReporter{}
 	}
 }

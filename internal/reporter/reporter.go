@@ -64,9 +64,6 @@ const (
 	kvMaxCustomMetrics                  = "MaxCustomMetrics"
 )
 
-// currently used reporter
-var globalReporter Reporter = &nullReporter{}
-
 var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
 )
@@ -84,18 +81,18 @@ func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string) error        { return nil }
 func (r *nullReporter) GetServiceName() string            { return "" }
 
-func Start(r *resource.Resource, registry interface{}) error {
+func Start(rsrc *resource.Resource, registry interface{}) (Reporter, error) {
 	log.SetLevelFromStr(config.DebugLevel())
 	if reg, ok := registry.(metrics.LegacyRegistry); !ok {
-		return fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
+		return nil, fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
 	} else {
-		initReporter(r, reg)
-		sendInitMessage(r)
-		return nil
+		rptr := initReporter(rsrc, reg)
+		sendInitMessage(rptr, rsrc)
+		return rptr, nil
 	}
 }
 
-func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) {
+func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) Reporter {
 	var rt string
 	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
@@ -107,39 +104,10 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) {
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
 	}
-	setGlobalReporter(rt, otelServiceName, registry)
-}
-
-func setGlobalReporter(reporterType string, otelServiceName string, registry metrics.LegacyRegistry) {
-	// Close the previous reporter
-	if globalReporter != nil {
-		globalReporter.ShutdownNow()
+	if rt == "none" {
+		return newNullReporter()
 	}
-
-	switch strings.ToLower(reporterType) {
-	case "none":
-		globalReporter = newNullReporter()
-	default:
-		globalReporter = newGRPCReporter(otelServiceName, registry)
-	}
-}
-
-// WaitForReady waits until the reporter becomes ready or the context is canceled.
-func WaitForReady(ctx context.Context) bool {
-	// globalReporter is not protected by a mutex as currently it's only modified
-	// from the init() function.
-	return globalReporter.WaitForReady(ctx)
-}
-
-// Shutdown flushes the metrics and stops the reporter. It blocked until the reporter
-// is shutdown or the context is canceled.
-func Shutdown(ctx context.Context) error {
-	return globalReporter.Shutdown(ctx)
-}
-
-// Closed indicates if the reporter has been shutdown
-func Closed() bool {
-	return globalReporter.Closed()
+	return newGRPCReporter(otelServiceName, registry)
 }
 
 func ShouldTraceRequestWithURL(traced bool, url string, ttMode TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
@@ -204,20 +172,4 @@ func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 	args[kvSignatureKey] = token
 
 	return args
-}
-
-func SetServiceKey(key string) error {
-	return globalReporter.SetServiceKey(key)
-}
-
-func ReportStatus(e Event) error {
-	return globalReporter.ReportStatus(e)
-}
-
-func ReportEvent(e Event) error {
-	return globalReporter.ReportEvent(e)
-}
-
-func GetServiceName() string {
-	return globalReporter.GetServiceName()
 }
