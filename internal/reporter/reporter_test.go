@@ -86,7 +86,8 @@ func TestGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
-	setGlobalReporter("ssl", "")
+	registry := metrics.NewLegacyRegistry()
+	setGlobalReporter("ssl", "", registry)
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
@@ -177,7 +178,8 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	oldReporter := globalReporter
-	setGlobalReporter("ssl", "")
+	registry := metrics.NewLegacyRegistry()
+	setGlobalReporter("ssl", "", registry)
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
@@ -241,7 +243,8 @@ func TestInvalidKey(t *testing.T) {
 	oldReporter := globalReporter
 
 	log.SetLevel(log.INFO)
-	setGlobalReporter("ssl", "")
+	registry := metrics.NewLegacyRegistry()
+	setGlobalReporter("ssl", "", registry)
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
 	r := globalReporter.(*grpcReporter)
@@ -453,7 +456,8 @@ func TestInitReporter(t *testing.T) {
 	// Test disable agent
 	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
-	initReporter(resource.Empty())
+	registry := metrics.NewLegacyRegistry()
+	initReporter(resource.Empty(), registry)
 	require.IsType(t, &nullReporter{}, globalReporter)
 
 	// Test enable agent
@@ -462,7 +466,7 @@ func TestInitReporter(t *testing.T) {
 	config.Load()
 	require.True(t, config.GetEnabled())
 
-	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")))
+	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry)
 	require.IsType(t, &grpcReporter{}, globalReporter)
 	require.Equal(t, "my service name", globalReporter.GetServiceName())
 }
@@ -499,8 +503,8 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	oldReporter := globalReporter
 	defer func() { globalReporter = oldReporter }()
-
-	setGlobalReporter("ssl", "")
+	registry := metrics.NewLegacyRegistry()
+	setGlobalReporter("ssl", "", registry)
 
 	require.IsType(t, &grpcReporter{}, globalReporter)
 
