@@ -20,6 +20,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
@@ -120,13 +121,16 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	reporter.Start(resrc)
+	registry := metrics.NewLegacyRegistry()
+	if err = reporter.Start(resrc, registry); err != nil {
+		return func() {}, err
+	}
 
 	exprtr := exporter.NewExporter()
 	smplr := sampler.NewSampler()
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	proc := processor.NewInboundMetricsSpanProcessor(isAppoptics)
+	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},

@@ -94,12 +94,58 @@ var (
 
 // Package-level state
 
-var ApmMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
-var CustomMetrics = NewMeasurements(true, metricsCustomMetricsMaxDefault)
-var apmHistograms = &histograms{
-	histograms: make(map[string]*histogram),
-	precision:  metricsHistPrecisionDefault,
+type registry struct {
+	*sync.RWMutex
+	apmHistograms *histograms
+	apmMetrics    *Measurements
+	customMetrics *Measurements
 }
+
+func getPrecision() int {
+	pEnv := "SW_APM_HISTOGRAM_PRECISION"
+	precision := os.Getenv(pEnv)
+	if precision != "" {
+		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
+		if p, err := strconv.Atoi(precision); err == nil {
+			if p >= 0 && p <= 5 {
+				return p
+			} else {
+				log.Errorf("value of %v must be between 0 and 5: %v", pEnv, precision)
+			}
+		} else {
+			log.Errorf("value of %v is not an int: %v", pEnv, precision)
+		}
+	}
+	return metricsHistPrecisionDefault
+}
+
+func NewLegacyRegistry() LegacyRegistry {
+	return &registry{
+		apmHistograms: &histograms{
+			histograms: make(map[string]*histogram),
+			precision:  getPrecision(),
+		},
+		apmMetrics:    NewMeasurements(false, metricsTransactionsMaxDefault),
+		customMetrics: NewMeasurements(true, metricsCustomMetricsMaxDefault),
+	}
+}
+
+type MetricRegistry interface {
+	RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool)
+}
+
+type LegacyRegistry interface {
+	MetricRegistry
+	BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
+		rcs map[string]*RateCounts, runtimeMetrics bool) []byte
+	BuildCustomMetricsMessage(flushInterval int32) []byte
+	ApmMetricsCap() int32
+	SetApmMetricsCap(int32)
+	CustomMetricsCap() int32
+	SetCustomMetricsCap(int32)
+}
+
+var _ LegacyRegistry = &registry{}
 
 // SpanMessage defines a span message
 type SpanMessage interface {
@@ -338,25 +384,6 @@ func (t *TransMap) Overflow() bool {
 	return t.overflow
 }
 
-// TODO: use config package, and add validator (0-5)
-// initialize values according to env variables
-func init() {
-	pEnv := "SW_APM_HISTOGRAM_PRECISION"
-	precision := os.Getenv(pEnv)
-	if precision != "" {
-		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
-		if p, err := strconv.Atoi(precision); err == nil {
-			if p >= 0 && p <= 5 {
-				apmHistograms.precision = p
-			} else {
-				log.Errorf("value of %v must be between 0 and 5: %v", pEnv, precision)
-			}
-		} else {
-			log.Errorf("value of %v is not an int: %v", pEnv, precision)
-		}
-	}
-}
-
 // addRequestCounters add various request-related counters to the metrics message buffer.
 func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCounts) {
 	var requested, traced, limited, ttTraced int64
@@ -386,21 +413,19 @@ func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCount
 	addMetricsValue(bbuf, index, TriggeredTraceCount, ttTraced)
 }
 
-// BuildMessage creates and encodes the custom metrics message.
-func BuildMessage(m *Measurements, serverless bool) []byte {
+// BuildCustomMetricsMessage creates and encodes the custom metrics message.
+func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
+	m := r.customMetrics.CopyAndReset(flushInterval)
 	if m == nil {
 		return nil
 	}
-
 	bbuf := bson.NewBuffer()
 	if m.IsCustom {
 		bbuf.AppendBool("IsCustom", m.IsCustom)
 	}
 
-	if !serverless {
-		appendHostId(bbuf)
-		bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
-	}
+	appendHostId(bbuf)
+	bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
 
 	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
 
@@ -526,16 +551,13 @@ func addRuntimeMetrics(bbuf *bson.Buffer, index *int) {
 // metricsFlushInterval	current metrics flush interval
 //
 // return				metrics message in BSON format
-func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
+func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
 	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
-	if m == nil {
-		return nil
-	}
 
 	bbuf := bson.NewBuffer()
 
 	appendHostId(bbuf)
-	bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
+	bbuf.AppendInt32("MetricsFlushInterval", flushInterval)
 
 	bbuf.AppendInt64("Timestamp_u", int64(time.Now().UnixNano()/1000))
 
@@ -563,6 +585,7 @@ func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
 		addRuntimeMetrics(bbuf, &index)
 	}
 
+	var m = r.apmMetrics.CopyAndReset(flushInterval)
 	for _, measurement := range m.m {
 		addMeasurementToBSON(bbuf, &index, measurement)
 	}
@@ -575,14 +598,14 @@ func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
 	start = bbuf.AppendStartArray("histograms")
 	index = 0
 
-	apmHistograms.lock.Lock()
+	r.apmHistograms.lock.Lock()
 
-	for _, h := range apmHistograms.histograms {
+	for _, h := range r.apmHistograms.histograms {
 		addHistogramToBSON(bbuf, &index, h)
 	}
-	apmHistograms.histograms = make(map[string]*histogram) // clear histograms
+	r.apmHistograms.histograms = make(map[string]*histogram) // clear histograms
 
-	apmHistograms.lock.Unlock()
+	r.apmHistograms.lock.Unlock()
 	bbuf.AppendFinishObject(start)
 	// ==========================================
 
@@ -995,7 +1018,7 @@ func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, ra
 
 // -- otel --
 
-func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
+func (r *registry) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	method := ""
 	status := int64(0)
 	isError := span.Status().Code == codes.Error
@@ -1047,15 +1070,15 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		metricName = transactionResponseTime
 	}
 
-	apmHistograms.recordHistogram("", duration)
-	if err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
+	r.apmHistograms.recordHistogram("", duration)
+	if err := s.processMeasurements(metricName, tagsList, r.apmMetrics); err == ErrExceedsMetricsCountLimit {
 		if isAppoptics {
 			s.Transaction = OtherTransactionName
 			tagsList = s.appOpticsTagsList()
 		} else {
 			tagsList[0]["sw.transaction"] = OtherTransactionName
 		}
-		err := s.processMeasurements(metricName, tagsList, ApmMetrics)
+		err := s.processMeasurements(metricName, tagsList, r.apmMetrics)
 		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
 		// which is handled above, and the reason we retry here.
 		if err != nil {
@@ -1063,7 +1086,23 @@ func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 		}
 	} else {
 		// We didn't hit ErrExceedsMetricsCountLimit
-		apmHistograms.recordHistogram(txnName, duration)
+		r.apmHistograms.recordHistogram(txnName, duration)
 	}
 
+}
+
+func (r *registry) ApmMetricsCap() int32 {
+	return r.apmMetrics.Cap()
+}
+
+func (r *registry) SetApmMetricsCap(cap int32) {
+	r.apmMetrics.SetCap(cap)
+}
+
+func (r *registry) CustomMetricsCap() int32 {
+	return r.customMetrics.Cap()
+}
+
+func (r *registry) SetCustomMetricsCap(cap int32) {
+	r.customMetrics.SetCap(cap)
 }

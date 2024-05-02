@@ -17,8 +17,10 @@ package reporter
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -82,13 +84,18 @@ func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string) error        { return nil }
 func (r *nullReporter) GetServiceName() string            { return "" }
 
-func Start(r *resource.Resource) {
+func Start(r *resource.Resource, registry interface{}) error {
 	log.SetLevelFromStr(config.DebugLevel())
-	initReporter(r)
-	sendInitMessage(r)
+	if reg, ok := registry.(metrics.LegacyRegistry); !ok {
+		return fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
+	} else {
+		initReporter(r, reg)
+		sendInitMessage(r)
+		return nil
+	}
 }
 
-func initReporter(r *resource.Resource) {
+func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) {
 	var rt string
 	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
@@ -100,10 +107,10 @@ func initReporter(r *resource.Resource) {
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
 	}
-	setGlobalReporter(rt, otelServiceName)
+	setGlobalReporter(rt, otelServiceName, registry)
 }
 
-func setGlobalReporter(reporterType string, otelServiceName string) {
+func setGlobalReporter(reporterType string, otelServiceName string, registry metrics.LegacyRegistry) {
 	// Close the previous reporter
 	if globalReporter != nil {
 		globalReporter.ShutdownNow()
@@ -113,7 +120,7 @@ func setGlobalReporter(reporterType string, otelServiceName string) {
 	case "none":
 		globalReporter = newNullReporter()
 	default:
-		globalReporter = newGRPCReporter(otelServiceName)
+		globalReporter = newGRPCReporter(otelServiceName, registry)
 	}
 }
 

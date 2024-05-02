@@ -239,6 +239,9 @@ type grpcReporter struct {
 	// The flag to indicate gracefully stopping the reporter. It should be accessed atomically.
 	// A (default) zero value means shutdown abruptly.
 	gracefully int32
+
+	// metrics
+	registry metrics.LegacyRegistry
 }
 
 // gRPC reporter errors
@@ -259,7 +262,7 @@ func getProxyCertPath() string {
 // initializes a new GRPC reporter from scratch (called once on program startup)
 //
 // returns	GRPC Reporter object
-func newGRPCReporter(otelServiceName string) Reporter {
+func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry) Reporter {
 	// collector address override
 	addr := config.GetCollector()
 
@@ -304,6 +307,8 @@ func newGRPCReporter(otelServiceName string) Reporter {
 
 		cond: sync.NewCond(&sync.Mutex{}),
 		done: make(chan struct{}),
+
+		registry: registry,
 	}
 
 	r.start()
@@ -810,13 +815,12 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 
 	var messages [][]byte
 	// generate a new metrics message
-	builtin := metrics.BuildBuiltinMetricsMessage(metrics.ApmMetrics.CopyAndReset(i),
-		r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
+	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
 
-	custom := metrics.BuildMessage(metrics.CustomMetrics.CopyAndReset(i), false)
+	custom := r.registry.BuildCustomMetricsMessage(i)
 	if custom != nil {
 		messages = append(messages, custom)
 	}
@@ -887,11 +891,11 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		o.SetEventFlushInterval(int64(ei))
 
 		// update MaxTransactions
-		mt := parseInt32(s.Arguments, kvMaxTransactions, metrics.ApmMetrics.Cap())
-		metrics.ApmMetrics.SetCap(mt)
+		mt := parseInt32(s.Arguments, kvMaxTransactions, r.registry.ApmMetricsCap())
+		r.registry.SetApmMetricsCap(mt)
 
-		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, metrics.CustomMetrics.Cap())
-		metrics.CustomMetrics.SetCap(maxCustomMetrics)
+		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, r.registry.CustomMetricsCap())
+		r.registry.SetCustomMetricsCap(maxCustomMetrics)
 	}
 
 	if !r.isReady() && hasDefaultSetting() {
