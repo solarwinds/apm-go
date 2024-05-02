@@ -95,10 +95,9 @@ var (
 // Package-level state
 
 type registry struct {
-	*sync.RWMutex
 	apmHistograms *histograms
-	apmMetrics    *Measurements
-	customMetrics *Measurements
+	apmMetrics    *measurements
+	customMetrics *measurements
 }
 
 func getPrecision() int {
@@ -149,7 +148,7 @@ var _ LegacyRegistry = &registry{}
 
 // SpanMessage defines a span message
 type SpanMessage interface {
-	Process(m *Measurements)
+	Process(m *measurements)
 }
 
 // BaseSpanMessage is the base span message with properties found in all types of span messages
@@ -177,8 +176,8 @@ type Measurement struct {
 	ReportSum bool              // include the sum in the report?
 }
 
-// Measurements are a collection of mutex-protected measurements
-type Measurements struct {
+// measurements are a collection of mutex-protected measurements
+type measurements struct {
 	m             map[string]*Measurement
 	transMap      *TransMap
 	IsCustom      bool
@@ -186,8 +185,8 @@ type Measurements struct {
 	sync.Mutex    // protect access to this collection
 }
 
-func NewMeasurements(isCustom bool, maxCount int32) *Measurements {
-	return &Measurements{
+func NewMeasurements(isCustom bool, maxCount int32) *measurements {
+	return &measurements{
 		m:             make(map[string]*Measurement),
 		transMap:      NewTransMap(maxCount),
 		IsCustom:      isCustom,
@@ -443,17 +442,17 @@ func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
 }
 
 // SetCap sets the maximum number of distinct metrics allowed.
-func (m *Measurements) SetCap(cap int32) {
+func (m *measurements) SetCap(cap int32) {
 	m.transMap.SetCap(cap)
 }
 
 // Cap returns the maximum number of distinct metrics allowed.
-func (m *Measurements) Cap() int32 {
+func (m *measurements) Cap() int32 {
 	return m.transMap.Cap()
 }
 
 // CopyAndReset resets the custom metrics and return a copy of the old one.
-func (m *Measurements) CopyAndReset(flushInterval int32) *Measurements {
+func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 	m.Lock()
 	defer m.Unlock()
 
@@ -471,8 +470,8 @@ func (m *Measurements) CopyAndReset(flushInterval int32) *Measurements {
 }
 
 // Clone returns a shallow copy
-func (m *Measurements) Clone() *Measurements {
-	return &Measurements{
+func (m *measurements) Clone() *measurements {
+	return &measurements{
 		m:             m.m,
 		transMap:      m.transMap.Clone(),
 		IsCustom:      m.IsCustom,
@@ -481,7 +480,7 @@ func (m *Measurements) Clone() *Measurements {
 }
 
 // Summary submits the summary measurement to the reporter.
-func (m *Measurements) Summary(name string, value float64, opts MetricOptions) error {
+func (m *measurements) Summary(name string, value float64, opts MetricOptions) error {
 	if err := opts.validate(); err != nil {
 		return err
 	}
@@ -489,7 +488,7 @@ func (m *Measurements) Summary(name string, value float64, opts MetricOptions) e
 }
 
 // Increment submits the incremental measurement to the reporter.
-func (m *Measurements) Increment(name string, opts MetricOptions) error {
+func (m *measurements) Increment(name string, opts MetricOptions) error {
 	if err := opts.validate(); err != nil {
 		return err
 	}
@@ -741,7 +740,7 @@ func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
 func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
-	m *Measurements) error {
+	m *measurements) error {
 	if tagsList == nil {
 		return errors.New("tagsList must not be nil")
 	}
@@ -749,7 +748,7 @@ func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[
 	return m.record(metricName, tagsList, duration, 1, true)
 }
 
-func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
+func (m *measurements) recordWithSoloTags(name string, tags map[string]string,
 	value float64, count int, reportValue bool) error {
 	return m.record(name, []map[string]string{tags}, value, count, reportValue)
 }
@@ -760,7 +759,7 @@ func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
 // value		measurement value
 // count		measurement count
 // reportValue	should the sum of all values be reported?
-func (m *Measurements) record(name string, tagsList []map[string]string,
+func (m *measurements) record(name string, tagsList []map[string]string,
 	value float64, count int, reportValue bool) error {
 	if len(tagsList) == 0 {
 		return nil
@@ -792,7 +791,7 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 	var ok bool
 
 	// create a new measurement if it doesn't exist
-	// the lock protects both Measurements and Measurement
+	// the lock protects both measurements and Measurement
 	m.Lock()
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
