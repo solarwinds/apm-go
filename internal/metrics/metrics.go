@@ -92,8 +92,6 @@ var (
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
 
-// Package-level state
-
 type registry struct {
 	apmHistograms *histograms
 	apmMetrics    *measurements

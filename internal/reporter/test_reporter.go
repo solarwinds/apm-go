@@ -42,7 +42,6 @@ const (
 	TestToken                  = "TOKEN"
 )
 
-var usingTestReporter = false
 var oldReporter Reporter = &nullReporter{}
 
 // TestReporterOption values may be passed to SetTestReporter.
@@ -67,8 +66,6 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	}
 	r.wg.Add(1)
 	go r.resultWriter()
-
-	usingTestReporter = true
 
 	// start with clean slate
 	resetSettings()
@@ -120,7 +117,6 @@ func (r *TestReporter) Close(numBufs int) {
 	if received < numBufs {
 		log.Printf("# FIX: TestReporter.Close() waited for %d events, got %d", numBufs, received)
 	}
-	usingTestReporter = false
 	if _, ok := oldReporter.(*nullReporter); !ok {
 		oldReporter = &nullReporter{}
 	}
