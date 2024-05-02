@@ -397,7 +397,7 @@ func TestAddHistogramToBSON(t *testing.T) {
 }
 
 func TestGenerateMetricsMessage(t *testing.T) {
-	reg := NewLegacyRegistry()
+	reg := NewLegacyRegistry().(*registry)
 	flushInterval := int32(60)
 	bbuf := bson.WithBuf(reg.BuildBuiltinMetricsMessage(flushInterval, &EventQueueStats{},
 		map[string]*RateCounts{ // requested, sampled, limited, traced, through
@@ -483,10 +483,9 @@ func TestGenerateMetricsMessage(t *testing.T) {
 
 	assert.Nil(t, m["TransactionNameOverflow"])
 
-	reg = NewLegacyRegistry()
-	r := reg.(*registry)
+	reg = NewLegacyRegistry().(*registry)
 	for i := 0; i <= metricsTransactionsMaxDefault; i++ {
-		if !r.apmMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
+		if !reg.apmMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
 			break
 		}
 	}
@@ -563,12 +562,11 @@ func TestRecordSpan(t *testing.T) {
 		),
 	)
 	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
-	reg := NewLegacyRegistry()
-	r := reg.(*registry)
+	reg := NewLegacyRegistry().(*registry)
 
 	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), false)
 
-	m := r.apmMetrics.CopyAndReset(60)
+	m := reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	v := m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:my cool route&"]
 	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
@@ -584,9 +582,8 @@ func TestRecordSpan(t *testing.T) {
 		v.Tags)
 	assert.Equal(t, responseTime, v.Name)
 
-	h := r.apmHistograms.histograms
-	reg = NewLegacyRegistry()
-	r = reg.(*registry)
+	h := reg.apmHistograms.histograms
+	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -601,7 +598,7 @@ func TestRecordSpan(t *testing.T) {
 	// Now test for AO
 	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), true)
 
-	m = r.apmMetrics.CopyAndReset(60)
+	m = reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	k1 := "TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&"
 	k2 := "TransactionResponseTime&true&HttpStatus:200&TransactionName:my cool route&"
@@ -626,9 +623,8 @@ func TestRecordSpan(t *testing.T) {
 		m.m[k3].Tags,
 	)
 
-	h = r.apmHistograms.histograms
-	reg = NewLegacyRegistry()
-	r = reg.(*registry)
+	h = reg.apmHistograms.histograms
+	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto = h[""]
 	granularHisto = h["my cool route"]
