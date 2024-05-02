@@ -456,12 +456,6 @@ func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 	m.Lock()
 	defer m.Unlock()
 
-	if len(m.m) == 0 {
-		m.FlushInterval = flushInterval
-		m.transMap.Reset()
-		return nil
-	}
-
 	clone := m.Clone()
 	m.m = make(map[string]*Measurement)
 	m.transMap.Reset()
@@ -552,6 +546,10 @@ func addRuntimeMetrics(bbuf *bson.Buffer, index *int) {
 // return				metrics message in BSON format
 func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
 	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
+	var m = r.apmMetrics.CopyAndReset(flushInterval)
+	if m == nil {
+		return nil
+	}
 
 	bbuf := bson.NewBuffer()
 
@@ -584,7 +582,6 @@ func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueu
 		addRuntimeMetrics(bbuf, &index)
 	}
 
-	var m = r.apmMetrics.CopyAndReset(flushInterval)
 	for _, measurement := range m.m {
 		addMeasurementToBSON(bbuf, &index, measurement)
 	}
