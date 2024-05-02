@@ -624,7 +624,6 @@ func TestRecordSpan(t *testing.T) {
 	)
 
 	h = reg.apmHistograms.histograms
-	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto = h[""]
 	granularHisto = h["my cool route"]
@@ -714,7 +713,6 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 		m.m[k3].Tags,
 	)
 	h = reg.apmHistograms.histograms
-	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto = h[""]
 	granularHisto = h["my cool route"]
@@ -799,7 +797,6 @@ func TestRecordSpanOverflow(t *testing.T) {
 	assert.Equal(t, responseTime, v.Name)
 
 	h := reg.apmHistograms.histograms
-	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -873,7 +870,6 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 	}
 
 	h := reg.apmHistograms.histograms
-	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
