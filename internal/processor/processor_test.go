@@ -37,34 +37,28 @@ func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	r.called = true
 }
 
-func (r *recordMock) BuildBuiltinMetricsMessage(flushInterval int32, qs *metrics.EventQueueStats, rcs map[string]*metrics.RateCounts, runtimeMetrics bool) []byte {
-	//TODO implement me
-	panic("implement me")
+func (r *recordMock) BuildBuiltinMetricsMessage(int32, *metrics.EventQueueStats, map[string]*metrics.RateCounts, bool) []byte {
+	panic("should not be called in this test")
 }
 
-func (r *recordMock) BuildCustomMetricsMessage(flushInterval int32) []byte {
-	//TODO implement me
-	panic("implement me")
+func (r *recordMock) BuildCustomMetricsMessage(int32) []byte {
+	panic("should not be called in this test")
 }
 
 func (r *recordMock) ApmMetricsCap() int32 {
-	//TODO implement me
-	panic("implement me")
+	panic("should not be called in this test")
 }
 
-func (r *recordMock) SetApmMetricsCap(i int32) {
-	//TODO implement me
-	panic("implement me")
+func (r *recordMock) SetApmMetricsCap(int32) {
+	panic("should not be called in this test")
 }
 
 func (r *recordMock) CustomMetricsCap() int32 {
-	//TODO implement me
-	panic("implement me")
+	panic("should not be called in this test")
 }
 
-func (r *recordMock) SetCustomMetricsCap(i int32) {
-	//TODO implement me
-	panic("implement me")
+func (r *recordMock) SetCustomMetricsCap(int32) {
+	panic("should not be called in this test")
 }
 
 var _ metrics.LegacyRegistry = &recordMock{}
