@@ -46,6 +46,30 @@ const (
 	SAMPLE_SOURCE_LAYER
 )
 
+type Oboe interface {
+	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
+	CheckSettingsTimeout()
+	GetSetting() (*oboeSettings, bool)
+	RemoveSetting()
+	HasDefaultSetting() bool
+	OboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
+	FlushRateCounts() map[string]*metrics.RateCounts
+}
+
+func NewOboe() Oboe {
+	return &oboe{
+		cfg: &oboeSettingsCfg{
+			settings: make(map[oboeSettingKey]*oboeSettings),
+		},
+	}
+}
+
+type oboe struct {
+	cfg *oboeSettingsCfg
+}
+
+var _ Oboe = &oboe{}
+
 // Current settings configuration
 type oboeSettingsCfg struct {
 	settings map[oboeSettingKey]*oboeSettings
@@ -53,8 +77,8 @@ type oboeSettingsCfg struct {
 }
 
 // FlushRateCounts collects the request counters values by categories.
-func FlushRateCounts() map[string]*metrics.RateCounts {
-	setting, ok := GetSetting()
+func (o *oboe) FlushRateCounts() map[string]*metrics.RateCounts {
+	setting, ok := o.GetSetting()
 	if !ok {
 		return nil
 	}
@@ -91,9 +115,9 @@ func (s *oboeSettings) hasOverrideFlag() bool {
 
 func newOboeSettings() *oboeSettings {
 	return &oboeSettings{
-		bucket:                    globalTokenBucket,
-		triggerTraceRelaxedBucket: triggerTraceRelaxedBucket,
-		triggerTraceStrictBucket:  triggerTraceStrictBucket,
+		bucket:                    &tokenBucket{},
+		triggerTraceRelaxedBucket: &tokenBucket{},
+		triggerTraceStrictBucket:  &tokenBucket{},
 	}
 }
 
@@ -135,22 +159,22 @@ type oboeSettingKey struct {
 }
 
 // Global configuration settings
-var globalSettingsCfg = &oboeSettingsCfg{
-	settings: make(map[oboeSettingKey]*oboeSettings),
-}
+//var globalSettingsCfg = &oboeSettingsCfg{
+//	settings: make(map[oboeSettingKey]*oboeSettings),
+//}
 
 // The global token bucket. Trace decisions of all the requests are controlled
 // by this single bucket.
 //
 // The rate and capacity will be initialized by the values fetched from the remote
 // server, therefore it's initialized with only the default values.
-var globalTokenBucket = &tokenBucket{}
+//var globalTokenBucket = &tokenBucket{}
 
 // The token bucket exclusively for trigger trace from authenticated clients
-var triggerTraceRelaxedBucket = &tokenBucket{}
+//var triggerTraceRelaxedBucket = &tokenBucket{}
 
 // The token bucket exclusively for trigger trace from unauthenticated clients
-var triggerTraceStrictBucket = &tokenBucket{}
+//var triggerTraceStrictBucket = &tokenBucket{}
 
 func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
 	b.RequestedInc()
@@ -312,7 +336,7 @@ func (tm TriggerTraceMode) Requested() bool {
 	}
 }
 
-func OboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+func (o *oboe) OboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	// TODO: ick!
 	//if usingTestReporter {
 	//	if r, ok := globalReporter.(*TestReporter); ok {
@@ -325,7 +349,7 @@ func OboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 	var setting *oboeSettings
 	var ok bool
 	diceRolled := false
-	if setting, ok = GetSetting(); !ok {
+	if setting, ok = o.GetSetting(); !ok {
 		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
@@ -539,7 +563,7 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
+func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
@@ -571,24 +595,14 @@ func UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int
 		layer: layer,
 	}
 
-	globalSettingsCfg.lock.Lock()
-	globalSettingsCfg.settings[key] = merged
-	globalSettingsCfg.lock.Unlock()
+	o.cfg.lock.Lock()
+	o.cfg.settings[key] = merged
+	o.cfg.lock.Unlock()
 }
 
-// Used for tests only
-func ResetSettings() {
-	FlushRateCounts()
-
-	globalSettingsCfg.lock.Lock()
-	defer globalSettingsCfg.lock.Unlock()
-	globalSettingsCfg.settings = make(map[oboeSettingKey]*oboeSettings)
-	globalTokenBucket.reset()
-}
-
-// OboeCheckSettingsTimeout checks and deletes expired settings
-func OboeCheckSettingsTimeout() {
-	globalSettingsCfg.checkSettingsTimeout()
+// CheckSettingsTimeout checks and deletes expired settings
+func (o *oboe) CheckSettingsTimeout() {
+	o.cfg.checkSettingsTimeout()
 }
 
 func (sc *oboeSettingsCfg) checkSettingsTimeout() {
@@ -604,36 +618,36 @@ func (sc *oboeSettingsCfg) checkSettingsTimeout() {
 	}
 }
 
-func GetSetting() (*oboeSettings, bool) {
-	globalSettingsCfg.lock.RLock()
-	defer globalSettingsCfg.lock.RUnlock()
+func (o *oboe) GetSetting() (*oboeSettings, bool) {
+	o.cfg.lock.RLock()
+	defer o.cfg.lock.RUnlock()
 
 	// for now only look up the default settings
 	key := oboeSettingKey{
 		sType: TYPE_DEFAULT,
 		layer: "",
 	}
-	if setting, ok := globalSettingsCfg.settings[key]; ok {
+	if setting, ok := o.cfg.settings[key]; ok {
 		return setting, true
 	}
 
 	return nil, false
 }
 
-func RemoveSetting() {
-	globalSettingsCfg.lock.Lock()
-	defer globalSettingsCfg.lock.Unlock()
+func (o *oboe) RemoveSetting() {
+	o.cfg.lock.Lock()
+	defer o.cfg.lock.Unlock()
 
 	key := oboeSettingKey{
 		sType: TYPE_DEFAULT,
 		layer: "",
 	}
 
-	delete(globalSettingsCfg.settings, key)
+	delete(o.cfg.settings, key)
 }
 
-func HasDefaultSetting() bool {
-	if _, ok := GetSetting(); ok {
+func (o *oboe) HasDefaultSetting() bool {
+	if _, ok := o.GetSetting(); ok {
 		return true
 	}
 	return false
