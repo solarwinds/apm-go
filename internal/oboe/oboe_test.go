@@ -73,7 +73,7 @@ func TestOboeSampleRequestSettingsDisabled(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		xTraceOptsRsp: "tracing-disabled",
 		bucketCap:     1,
 		bucketRate:    1,
@@ -90,7 +90,7 @@ func TestOboeSampleRequest(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     1000000,
@@ -108,7 +108,7 @@ func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     1000000,
@@ -126,7 +126,7 @@ func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          0,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       false,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     0,
@@ -144,7 +144,7 @@ func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     1000000,
@@ -162,7 +162,7 @@ func TestOboeSampleRequestThrough(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     1000000,
@@ -180,7 +180,7 @@ func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          1000000,
-		source:        SAMPLE_SOURCE_DEFAULT,
+		source:        SampleSourceDefault,
 		enabled:       true,
 		xTraceOptsRsp: "not-requested",
 		bucketCap:     1000000,
@@ -200,7 +200,7 @@ func TestOboeSampleRequestRelaxedTT(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "ok",
 		bucketCap:     1000000,
@@ -218,7 +218,7 @@ func TestOboeSampleRequestStrictTT(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "ok",
 		bucketCap:     1000000,
@@ -236,7 +236,7 @@ func TestOboeSampleRequestRelaxedTTDisabled(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "trigger-tracing-disabled",
 		bucketCap:     0,
@@ -254,7 +254,7 @@ func TestOboeSampleRequestStrictTTDisabled(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "trigger-tracing-disabled",
 		bucketCap:     0,
@@ -273,7 +273,7 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 	expected := SampleDecision{
 		trace:         true,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "ok",
 		bucketCap:     1,
@@ -285,7 +285,7 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 	expected = SampleDecision{
 		trace:         false,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "rate-exceeded",
 		bucketCap:     1,
@@ -303,7 +303,7 @@ func TestOboeSampleRequestInvalidTT(t *testing.T) {
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
-		source:        SAMPLE_SOURCE_UNSET,
+		source:        SampleSourceUnset,
 		enabled:       true,
 		xTraceOptsRsp: "",
 		bucketCap:     1000000,

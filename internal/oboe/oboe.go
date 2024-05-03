@@ -34,16 +34,16 @@ const (
 	maxSamplingRate = config.MaxSampleRate
 )
 
-// enums used by sampling and tracing settings
+// SampleSource enums used by sampling and tracing settings
 type SampleSource int
 
 // source of the sample value
 const (
-	SAMPLE_SOURCE_UNSET SampleSource = iota - 1
-	SAMPLE_SOURCE_NONE
-	SAMPLE_SOURCE_FILE
-	SAMPLE_SOURCE_DEFAULT
-	SAMPLE_SOURCE_LAYER
+	SampleSourceUnset SampleSource = iota - 1
+	SampleSourceNone
+	SampleSourceFile
+	SampleSourceDefault
+	SampleSourceLayer
 )
 
 type Oboe interface {
@@ -207,15 +207,12 @@ func floatToStr(f float64) string {
 }
 
 func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	diceRolled := false
 	setting, ok := o.GetSetting()
 	if !ok {
-		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, TtSettingsNotAvailable, 0, 0, diceRolled}
+		return SampleDecision{false, 0, SampleSourceNone, false, TtSettingsNotAvailable, 0, 0, false}
 	}
 
-	retval := false
-	doRateLimiting := false
-
+	var diceRolled, retval, doRateLimiting bool
 	sampleRate, flags, source := setting.mergeURLSetting(url)
 
 	// Choose an appropriate bucket
@@ -246,13 +243,13 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 			}
 		}
 		ttCap, ttRate := setting.getTokenBucketSetting(triggerTrace)
-		return SampleDecision{ret, -1, SAMPLE_SOURCE_UNSET, flags.Enabled(), rsp, ttRate, ttCap, diceRolled}
+		return SampleDecision{ret, -1, SampleSourceUnset, flags.Enabled(), rsp, ttRate, ttCap, diceRolled}
 	}
 
 	unsetBucketAndSampleKVs := false
 	if !continued {
 		// A new request
-		if flags&FLAG_SAMPLE_START != 0 {
+		if flags&FlagSampleStart != 0 {
 			// roll the dice
 			diceRolled = true
 			retval = shouldSample(sampleRate)
@@ -262,12 +259,12 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 		}
 	} else if swState.IsValid() {
 		if swState.Flags().IsSampled() {
-			if flags&FLAG_SAMPLE_THROUGH_ALWAYS != 0 {
+			if flags&FlagSampleThroughAlways != 0 {
 				// Conform to liboboe behavior; continue decision would result in a -1 value for the
 				// BucketCapacity, BucketRate, SampleRate and SampleSource KVs to indicate "unset".
 				unsetBucketAndSampleKVs = true
 				retval = true
-			} else if flags&FLAG_SAMPLE_THROUGH != 0 {
+			} else if flags&FlagSampleThrough != 0 {
 				// roll the dice
 				diceRolled = true
 				retval = shouldSample(sampleRate)
@@ -286,7 +283,7 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 
 	var bucketCap, bucketRate float64
 	if unsetBucketAndSampleKVs {
-		bucketCap, bucketRate, sampleRate, source = -1, -1, -1, SAMPLE_SOURCE_UNSET
+		bucketCap, bucketRate, sampleRate, source = -1, -1, -1, SampleSourceUnset
 	} else {
 		bucketCap, bucketRate = setting.getTokenBucketSetting(ModeTriggerTraceNotPresent)
 	}
@@ -398,7 +395,7 @@ func (o *oboe) GetSetting() (*settings, bool) {
 
 	// for now only look up the default settings
 	key := settingKey{
-		sType: TYPE_DEFAULT,
+		sType: TypeDefault,
 		layer: "",
 	}
 	if setting, ok := o.settings[key]; ok {
@@ -413,7 +410,7 @@ func (o *oboe) RemoveSetting() {
 	defer o.Unlock()
 
 	key := settingKey{
-		sType: TYPE_DEFAULT,
+		sType: TypeDefault,
 		layer: "",
 	}
 
@@ -437,64 +434,17 @@ func flagStringToBin(flagString string) settingFlag {
 		for _, s := range strings.Split(flagString, ",") {
 			switch s {
 			case "OVERRIDE":
-				flags |= FLAG_OVERRIDE
+				flags |= FlagOverride
 			case "SAMPLE_START":
-				flags |= FLAG_SAMPLE_START
+				flags |= FlagSampleStart
 			case "SAMPLE_THROUGH":
-				flags |= FLAG_SAMPLE_THROUGH
+				flags |= FlagSampleThrough
 			case "SAMPLE_THROUGH_ALWAYS":
-				flags |= FLAG_SAMPLE_THROUGH_ALWAYS
+				flags |= FlagSampleThroughAlways
 			case "TRIGGER_TRACE":
-				flags |= FLAG_TRIGGER_TRACE
+				flags |= FlagTriggerTrace
 			}
 		}
 	}
 	return flags
-}
-
-// tracing mode
-type TracingMode int
-
-// tracing modes
-const (
-	TraceDisabled TracingMode = iota // disable tracing, will neither start nor continue traces
-	TraceEnabled                     // perform sampling every inbound request for tracing
-	TraceUnknown                     // for cache purpose only
-)
-
-// NewTracingMode creates a tracing mode object from a string
-func NewTracingMode(mode config.TracingMode) TracingMode {
-	switch mode {
-	case config.DisabledTracingMode:
-		return TraceDisabled
-	case config.EnabledTracingMode:
-		return TraceEnabled
-	default:
-	}
-	return TraceUnknown
-}
-
-func (tm TracingMode) isUnknown() bool {
-	return tm == TraceUnknown
-}
-
-func (tm TracingMode) toFlags() settingFlag {
-	switch tm {
-	case TraceEnabled:
-		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
-	case TraceDisabled:
-	default:
-	}
-	return FLAG_OK
-}
-
-func (tm TracingMode) ToString() string {
-	switch tm {
-	case TraceEnabled:
-		return string(config.EnabledTracingMode)
-	case TraceDisabled:
-		return string(config.DisabledTracingMode)
-	default:
-		return string(config.UnknownTracingMode)
-	}
 }

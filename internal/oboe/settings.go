@@ -40,7 +40,7 @@ type settings struct {
 }
 
 func (s *settings) hasOverrideFlag() bool {
-	return s.originalFlags&FLAG_OVERRIDE != 0
+	return s.originalFlags&FlagOverride != 0
 }
 func newOboeSettings() *settings {
 	return &settings{
@@ -66,14 +66,14 @@ func mergeLocalSetting(remote *settings) *settings {
 		// Choose the lower sample rate and merge the flags
 		if remote.value > config.GetSampleRate() {
 			remote.value = config.GetSampleRate()
-			remote.source = SAMPLE_SOURCE_FILE
+			remote.source = SampleSourceFile
 		}
 		remote.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
 	} else if config.SamplingConfigured() {
 		// Use local sample rate and tracing mode config
 		remote.value = config.GetSampleRate()
 		remote.flags = NewTracingMode(config.GetTracingMode()).toFlags()
-		remote.source = SAMPLE_SOURCE_FILE
+		remote.source = SampleSourceFile
 	}
 
 	if !config.GetTriggerTrace() {
@@ -95,7 +95,7 @@ func (s *settings) mergeURLSetting(url string) (int, settingFlag, SampleSource) 
 	}
 
 	flags := urlTracingMode.toFlags()
-	source := SAMPLE_SOURCE_FILE
+	source := SampleSourceFile
 
 	if s.hasOverrideFlag() {
 		flags &= s.originalFlags
@@ -132,8 +132,8 @@ type settingFlag uint16
 
 // setting types
 const (
-	TYPE_DEFAULT settingType = iota // default setting which serves as a fallback if no other settings found
-	TYPE_LAYER                      // layer specific settings
+	TypeDefault settingType = iota // default setting which serves as a fallback if no other settings found
+	TypeLayer                      // layer specific settings
 )
 
 // setting flags offset
@@ -148,34 +148,34 @@ const (
 
 // setting flags
 const (
-	FLAG_OK                    settingFlag = 0x0
-	FLAG_INVALID               settingFlag = 1 << FlagInvalidOffset
-	FLAG_OVERRIDE              settingFlag = 1 << FlagOverrideOffset
-	FLAG_SAMPLE_START          settingFlag = 1 << FlagSampleStartOffset
-	FLAG_SAMPLE_THROUGH        settingFlag = 1 << FlagSampleThroughOffset
-	FLAG_SAMPLE_THROUGH_ALWAYS settingFlag = 1 << FlagSampleThroughAlwaysOffset
-	FLAG_TRIGGER_TRACE         settingFlag = 1 << FlagTriggerTraceOffset
+	FlagOk                  settingFlag = 0x0
+	FlagInvalid             settingFlag = 1 << FlagInvalidOffset
+	FlagOverride            settingFlag = 1 << FlagOverrideOffset
+	FlagSampleStart         settingFlag = 1 << FlagSampleStartOffset
+	FlagSampleThrough       settingFlag = 1 << FlagSampleThroughOffset
+	FlagSampleThroughAlways settingFlag = 1 << FlagSampleThroughAlwaysOffset
+	FlagTriggerTrace        settingFlag = 1 << FlagTriggerTraceOffset
 )
 
 // Enabled returns if the trace is enabled or not.
 func (f settingFlag) Enabled() bool {
-	return f&(FLAG_SAMPLE_START|FLAG_SAMPLE_THROUGH_ALWAYS) != 0
+	return f&(FlagSampleStart|FlagSampleThroughAlways) != 0
 }
 
 // TriggerTraceEnabled returns if the trigger trace is enabled
 func (f settingFlag) TriggerTraceEnabled() bool {
-	return f&FLAG_TRIGGER_TRACE != 0
+	return f&FlagTriggerTrace != 0
 }
 
 func (st settingType) toSampleSource() SampleSource {
 	var source SampleSource
 	switch st {
-	case TYPE_DEFAULT:
-		source = SAMPLE_SOURCE_DEFAULT
-	case TYPE_LAYER:
-		source = SAMPLE_SOURCE_LAYER
+	case TypeDefault:
+		source = SampleSourceDefault
+	case TypeLayer:
+		source = SampleSourceLayer
 	default:
-		source = SAMPLE_SOURCE_NONE
+		source = SampleSourceNone
 	}
 	return source
 }

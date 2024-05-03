@@ -349,10 +349,10 @@ func (s SamplingScenario) test(t *testing.T) {
 		bucketCap := "1000000"
 		bucketRate := bucketCap
 		sampleRate := 1000000
-		sampleSource := oboe.SAMPLE_SOURCE_DEFAULT
+		sampleSource := oboe.SampleSourceDefault
 		if s.triggerTrace && !s.traceStateSwSampled {
 			sampleRate = -1
-			sampleSource = oboe.SAMPLE_SOURCE_UNSET
+			sampleSource = oboe.SampleSourceUnset
 		}
 		if s.traceStateSwSampled {
 			bucketCap, bucketRate, sampleRate, sampleSource = "-1", "-1", -1, -1
