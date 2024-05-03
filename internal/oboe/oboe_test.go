@@ -376,7 +376,20 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 	o := NewOboe()
 	addLimitedTriggerTrace(o)
 	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	// We expect the first TT to go through
 	expected := SampleDecision{
+		trace:         true,
+		rate:          -1,
+		source:        SAMPLE_SOURCE_UNSET,
+		enabled:       true,
+		xTraceOptsRsp: "ok",
+		bucketCap:     1,
+		bucketRate:    1,
+		diceRolled:    false,
+	}
+	require.Equal(t, expected, dec)
+	dec = o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	expected = SampleDecision{
 		trace:         false,
 		rate:          -1,
 		source:        SAMPLE_SOURCE_UNSET,
