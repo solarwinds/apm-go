@@ -58,23 +58,16 @@ type Oboe interface {
 
 func NewOboe() Oboe {
 	return &oboe{
-		cfg: &oboeSettingsCfg{
-			settings: make(map[settingKey]*settings),
-		},
+		settings: make(map[settingKey]*settings),
 	}
 }
 
 type oboe struct {
-	cfg *oboeSettingsCfg
+	sync.RWMutex
+	settings map[settingKey]*settings
 }
 
 var _ Oboe = &oboe{}
-
-// Current settings configuration
-type oboeSettingsCfg struct {
-	settings map[settingKey]*settings
-	lock     sync.RWMutex
-}
 
 // FlushRateCounts collects the request counters values by categories.
 func (o *oboe) FlushRateCounts() map[string]*metrics.RateCounts {
@@ -213,69 +206,11 @@ func floatToStr(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
-type TriggerTraceMode int
-
-const (
-	// ModeTriggerTraceNotPresent means there is no X-Trace-Options header detected,
-	// or the X-Trace-Options header is present but trigger_trace flag is not. This
-	// indicates that it's a trace for regular sampling.
-	ModeTriggerTraceNotPresent TriggerTraceMode = iota
-
-	// ModeInvalidTriggerTrace means X-Trace-Options is detected but no valid trigger-trace
-	// flag found, or X-Trace-Options-Signature is present but the authentication is failed.
-	ModeInvalidTriggerTrace
-
-	// ModeRelaxedTriggerTrace means X-Trace-Options-Signature is present and valid.
-	// The trace will be sampled/limited by the relaxed token bucket.
-	ModeRelaxedTriggerTrace
-
-	// ModeStrictTriggerTrace means no X-Trace-Options-Signature is present. The trace
-	// will be limited by the strict token bucket.
-	ModeStrictTriggerTrace
-)
-
-// Trigger trace response messages
-const (
-	ttOK                     = "ok"
-	ttRateExceeded           = "rate-exceeded"
-	ttTracingDisabled        = "tracing-disabled"
-	ttTriggerTracingDisabled = "trigger-tracing-disabled"
-	ttNotRequested           = "not-requested"
-	ttIgnored                = "ignored"
-	ttSettingsNotAvailable   = "settings-not-available"
-	ttEmpty                  = ""
-)
-
-// Enabled indicates whether it's a trigger-trace request
-func (tm TriggerTraceMode) Enabled() bool {
-	switch tm {
-	case ModeTriggerTraceNotPresent, ModeInvalidTriggerTrace:
-		return false
-	case ModeRelaxedTriggerTrace, ModeStrictTriggerTrace:
-		return true
-	default:
-		panic(fmt.Sprintf("Unhandled trigger trace mode: %x", tm))
-	}
-}
-
-// Requested indicates whether the user tries to issue a trigger-trace request
-// (but may be rejected if the header is illegal)
-func (tm TriggerTraceMode) Requested() bool {
-	switch tm {
-	case ModeTriggerTraceNotPresent:
-		return false
-	case ModeRelaxedTriggerTrace, ModeStrictTriggerTrace, ModeInvalidTriggerTrace:
-		return true
-	default:
-		panic(fmt.Sprintf("Unhandled trigger trace mode: %x", tm))
-	}
-}
-
 func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	diceRolled := false
 	setting, ok := o.GetSetting()
 	if !ok {
-		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
+		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, TtSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
 	retval := false
@@ -293,21 +228,21 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 
 	if triggerTrace.Requested() && !continued {
 		sampled := (triggerTrace != ModeInvalidTriggerTrace) && (flags.TriggerTraceEnabled())
-		rsp := ttOK
+		rsp := TtOK
 
 		ret := bucket.count(sampled, false, true)
 
 		if flags.TriggerTraceEnabled() && triggerTrace.Enabled() {
 			if !ret {
-				rsp = ttRateExceeded
+				rsp = TtRateExceeded
 			}
 		} else if triggerTrace == ModeInvalidTriggerTrace {
 			rsp = ""
 		} else {
 			if !flags.Enabled() {
-				rsp = ttTracingDisabled
+				rsp = TtTracingDisabled
 			} else {
-				rsp = ttTriggerTracingDisabled
+				rsp = TtTriggerTracingDisabled
 			}
 		}
 		ttCap, ttRate := setting.getTokenBucketSetting(triggerTrace)
@@ -344,9 +279,9 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 
 	retval = bucket.count(retval, continued, doRateLimiting)
 
-	rsp := ttNotRequested
+	rsp := TtNotRequested
 	if triggerTrace.Requested() {
-		rsp = ttIgnored
+		rsp = TtIgnored
 	}
 
 	var bucketCap, bucketRate float64
@@ -375,13 +310,6 @@ func bytesToFloat64(b []byte) (float64, error) {
 	return math.Float64frombits(binary.LittleEndian.Uint64(b)), nil
 }
 
-func bytesToInt32(b []byte) (int32, error) {
-	if len(b) != 4 {
-		return -1, fmt.Errorf("invalid length: %d", len(b))
-	}
-	return int32(binary.LittleEndian.Uint32(b)), nil
-}
-
 func parseFloat64(args map[string][]byte, key string, fb float64) float64 {
 	ret := fb
 	if c, ok := args[key]; ok {
@@ -391,20 +319,6 @@ func parseFloat64(args map[string][]byte, key string, fb float64) float64 {
 			log.Debugf("parsed %s=%f", key, v)
 		} else {
 			log.Warningf("parse error: %s=%f err=%v fallback=%f", key, v, err, fb)
-		}
-	}
-	return ret
-}
-
-func ParseInt32(args map[string][]byte, key string, fb int32) int32 {
-	ret := fb
-	if c, ok := args[key]; ok {
-		v, err := bytesToInt32(c)
-		if err == nil && v >= 0 {
-			ret = v
-			log.Debugf("parsed %s=%d", key, v)
-		} else {
-			log.Warningf("parse error: %s=%d err=%v fallback=%d", key, v, err, fb)
 		}
 	}
 	return ret
@@ -455,21 +369,21 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 		layer: layer,
 	}
 
-	o.cfg.lock.Lock()
-	o.cfg.settings[key] = merged
-	o.cfg.lock.Unlock()
+	o.Lock()
+	o.settings[key] = merged
+	o.Unlock()
 }
 
 // CheckSettingsTimeout checks and deletes expired settings
 func (o *oboe) CheckSettingsTimeout() {
-	o.cfg.checkSettingsTimeout()
+	o.checkSettingsTimeout()
 }
 
-func (sc *oboeSettingsCfg) checkSettingsTimeout() {
-	sc.lock.Lock()
-	defer sc.lock.Unlock()
+func (o *oboe) checkSettingsTimeout() {
+	o.Lock()
+	defer o.Unlock()
 
-	ss := sc.settings
+	ss := o.settings
 	for k, s := range ss {
 		e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
 		if e.Before(time.Now()) {
@@ -479,15 +393,15 @@ func (sc *oboeSettingsCfg) checkSettingsTimeout() {
 }
 
 func (o *oboe) GetSetting() (*settings, bool) {
-	o.cfg.lock.RLock()
-	defer o.cfg.lock.RUnlock()
+	o.RLock()
+	defer o.RUnlock()
 
 	// for now only look up the default settings
 	key := settingKey{
 		sType: TYPE_DEFAULT,
 		layer: "",
 	}
-	if setting, ok := o.cfg.settings[key]; ok {
+	if setting, ok := o.settings[key]; ok {
 		return setting, true
 	}
 
@@ -495,15 +409,15 @@ func (o *oboe) GetSetting() (*settings, bool) {
 }
 
 func (o *oboe) RemoveSetting() {
-	o.cfg.lock.Lock()
-	defer o.cfg.lock.Unlock()
+	o.Lock()
+	defer o.Unlock()
 
 	key := settingKey{
 		sType: TYPE_DEFAULT,
 		layer: "",
 	}
 
-	delete(o.cfg.settings, key)
+	delete(o.settings, key)
 }
 
 func (o *oboe) HasDefaultSetting() bool {

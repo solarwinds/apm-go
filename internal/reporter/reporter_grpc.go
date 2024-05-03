@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/config"
@@ -888,19 +889,19 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		r.oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
-		mi := oboe.ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)
+		mi := ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)
 		atomic.StoreInt32(&r.collectMetricInterval, mi)
 
 		// update events flush interval
 		o := config.ReporterOpts()
-		ei := oboe.ParseInt32(s.Arguments, constants.KvEventsFlushInterval, int32(o.GetEventFlushInterval()))
+		ei := ParseInt32(s.Arguments, constants.KvEventsFlushInterval, int32(o.GetEventFlushInterval()))
 		o.SetEventFlushInterval(int64(ei))
 
 		// update MaxTransactions
-		mt := oboe.ParseInt32(s.Arguments, constants.KvMaxTransactions, r.registry.ApmMetricsCap())
+		mt := ParseInt32(s.Arguments, constants.KvMaxTransactions, r.registry.ApmMetricsCap())
 		r.registry.SetApmMetricsCap(mt)
 
-		maxCustomMetrics := oboe.ParseInt32(s.Arguments, constants.KvMaxCustomMetrics, r.registry.CustomMetricsCap())
+		maxCustomMetrics := ParseInt32(s.Arguments, constants.KvMaxCustomMetrics, r.registry.CustomMetricsCap())
 		r.registry.SetCustomMetricsCap(maxCustomMetrics)
 	}
 
@@ -1410,4 +1411,25 @@ func printRPCMsg(m Method) {
 		str = append(str, utils.SPrintBson(msg))
 	}
 	log.Debugf("%s", str)
+}
+
+func bytesToInt32(b []byte) (int32, error) {
+	if len(b) != 4 {
+		return -1, fmt.Errorf("invalid length: %d", len(b))
+	}
+	return int32(binary.LittleEndian.Uint32(b)), nil
+}
+
+func ParseInt32(args map[string][]byte, key string, fb int32) int32 {
+	ret := fb
+	if c, ok := args[key]; ok {
+		v, err := bytesToInt32(c)
+		if err == nil && v >= 0 {
+			ret = v
+			log.Debugf("parsed %s=%d", key, v)
+		} else {
+			log.Warningf("parse error: %s=%d err=%v fallback=%d", key, v, err, fb)
+		}
+	}
+	return ret
 }
