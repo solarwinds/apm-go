@@ -58,7 +58,7 @@ var (
 func TestOboeSampleRequestSettingsUnavailable(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		xTraceOptsRsp: "settings-not-available",
 	}
@@ -69,7 +69,7 @@ func TestOboeSampleRequestSettingsDisabled(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddDisabled(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
@@ -86,7 +86,7 @@ func TestOboeSampleRequest(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
@@ -104,7 +104,7 @@ func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(true, "url", ttMode, unsampledSwState)
+	dec := o.SampleRequest(true, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          1000000,
@@ -122,7 +122,7 @@ func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddTriggerTraceOnly(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          0,
@@ -140,7 +140,7 @@ func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, unsampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
@@ -158,7 +158,7 @@ func TestOboeSampleRequestThrough(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddSampleThrough(o)
-	dec := o.OboeSampleRequest(true, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(true, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
 		rate:          1000000,
@@ -176,7 +176,7 @@ func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
 	oboetestutils.AddSampleThrough(o)
-	dec := o.OboeSampleRequest(true, "url", ttMode, unsampledSwState)
+	dec := o.SampleRequest(true, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          1000000,
@@ -196,7 +196,7 @@ func TestOboeSampleRequestRelaxedTT(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
 		rate:          -1,
@@ -214,7 +214,7 @@ func TestOboeSampleRequestStrictTT(t *testing.T) {
 	ttMode := ModeStrictTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
 		rate:          -1,
@@ -232,7 +232,7 @@ func TestOboeSampleRequestRelaxedTTDisabled(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddNoTriggerTrace(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
@@ -250,7 +250,7 @@ func TestOboeSampleRequestStrictTTDisabled(t *testing.T) {
 	ttMode := ModeStrictTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddNoTriggerTrace(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
@@ -268,7 +268,7 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddLimitedTriggerTrace(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	// We expect the first TT to go through
 	expected := SampleDecision{
 		trace:         true,
@@ -281,7 +281,7 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 		diceRolled:    false,
 	}
 	require.Equal(t, expected, dec)
-	dec = o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec = o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected = SampleDecision{
 		trace:         false,
 		rate:          -1,
@@ -299,7 +299,7 @@ func TestOboeSampleRequestInvalidTT(t *testing.T) {
 	ttMode := ModeInvalidTriggerTrace
 	o := NewOboe()
 	oboetestutils.AddDefaultSetting(o)
-	dec := o.OboeSampleRequest(false, "url", ttMode, sampledSwState)
+	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
 		rate:          -1,
@@ -317,7 +317,7 @@ func TestGetTokenBucketSetting(t *testing.T) {
 	main := &tokenBucket{ratePerSec: 1, capacity: 2}
 	relaxed := &tokenBucket{ratePerSec: 3, capacity: 4}
 	strict := &tokenBucket{ratePerSec: 5, capacity: 6}
-	setting := &oboeSettings{
+	setting := &settings{
 		bucket:                    main,
 		triggerTraceRelaxedBucket: relaxed,
 		triggerTraceStrictBucket:  strict,
@@ -334,7 +334,7 @@ func TestGetTokenBucketSetting(t *testing.T) {
 		{99, nil},
 	}
 	for _, scen := range scenarios {
-		capacity, rate := getTokenBucketSetting(setting, scen.mode)
+		capacity, rate := setting.getTokenBucketSetting(scen.mode)
 		if scen.bucket == nil {
 			require.Equal(t, float64(0), capacity)
 			require.Equal(t, float64(0), rate)

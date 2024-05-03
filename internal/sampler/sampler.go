@@ -99,7 +99,7 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := s.oboe.OboeSampleRequest(swState.IsValid(), url, ttMode, swState)
+		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
 			decision = sdktrace.Drop
