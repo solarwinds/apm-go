@@ -26,35 +26,6 @@ var (
 	unsampledSwState = w3cfmt.ParseSwTraceState("0123456789abcdef-00")
 )
 
-//func TestCreateInitMessage(t *testing.T) {
-//	tid := trace.TraceID{0x01, 0x02, 0x03, 0x04}
-//	r, err := resource.New(context.Background(), resource.WithAttributes(
-//		attribute.String("foo", "bar"),
-//		// service.name should be omitted
-//		attribute.String("service.name", "my cool service"),
-//	))
-//	require.NoError(t, err)
-//	a := time.Now()
-//	evt := createInitMessage(tid, r)
-//	b := time.Now()
-//	require.NoError(t, err)
-//	require.NotNil(t, evt)
-//	e, ok := evt.(*event)
-//	require.True(t, ok)
-//	require.Equal(t, tid, e.taskID)
-//	require.NotEqual(t, [8]byte{}, e.opID)
-//	require.True(t, e.t.After(a))
-//	require.True(t, e.t.Before(b))
-//	require.Equal(t, []attribute.KeyValue{
-//		attribute.String("foo", "bar"),
-//		attribute.Bool("__Init", true),
-//		attribute.String("APM.Version", utils.Version()),
-//	}, e.kvs)
-//	require.Equal(t, LabelUnset, e.label)
-//	require.Equal(t, "", e.layer)
-//	require.False(t, e.parent.IsValid())
-//}
-
 func TestOboeSampleRequestSettingsUnavailable(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
