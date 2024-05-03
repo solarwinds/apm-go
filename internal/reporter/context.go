@@ -58,14 +58,14 @@ func (a AuthStatus) Msg() string {
 // TODO: This could live in the `xtrace` package, except it requires
 // TODO: the ability to extract the TT Token from oboe settings.
 // TODO: Determine a clean/elegant way to clean this up.
-func ValidateXTraceOptionsSignature(signature, ts, data string) AuthStatus {
+func ValidateXTraceOptionsSignature(o oboe.Oboe, signature, ts, data string) AuthStatus {
 	var err error
 	_, err = tsInScope(ts)
 	if err != nil {
 		return AuthBadTimestamp
 	}
 
-	token, err := getTriggerTraceToken()
+	token, err := getTriggerTraceToken(o)
 	if err != nil {
 		return AuthNoSignatureKey
 	}
@@ -76,8 +76,8 @@ func ValidateXTraceOptionsSignature(signature, ts, data string) AuthStatus {
 	return AuthOK
 }
 
-func HmacHashTT(data []byte) (string, error) {
-	token, err := getTriggerTraceToken()
+func HmacHashTT(o oboe.Oboe, data []byte) (string, error) {
+	token, err := getTriggerTraceToken(o)
 	if err != nil {
 		return "", err
 	}
@@ -91,8 +91,9 @@ func HmacHash(token, data []byte) string {
 	return sha
 }
 
-func getTriggerTraceToken() ([]byte, error) {
-	setting, ok := oboe.GetSetting()
+// TODO move to Oboe interface?
+func getTriggerTraceToken(o oboe.Oboe) ([]byte, error) {
+	setting, ok := o.GetSetting()
 	if !ok {
 		return nil, errors.New("failed to get settings")
 	}

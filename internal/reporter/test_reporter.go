@@ -17,7 +17,6 @@ package reporter
 import (
 	"context"
 	"errors"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"log"
 	"sync"
 	"time"
@@ -67,8 +66,9 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	r.wg.Add(1)
 	go r.resultWriter()
 
+	// TODO
 	// start with clean slate
-	oboe.ResetSettings()
+	//oboe.ResetSettings()
 
 	return r
 }

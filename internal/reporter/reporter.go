@@ -21,11 +21,9 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -98,14 +96,6 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) Reporte
 		return newNullReporter()
 	}
 	return newGRPCReporter(otelServiceName, registry)
-}
-
-func ShouldTraceRequestWithURL(traced bool, url string, ttMode oboe.TriggerTraceMode, swState w3cfmt.SwTraceState) oboe.SampleDecision {
-	return shouldTraceRequestWithURL(traced, url, ttMode, swState)
-}
-
-func shouldTraceRequestWithURL(traced bool, url string, triggerTrace oboe.TriggerTraceMode, swState w3cfmt.SwTraceState) oboe.SampleDecision {
-	return oboe.OboeSampleRequest(traced, url, triggerTrace, swState)
 }
 
 func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {

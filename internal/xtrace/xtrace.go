@@ -17,6 +17,7 @@ package xtrace
 import (
 	"context"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"regexp"
 	"strconv"
@@ -46,7 +47,7 @@ const (
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 
-func GetXTraceOptions(ctx context.Context) Options {
+func GetXTraceOptions(ctx context.Context, o oboe.Oboe) Options {
 	xtoStr, ok := ctx.Value(OptionsKey).(string)
 	if !ok {
 		xtoStr = ""
@@ -56,10 +57,10 @@ func GetXTraceOptions(ctx context.Context) Options {
 		xtoSig = ""
 	}
 
-	return parseXTraceOptions(xtoStr, xtoSig)
+	return parseXTraceOptions(o, xtoStr, xtoSig)
 }
 
-func parseXTraceOptions(opts string, sig string) Options {
+func parseXTraceOptions(o oboe.Oboe, opts string, sig string) Options {
 	x := Options{
 		opts:        opts,
 		sig:         sig,
@@ -107,7 +108,7 @@ func parseXTraceOptions(opts string, sig string) Options {
 	if sig == "" {
 		x.sigState = NoSignature
 	} else {
-		x.authStatus = reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
+		x.authStatus = reporter.ValidateXTraceOptionsSignature(o, sig, strconv.FormatInt(x.timestamp, 10), opts)
 		if x.authStatus.IsError() {
 			log.Warning("Invalid xtrace options signature", x.authStatus.Msg())
 			x.sigState = InvalidSignature

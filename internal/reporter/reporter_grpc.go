@@ -244,6 +244,9 @@ type grpcReporter struct {
 
 	// metrics
 	registry metrics.LegacyRegistry
+
+	// oboe
+	oboe oboe.Oboe
 }
 
 // gRPC reporter errors
@@ -817,7 +820,7 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 
 	var messages [][]byte
 	// generate a new metrics message
-	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), oboe.FlushRateCounts(), config.GetRuntimeMetrics())
+	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), r.oboe.FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
@@ -881,7 +884,7 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
-		oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
+		r.oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
 		mi := oboe.ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)
@@ -900,7 +903,7 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		r.registry.SetCustomMetricsCap(maxCustomMetrics)
 	}
 
-	if !r.isReady() && oboe.HasDefaultSetting() {
+	if !r.isReady() && r.oboe.HasDefaultSetting() {
 		r.cond.L.Lock()
 		r.setReady(true)
 		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
@@ -915,8 +918,8 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	oboe.OboeCheckSettingsTimeout()
-	if r.isReady() && !oboe.HasDefaultSetting() {
+	r.oboe.CheckSettingsTimeout()
+	if r.isReady() && !r.oboe.HasDefaultSetting() {
 		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
 		r.setReady(false)
 	}
