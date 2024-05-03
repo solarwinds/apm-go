@@ -128,8 +128,7 @@ func TestGRPCReporter(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	// TODO
-	//oboe.RemoveSetting()
+	o.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
@@ -537,8 +536,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	// TODO
-	// oboe.RemoveSetting()
+	o.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
