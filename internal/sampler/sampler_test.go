@@ -458,21 +458,20 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 }
 
 func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
-	// TODO Fix by properly setting _no_ settings
-	//oboetestutils.UpdateSetting(oboetestutils.NoSettingST)
-	//sc := trace.NewSpanContext(trace.SpanContextConfig{
-	//	TraceID: traceId,
-	//	SpanID:  spanId,
-	//})
-	//opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
-	//ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
-	//sig := "0000"
-	//ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	//xto := xtrace.GetXTraceOptions(ctx)
-	//ts := hydrateTraceState(sc, xto, "ok")
-	//fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
-	//require.NoError(t, err)
-	//require.Equal(t, "auth=no-signature-key", fullResp)
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: traceId,
+		SpanID:  spanId,
+	})
+	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
+	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
+	sig := "0000"
+	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
+	ts := hydrateTraceState(sc, xto, "ok")
+	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
+	require.NoError(t, err)
+	require.Equal(t, "auth=no-signature-key", fullResp)
 }
 
 func TestHydrateTraceStateValidSignature(t *testing.T) {
