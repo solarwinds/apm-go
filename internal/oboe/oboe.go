@@ -24,7 +24,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -83,129 +82,7 @@ func (o *oboe) FlushRateCounts() map[string]*metrics.RateCounts {
 	return rcs
 }
 
-// token bucket
-type tokenBucket struct {
-	ratePerSec float64
-	capacity   float64
-	available  float64
-	last       time.Time
-	lock       sync.Mutex
-	metrics.RateCounts
-}
-
-func (b *tokenBucket) setRateCap(rate, cap float64) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.ratePerSec = rate
-	b.capacity = cap
-
-	if b.available > b.capacity {
-		b.available = b.capacity
-	}
-}
-
-func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
-	b.RequestedInc()
-
-	if !hasMetadata {
-		b.SampledInc()
-	}
-
-	if !sampled {
-		return sampled
-	}
-
-	if rateLimit {
-		if ok := b.consume(1); !ok {
-			b.LimitedInc()
-			return false
-		}
-	}
-
-	if hasMetadata {
-		b.ThroughInc()
-	}
-	b.TracedInc()
-	return sampled
-}
-
-func (b *tokenBucket) consume(size float64) bool {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.update(time.Now())
-	if b.available >= size {
-		b.available -= size
-		return true
-	}
-	return false
-}
-
-func (b *tokenBucket) update(now time.Time) {
-	if b.available < b.capacity { // room for more tokens?
-		delta := now.Sub(b.last) // calculate duration since last check
-		b.last = now             // update time of last check
-		if delta <= 0 {          // return if no delta or time went "backwards"
-			return
-		}
-		newTokens := b.ratePerSec * delta.Seconds()               // # tokens generated since last check
-		b.available = math.Min(b.capacity, b.available+newTokens) // add new tokens to bucket, but don't overfill
-	}
-}
-
-type SampleDecision struct {
-	trace  bool
-	rate   int
-	source SampleSource
-	// if the request is disabled from tracing in a per-transaction level or for
-	// the entire service.
-	enabled       bool
-	xTraceOptsRsp string
-	bucketCap     float64
-	bucketRate    float64
-
-	diceRolled bool
-}
-
-func (s SampleDecision) Trace() bool {
-	return s.trace
-}
-
-func (s SampleDecision) XTraceOptsRsp() string {
-	return s.xTraceOptsRsp
-}
-
-func (s SampleDecision) Enabled() bool {
-	return s.enabled
-}
-
-func (s SampleDecision) BucketCapacity() float64 {
-	return s.bucketCap
-}
-
-func (s SampleDecision) BucketCapacityStr() string {
-	return floatToStr(s.BucketCapacity())
-}
-
-func (s SampleDecision) BucketRate() float64 {
-	return s.bucketRate
-}
-
-func (s SampleDecision) BucketRateStr() string {
-	return floatToStr(s.BucketRate())
-}
-
-func (s SampleDecision) SampleRate() int {
-	return s.rate
-}
-
-func (s SampleDecision) SampleSource() SampleSource {
-	return s.source
-}
-
-func floatToStr(f float64) string {
-	return strconv.FormatFloat(f, 'f', -1, 64)
-}
-
+// SampleRequest returns a SampleDecision based on inputs and state of various token buckets
 func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	setting, ok := o.GetSetting()
 	if !ok {
