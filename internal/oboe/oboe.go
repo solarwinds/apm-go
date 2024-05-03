@@ -131,16 +131,6 @@ type tokenBucket struct {
 	metrics.RateCounts
 }
 
-func (b *tokenBucket) reset() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.ratePerSec = 0
-	b.capacity = 0
-	b.available = 0
-	b.last = time.Time{}
-}
-
 func (b *tokenBucket) setRateCap(rate, cap float64) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
