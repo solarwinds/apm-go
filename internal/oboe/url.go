@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package reporter
+
+package oboe
 
 import (
 	"github.com/solarwinds/apm-go/internal/config"
@@ -47,34 +48,34 @@ const (
 )
 
 // setURLTrace sets a url and its trace decision into the cache
-func (c *urlCache) setURLTrace(url string, trace tracingMode) {
+func (c *urlCache) setURLTrace(url string, trace TracingMode) {
 	_ = c.Set([]byte(url), []byte(trace.ToString()), cacheExpireSeconds)
 }
 
 // getURLTrace gets the trace decision of a URL
-func (c *urlCache) getURLTrace(url string) (tracingMode, error) {
+func (c *urlCache) getURLTrace(url string) (TracingMode, error) {
 	traceStr, err := c.Get([]byte(url))
 	if err != nil {
 		return TraceUnknown, err
 	}
 
-	return newTracingMode(config.TracingMode(string(traceStr))), nil
+	return NewTracingMode(config.TracingMode(string(traceStr))), nil
 }
 
 // urlFilter defines a URL filter
 type urlFilter interface {
 	match(url string) bool
-	tracingMode() tracingMode
+	tracingMode() TracingMode
 }
 
 // regexFilter is a regular expression based URL filter
 type regexFilter struct {
 	regex *regexp.Regexp
-	trace tracingMode
+	trace TracingMode
 }
 
 // newRegexFilter creates a new regexFilter instance
-func newRegexFilter(regex string, mode tracingMode) (*regexFilter, error) {
+func newRegexFilter(regex string, mode TracingMode) (*regexFilter, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse regexp")
@@ -88,18 +89,18 @@ func (f *regexFilter) match(url string) bool {
 }
 
 // tracingMode returns the tracing mode of this url pattern
-func (f *regexFilter) tracingMode() tracingMode {
+func (f *regexFilter) tracingMode() TracingMode {
 	return f.trace
 }
 
 // extensionFilter is a extension-based filter
 type extensionFilter struct {
 	Exts  map[string]struct{}
-	trace tracingMode
+	trace TracingMode
 }
 
 // newExtensionFilter create a new instance of extensionFilter
-func newExtensionFilter(extensions []string, mode tracingMode) *extensionFilter {
+func newExtensionFilter(extensions []string, mode TracingMode) *extensionFilter {
 	exts := make(map[string]struct{})
 	for _, ext := range extensions {
 		exts[ext] = struct{}{}
@@ -115,7 +116,7 @@ func (f *extensionFilter) match(url string) bool {
 }
 
 // tracingMode returns the tracing mode of this extension pattern
-func (f *extensionFilter) tracingMode() tracingMode {
+func (f *extensionFilter) tracingMode() TracingMode {
 	return f.trace
 }
 
@@ -140,21 +141,21 @@ func (f *urlFilters) loadConfig(filters []config.TransactionFilter) {
 
 	for _, filter := range filters {
 		if filter.RegEx != "" {
-			re, err := newRegexFilter(filter.RegEx, newTracingMode(filter.Tracing))
+			re, err := newRegexFilter(filter.RegEx, NewTracingMode(filter.Tracing))
 			if err != nil {
 				log.Warningf("Ignore bad regex: %s, error=", filter.RegEx, err.Error())
 			}
 			f.filters = append(f.filters, re)
 		} else {
 			f.filters = append(f.filters,
-				newExtensionFilter(filter.Extensions, newTracingMode(filter.Tracing)))
+				newExtensionFilter(filter.Extensions, NewTracingMode(filter.Tracing)))
 		}
 	}
 }
 
-// getTracingMode checks if the URL should be traced or not. It returns TraceUnknown
+// GetTracingMode checks if the URL should be traced or not. It returns TraceUnknown
 // if the url is not found.
-func (f *urlFilters) getTracingMode(url string) tracingMode {
+func (f *urlFilters) GetTracingMode(url string) TracingMode {
 	if len(f.filters) == 0 || url == "" {
 		return TraceUnknown
 	}
@@ -170,7 +171,7 @@ func (f *urlFilters) getTracingMode(url string) tracingMode {
 	return trace
 }
 
-func (f *urlFilters) lookupTracingMode(url string) tracingMode {
+func (f *urlFilters) lookupTracingMode(url string) TracingMode {
 	for _, filter := range f.filters {
 		if filter.match(url) {
 			return filter.tracingMode()

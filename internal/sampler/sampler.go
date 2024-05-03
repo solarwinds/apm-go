@@ -17,6 +17,7 @@ package sampler
 import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/swotel"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
@@ -137,17 +138,17 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 
 }
 
-func getTtMode(xto xtrace.Options) reporter.TriggerTraceMode {
+func getTtMode(xto xtrace.Options) oboe.TriggerTraceMode {
 	if xto.TriggerTrace() {
 		switch xto.SignatureState() {
 		case xtrace.ValidSignature:
-			return reporter.ModeRelaxedTriggerTrace
+			return oboe.ModeRelaxedTriggerTrace
 		case xtrace.InvalidSignature:
-			return reporter.ModeInvalidTriggerTrace
+			return oboe.ModeInvalidTriggerTrace
 		default:
-			return reporter.ModeStrictTriggerTrace
+			return oboe.ModeStrictTriggerTrace
 		}
 	} else {
-		return reporter.ModeTriggerTraceNotPresent
+		return oboe.ModeTriggerTraceNotPresent
 	}
 }

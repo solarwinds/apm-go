@@ -21,6 +21,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/reporter/mocks"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
@@ -126,7 +127,7 @@ func TestGRPCReporter(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	removeSetting()
+	oboe.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
@@ -530,7 +531,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	removeSetting()
+	oboe.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())

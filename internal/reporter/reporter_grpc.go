@@ -22,12 +22,14 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/host/aws"
 	"github.com/solarwinds/apm-go/internal/host/azure"
 	"github.com/solarwinds/apm-go/internal/host/k8s"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
@@ -815,7 +817,7 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 
 	var messages [][]byte
 	// generate a new metrics message
-	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
+	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), oboe.FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
@@ -879,26 +881,26 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
-		updateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
+		oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
-		mi := parseInt32(s.Arguments, kvMetricsFlushInterval, r.collectMetricInterval)
+		mi := oboe.ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)
 		atomic.StoreInt32(&r.collectMetricInterval, mi)
 
 		// update events flush interval
 		o := config.ReporterOpts()
-		ei := parseInt32(s.Arguments, kvEventsFlushInterval, int32(o.GetEventFlushInterval()))
+		ei := oboe.ParseInt32(s.Arguments, constants.KvEventsFlushInterval, int32(o.GetEventFlushInterval()))
 		o.SetEventFlushInterval(int64(ei))
 
 		// update MaxTransactions
-		mt := parseInt32(s.Arguments, kvMaxTransactions, r.registry.ApmMetricsCap())
+		mt := oboe.ParseInt32(s.Arguments, constants.KvMaxTransactions, r.registry.ApmMetricsCap())
 		r.registry.SetApmMetricsCap(mt)
 
-		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, r.registry.CustomMetricsCap())
+		maxCustomMetrics := oboe.ParseInt32(s.Arguments, constants.KvMaxCustomMetrics, r.registry.CustomMetricsCap())
 		r.registry.SetCustomMetricsCap(maxCustomMetrics)
 	}
 
-	if !r.isReady() && hasDefaultSetting() {
+	if !r.isReady() && oboe.HasDefaultSetting() {
 		r.cond.L.Lock()
 		r.setReady(true)
 		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
@@ -913,8 +915,8 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	OboeCheckSettingsTimeout()
-	if r.isReady() && !hasDefaultSetting() {
+	oboe.OboeCheckSettingsTimeout()
+	if r.isReady() && !oboe.HasDefaultSetting() {
 		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
 		r.setReady(false)
 	}

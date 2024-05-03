@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"strconv"
 	"time"
 
@@ -91,14 +92,14 @@ func HmacHash(token, data []byte) string {
 }
 
 func getTriggerTraceToken() ([]byte, error) {
-	setting, ok := getSetting()
+	setting, ok := oboe.GetSetting()
 	if !ok {
 		return nil, errors.New("failed to get settings")
 	}
-	if len(setting.triggerToken) == 0 {
+	if len(setting.TriggerToken) == 0 {
 		return nil, errors.New("no valid signature key found")
 	}
-	return setting.triggerToken, nil
+	return setting.TriggerToken, nil
 }
 
 func tsInScope(tsStr string) (string, error) {

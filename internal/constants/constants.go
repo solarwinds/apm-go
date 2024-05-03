@@ -32,3 +32,17 @@ const (
 	InfoLabel    = "info"
 	UnknownLabel = "UNKNOWN"
 )
+
+const (
+	KvSignatureKey                      = "SignatureKey"
+	KvBucketCapacity                    = "BucketCapacity"
+	KvBucketRate                        = "BucketRate"
+	KvTriggerTraceRelaxedBucketCapacity = "TriggerRelaxedBucketCapacity"
+	KvTriggerTraceRelaxedBucketRate     = "TriggerRelaxedBucketRate"
+	KvTriggerTraceStrictBucketCapacity  = "TriggerStrictBucketCapacity"
+	KvTriggerTraceStrictBucketRate      = "TriggerStrictBucketRate"
+	KvMetricsFlushInterval              = "MetricsFlushInterval"
+	KvEventsFlushInterval               = "EventsFlushInterval"
+	KvMaxTransactions                   = "MaxTransactions"
+	KvMaxCustomMetrics                  = "MaxCustomMetrics"
+)

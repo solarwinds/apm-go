@@ -12,28 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reporter
+package oboe
 
 import (
 	"encoding/binary"
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
-	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/trace"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -60,7 +54,7 @@ type oboeSettingsCfg struct {
 
 // FlushRateCounts collects the request counters values by categories.
 func FlushRateCounts() map[string]*metrics.RateCounts {
-	setting, ok := getSetting()
+	setting, ok := GetSetting()
 	if !ok {
 		return nil
 	}
@@ -85,7 +79,7 @@ type oboeSettings struct {
 	source                    SampleSource
 	ttl                       int64
 	layer                     string
-	triggerToken              []byte
+	TriggerToken              []byte
 	bucket                    *tokenBucket
 	triggerTraceRelaxedBucket *tokenBucket
 	triggerTraceStrictBucket  *tokenBucket
@@ -157,35 +151,6 @@ var triggerTraceRelaxedBucket = &tokenBucket{}
 
 // The token bucket exclusively for trigger trace from unauthenticated clients
 var triggerTraceStrictBucket = &tokenBucket{}
-
-func createInitMessage(tid trace.TraceID, r *resource.Resource) Event {
-	evt := NewEventWithRandomOpID(tid, time.Now())
-	evt.SetLabel(LabelUnset)
-	for _, kv := range r.Attributes() {
-		if kv.Key != semconv.ServiceNameKey {
-			evt.AddKV(kv)
-		}
-	}
-
-	evt.AddKVs([]attribute.KeyValue{
-		attribute.Bool("__Init", true),
-		attribute.String("APM.Version", utils.Version()),
-	})
-	return evt
-}
-
-func sendInitMessage(r Reporter, rsrc *resource.Resource) {
-	if r.Closed() {
-		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
-		return
-	}
-	tid := trace.TraceID{0}
-	rand.Random(tid[:])
-	evt := createInitMessage(tid, rsrc)
-	if err := r.ReportStatus(evt); err != nil {
-		log.Error("could not send init message", err)
-	}
-}
 
 func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
 	b.RequestedInc()
@@ -347,7 +312,7 @@ func (tm TriggerTraceMode) Requested() bool {
 	}
 }
 
-func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+func OboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	// TODO: ick!
 	//if usingTestReporter {
 	//	if r, ok := globalReporter.(*TestReporter); ok {
@@ -360,7 +325,7 @@ func oboeSampleRequest(continued bool, url string, triggerTrace TriggerTraceMode
 	var setting *oboeSettings
 	var ok bool
 	diceRolled := false
-	if setting, ok = getSetting(); !ok {
+	if setting, ok = GetSetting(); !ok {
 		return SampleDecision{false, 0, SAMPLE_SOURCE_NONE, false, ttSettingsNotAvailable, 0, 0, diceRolled}
 	}
 
@@ -500,7 +465,7 @@ func parseFloat64(args map[string][]byte, key string, fb float64) float64 {
 	return ret
 }
 
-func parseInt32(args map[string][]byte, key string, fb int32) int32 {
+func ParseInt32(args map[string][]byte, key string, fb int32) int32 {
 	ret := fb
 	if c, ok := args[key]; ok {
 		v, err := bytesToInt32(c)
@@ -525,11 +490,11 @@ func mergeLocalSetting(remote *oboeSettings) *oboeSettings {
 			remote.value = config.GetSampleRate()
 			remote.source = SAMPLE_SOURCE_FILE
 		}
-		remote.flags &= newTracingMode(config.GetTracingMode()).toFlags()
+		remote.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
 	} else if config.SamplingConfigured() {
 		// Use local sample rate and tracing mode config
 		remote.value = config.GetSampleRate()
-		remote.flags = newTracingMode(config.GetTracingMode()).toFlags()
+		remote.flags = NewTracingMode(config.GetTracingMode()).toFlags()
 		remote.source = SAMPLE_SOURCE_FILE
 	}
 
@@ -546,7 +511,7 @@ func mergeURLSetting(setting *oboeSettings, url string) (int, settingFlag, Sampl
 		return setting.value, setting.flags, setting.source
 	}
 
-	urlTracingMode := urls.getTracingMode(url)
+	urlTracingMode := urls.GetTracingMode(url)
 	if urlTracingMode.isUnknown() {
 		return setting.value, setting.flags, setting.source
 	}
@@ -574,7 +539,7 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func updateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
+func UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
@@ -585,18 +550,18 @@ func updateSetting(sType int32, layer string, flags []byte, value int64, ttl int
 	ns.ttl = ttl
 	ns.layer = layer
 
-	ns.triggerToken = args[kvSignatureKey]
+	ns.TriggerToken = args[constants.KvSignatureKey]
 
-	rate := parseFloat64(args, kvBucketRate, 0)
-	capacity := parseFloat64(args, kvBucketCapacity, 0)
+	rate := parseFloat64(args, constants.KvBucketRate, 0)
+	capacity := parseFloat64(args, constants.KvBucketCapacity, 0)
 	ns.bucket.setRateCap(rate, capacity)
 
-	tRelaxedRate := parseFloat64(args, kvTriggerTraceRelaxedBucketRate, 0)
-	tRelaxedCapacity := parseFloat64(args, kvTriggerTraceRelaxedBucketCapacity, 0)
+	tRelaxedRate := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketRate, 0)
+	tRelaxedCapacity := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketCapacity, 0)
 	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
 
-	tStrictRate := parseFloat64(args, kvTriggerTraceStrictBucketRate, 0)
-	tStrictCapacity := parseFloat64(args, kvTriggerTraceStrictBucketCapacity, 0)
+	tStrictRate := parseFloat64(args, constants.KvTriggerTraceStrictBucketRate, 0)
+	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
 	merged := mergeLocalSetting(ns)
@@ -612,7 +577,7 @@ func updateSetting(sType int32, layer string, flags []byte, value int64, ttl int
 }
 
 // Used for tests only
-func resetSettings() {
+func ResetSettings() {
 	FlushRateCounts()
 
 	globalSettingsCfg.lock.Lock()
@@ -639,7 +604,7 @@ func (sc *oboeSettingsCfg) checkSettingsTimeout() {
 	}
 }
 
-func getSetting() (*oboeSettings, bool) {
+func GetSetting() (*oboeSettings, bool) {
 	globalSettingsCfg.lock.RLock()
 	defer globalSettingsCfg.lock.RUnlock()
 
@@ -655,7 +620,7 @@ func getSetting() (*oboeSettings, bool) {
 	return nil, false
 }
 
-func removeSetting() {
+func RemoveSetting() {
 	globalSettingsCfg.lock.Lock()
 	defer globalSettingsCfg.lock.Unlock()
 
@@ -667,8 +632,8 @@ func removeSetting() {
 	delete(globalSettingsCfg.settings, key)
 }
 
-func hasDefaultSetting() bool {
-	if _, ok := getSetting(); ok {
+func HasDefaultSetting() bool {
+	if _, ok := GetSetting(); ok {
 		return true
 	}
 	return false
@@ -700,17 +665,17 @@ func flagStringToBin(flagString string) settingFlag {
 }
 
 // tracing mode
-type tracingMode int
+type TracingMode int
 
 // tracing modes
 const (
-	TraceDisabled tracingMode = iota // disable tracing, will neither start nor continue traces
+	TraceDisabled TracingMode = iota // disable tracing, will neither start nor continue traces
 	TraceEnabled                     // perform sampling every inbound request for tracing
 	TraceUnknown                     // for cache purpose only
 )
 
-// newTracingMode creates a tracing mode object from a string
-func newTracingMode(mode config.TracingMode) tracingMode {
+// NewTracingMode creates a tracing mode object from a string
+func NewTracingMode(mode config.TracingMode) TracingMode {
 	switch mode {
 	case config.DisabledTracingMode:
 		return TraceDisabled
@@ -721,11 +686,11 @@ func newTracingMode(mode config.TracingMode) tracingMode {
 	return TraceUnknown
 }
 
-func (tm tracingMode) isUnknown() bool {
+func (tm TracingMode) isUnknown() bool {
 	return tm == TraceUnknown
 }
 
-func (tm tracingMode) toFlags() settingFlag {
+func (tm TracingMode) toFlags() settingFlag {
 	switch tm {
 	case TraceEnabled:
 		return FLAG_SAMPLE_START | FLAG_SAMPLE_THROUGH_ALWAYS | FLAG_TRIGGER_TRACE
@@ -735,7 +700,7 @@ func (tm tracingMode) toFlags() settingFlag {
 	return FLAG_OK
 }
 
-func (tm tracingMode) ToString() string {
+func (tm TracingMode) ToString() string {
 	switch tm {
 	case TraceEnabled:
 		return string(config.EnabledTracingMode)

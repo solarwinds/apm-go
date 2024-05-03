@@ -17,6 +17,7 @@ package reporter
 import (
 	"context"
 	"errors"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"log"
 	"sync"
 	"time"
@@ -39,7 +40,6 @@ type TestReporter struct {
 
 const (
 	defaultTestReporterTimeout = 2 * time.Second
-	TestToken                  = "TOKEN"
 )
 
 var oldReporter Reporter = &nullReporter{}
@@ -68,9 +68,7 @@ func SetTestReporter(options ...TestReporterOption) *TestReporter {
 	go r.resultWriter()
 
 	// start with clean slate
-	resetSettings()
-
-	r.updateSetting()
+	oboe.ResetSettings()
 
 	return r
 }
@@ -148,92 +146,4 @@ func (r *TestReporter) ReportEvent(Event) error {
 
 func (r *TestReporter) ReportStatus(Event) error {
 	return errors.New("TestReporter.ReportStatus not implemented")
-}
-
-func (r *TestReporter) addDefaultSetting() {
-	// add default setting with 100% sampling
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE"),
-		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addSampleThrough() {
-	// add default setting with 100% sampling
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("SAMPLE_START,SAMPLE_THROUGH,TRIGGER_TRACE"),
-		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addNoTriggerTrace() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
-		1000000, 120, argsToMap(1000000, 1000000, 0, 0, 0, 0, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addTriggerTraceOnly() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("TRIGGER_TRACE"),
-		0, 120, argsToMap(0, 0, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addRelaxedTriggerTraceOnly() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("TRIGGER_TRACE"),
-		0, 120, argsToMap(0, 0, 1000000, 1000000, 0, 0, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addStrictTriggerTraceOnly() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("TRIGGER_TRACE"),
-		0, 120, argsToMap(0, 0, 0, 0, 1000000, 1000000, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addLimitedTriggerTrace() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE"),
-		1000000, 120, argsToMap(1000000, 1000000, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
-}
-
-func (r *TestReporter) addDisabled() {
-	updateSetting(int32(TYPE_DEFAULT), "",
-		[]byte(""),
-		0, 120, argsToMap(0, 0, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
-}
-
-// Setting types
-const (
-	DefaultST = iota
-	NoTriggerTraceST
-	TriggerTraceOnlyST
-	RelaxedTriggerTraceOnlyST
-	StrictTriggerTraceOnlyST
-	LimitedTriggerTraceST
-	SampleThroughST
-	DisabledST
-	NoSettingST
-)
-
-func (r *TestReporter) updateSetting() {
-	switch r.SettingType {
-	case DefaultST:
-		r.addDefaultSetting()
-	case NoTriggerTraceST:
-		r.addNoTriggerTrace()
-	case TriggerTraceOnlyST:
-		r.addTriggerTraceOnly()
-	case RelaxedTriggerTraceOnlyST:
-		r.addRelaxedTriggerTraceOnly()
-	case StrictTriggerTraceOnlyST:
-		r.addStrictTriggerTraceOnly()
-	case LimitedTriggerTraceST:
-		r.addLimitedTriggerTrace()
-	case SampleThroughST:
-		r.addSampleThrough()
-	case DisabledST:
-		r.addDisabled()
-	case NoSettingST:
-		// Nothing to do
-	default:
-		panic("No such setting type.")
-	}
 }

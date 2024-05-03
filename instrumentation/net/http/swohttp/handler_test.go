@@ -15,7 +15,7 @@
 package swohttp
 
 import (
-	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/solarwinds/apm-go/swo"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -35,8 +35,7 @@ const (
 var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-01\z`)
 
 func TestHandlerNoXOptsResponse(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
+	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
 
 	cb, err := swo.Start()
 	require.NoError(t, err)
@@ -49,8 +48,7 @@ func TestHandlerNoXOptsResponse(t *testing.T) {
 }
 
 func TestHandlerWithXOptsResponse(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
+	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
 
 	cb, err := swo.Start()
 	require.NoError(t, err)

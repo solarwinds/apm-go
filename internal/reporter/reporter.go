@@ -16,16 +16,21 @@ package reporter
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"math"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
+	"time"
 )
 
 // defines what methods a Reporter should offer (internal to Reporter package)
@@ -48,21 +53,6 @@ type Reporter interface {
 	// falling back to the service name in the service key
 	GetServiceName() string
 }
-
-// KVs from getSettingsResult arguments
-const (
-	kvSignatureKey                      = "SignatureKey"
-	kvBucketCapacity                    = "BucketCapacity"
-	kvBucketRate                        = "BucketRate"
-	kvTriggerTraceRelaxedBucketCapacity = "TriggerRelaxedBucketCapacity"
-	kvTriggerTraceRelaxedBucketRate     = "TriggerRelaxedBucketRate"
-	kvTriggerTraceStrictBucketCapacity  = "TriggerStrictBucketCapacity"
-	kvTriggerTraceStrictBucketRate      = "TriggerStrictBucketRate"
-	kvMetricsFlushInterval              = "MetricsFlushInterval"
-	kvEventsFlushInterval               = "EventsFlushInterval"
-	kvMaxTransactions                   = "MaxTransactions"
-	kvMaxCustomMetrics                  = "MaxCustomMetrics"
-)
 
 var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
@@ -110,66 +100,39 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) Reporte
 	return newGRPCReporter(otelServiceName, registry)
 }
 
-func ShouldTraceRequestWithURL(traced bool, url string, ttMode TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+func ShouldTraceRequestWithURL(traced bool, url string, ttMode oboe.TriggerTraceMode, swState w3cfmt.SwTraceState) oboe.SampleDecision {
 	return shouldTraceRequestWithURL(traced, url, ttMode, swState)
 }
 
-func shouldTraceRequestWithURL(traced bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	return oboeSampleRequest(traced, url, triggerTrace, swState)
+func shouldTraceRequestWithURL(traced bool, url string, triggerTrace oboe.TriggerTraceMode, swState w3cfmt.SwTraceState) oboe.SampleDecision {
+	return oboe.OboeSampleRequest(traced, url, triggerTrace, swState)
 }
 
-func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
-	metricsFlushInterval, maxTransactions int, token []byte) map[string][]byte {
-	args := make(map[string][]byte)
-
-	if capacity > -1 {
-		bits := math.Float64bits(capacity)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvBucketCapacity] = bytes
-	}
-	if ratePerSec > -1 {
-		bits := math.Float64bits(ratePerSec)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvBucketRate] = bytes
-	}
-	if tRCap > -1 {
-		bits := math.Float64bits(tRCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceRelaxedBucketCapacity] = bytes
-	}
-	if tRRate > -1 {
-		bits := math.Float64bits(tRRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceRelaxedBucketRate] = bytes
-	}
-	if tSCap > -1 {
-		bits := math.Float64bits(tSCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceStrictBucketCapacity] = bytes
-	}
-	if tSRate > -1 {
-		bits := math.Float64bits(tSRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceStrictBucketRate] = bytes
-	}
-	if metricsFlushInterval > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(metricsFlushInterval))
-		args[kvMetricsFlushInterval] = bytes
-	}
-	if maxTransactions > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(maxTransactions))
-		args[kvMaxTransactions] = bytes
+func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {
+	evt := NewEventWithRandomOpID(tid, time.Now())
+	evt.SetLabel(LabelUnset)
+	for _, kv := range r.Attributes() {
+		if kv.Key != semconv.ServiceNameKey {
+			evt.AddKV(kv)
+		}
 	}
 
-	args[kvSignatureKey] = token
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.Bool("__Init", true),
+		attribute.String("APM.Version", utils.Version()),
+	})
+	return evt
+}
 
-	return args
+func sendInitMessage(r Reporter, rsrc *resource.Resource) {
+	if r.Closed() {
+		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
+		return
+	}
+	tid := trace.TraceID{0}
+	rand.Random(tid[:])
+	evt := CreateInitMessage(tid, rsrc)
+	if err := r.ReportStatus(evt); err != nil {
+		log.Error("could not send init message", err)
+	}
 }

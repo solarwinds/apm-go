@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package reporter
+package oboe
 
 import (
 	"github.com/solarwinds/apm-go/internal/config"
@@ -52,22 +52,22 @@ func TestUrlFilter(t *testing.T) {
 		{Type: "url", Extensions: []string{"png", "jpg"}, Tracing: config.DisabledTracingMode},
 	})
 
-	assert.Equal(t, TraceDisabled, filter.getTracingMode("user123"))
+	assert.Equal(t, TraceDisabled, filter.GetTracingMode("user123"))
 	assert.Equal(t, int64(1), filter.cache.EntryCount())
 	assert.Equal(t, int64(0), filter.cache.HitCount())
 
-	assert.Equal(t, TraceUnknown, filter.getTracingMode("test123"))
+	assert.Equal(t, TraceUnknown, filter.GetTracingMode("test123"))
 	assert.Equal(t, int64(2), filter.cache.EntryCount())
 	assert.Equal(t, int64(2), filter.cache.MissCount())
 
-	assert.Equal(t, TraceDisabled, filter.getTracingMode("user200"))
+	assert.Equal(t, TraceDisabled, filter.GetTracingMode("user200"))
 	assert.Equal(t, int64(3), filter.cache.EntryCount())
 	assert.Equal(t, int64(0), filter.cache.HitCount())
 
-	assert.Equal(t, TraceDisabled, filter.getTracingMode("user123"))
+	assert.Equal(t, TraceDisabled, filter.GetTracingMode("user123"))
 	assert.Equal(t, int64(3), filter.cache.EntryCount())
 	assert.Equal(t, int64(1), filter.cache.HitCount())
 
-	assert.Equal(t, TraceDisabled, filter.getTracingMode("http://user.com/eric/avatar.png"))
+	assert.Equal(t, TraceDisabled, filter.GetTracingMode("http://user.com/eric/avatar.png"))
 	assert.Equal(t, int64(4), filter.cache.EntryCount())
 }
