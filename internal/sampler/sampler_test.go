@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
-	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/swotel"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/solarwinds/apm-go/internal/xtrace"
@@ -484,7 +483,7 @@ func TestHydrateTraceStateValidSignature(t *testing.T) {
 	})
 	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
-	sig, err := reporter.HmacHashTT(o, []byte(opts))
+	sig, err := xtrace.HmacHashTT(o, []byte(opts))
 	require.NoError(t, err)
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
 	xto := xtrace.GetXTraceOptions(ctx, o)

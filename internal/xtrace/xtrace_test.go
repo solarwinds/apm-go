@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
-	"github.com/solarwinds/apm-go/internal/reporter"
 	"testing"
 	"time"
 
@@ -38,7 +37,7 @@ func TestGetXTraceOptions(t *testing.T) {
 	// Timestamp required in signature validation
 	opts := fmt.Sprintf("sw-keys=check-id:check-1013,website-id;booking-demo;ts=%d", time.Now().Unix())
 	ctx = context.WithValue(ctx, OptionsKey, opts)
-	sig, err := reporter.HmacHashTT(o, []byte(opts))
+	sig, err := HmacHashTT(o, []byte(opts))
 	if err != nil {
 		t.Fatal(err)
 	}

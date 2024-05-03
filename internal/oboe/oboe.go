@@ -16,6 +16,7 @@ package oboe
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
@@ -53,6 +54,7 @@ type Oboe interface {
 	HasDefaultSetting() bool
 	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
 	FlushRateCounts() map[string]*metrics.RateCounts
+	GetTriggerTraceToken() ([]byte, error)
 }
 
 func NewOboe() Oboe {
@@ -299,6 +301,17 @@ func (o *oboe) HasDefaultSetting() bool {
 		return true
 	}
 	return false
+}
+
+func (o *oboe) GetTriggerTraceToken() ([]byte, error) {
+	setting, ok := o.GetSetting()
+	if !ok {
+		return nil, errors.New("failed to get settings")
+	}
+	if len(setting.TriggerToken) == 0 {
+		return nil, errors.New("no valid signature key found")
+	}
+	return setting.TriggerToken, nil
 }
 
 func shouldSample(sampleRate int) bool {
