@@ -3,11 +3,11 @@ package oboetestutils
 import (
 	"encoding/binary"
 	"github.com/solarwinds/apm-go/internal/constants"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"math"
 )
 
 const TestToken = "TOKEN"
+const TypeDefault = 0
 
 func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 	metricsFlushInterval, maxTransactions int, token []byte) map[string][]byte {
@@ -64,52 +64,57 @@ func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 
 	return args
 }
-func addDefaultSetting() {
+
+type SettingUpdater interface {
+	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
+}
+
+func AddDefaultSetting(o SettingUpdater) {
 	// add default setting with 100% sampling
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE"),
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
 }
 
-func addSampleThrough() {
+func AddSampleThrough(o SettingUpdater) {
 	// add default setting with 100% sampling
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH,TRIGGER_TRACE"),
 		1000000, 120, argsToMap(1000000, 1000000, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
 }
 
-func addNoTriggerTrace() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddNoTriggerTrace(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS"),
 		1000000, 120, argsToMap(1000000, 1000000, 0, 0, 0, 0, -1, -1, []byte(TestToken)))
 }
 
-func addTriggerTraceOnly() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddTriggerTraceOnly(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("TRIGGER_TRACE"),
 		0, 120, argsToMap(0, 0, 1000000, 1000000, 1000000, 1000000, -1, -1, []byte(TestToken)))
 }
 
-func addRelaxedTriggerTraceOnly() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddRelaxedTriggerTraceOnly(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("TRIGGER_TRACE"),
 		0, 120, argsToMap(0, 0, 1000000, 1000000, 0, 0, -1, -1, []byte(TestToken)))
 }
 
-func addStrictTriggerTraceOnly() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddStrictTriggerTraceOnly(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("TRIGGER_TRACE"),
 		0, 120, argsToMap(0, 0, 0, 0, 1000000, 1000000, -1, -1, []byte(TestToken)))
 }
 
-func addLimitedTriggerTrace() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddLimitedTriggerTrace(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE"),
 		1000000, 120, argsToMap(1000000, 1000000, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
 }
 
-func addDisabled() {
-	oboe.UpdateSetting(int32(oboe.TYPE_DEFAULT), "",
+func AddDisabled(o SettingUpdater) {
+	o.UpdateSetting(int32(TypeDefault), "",
 		[]byte(""),
 		0, 120, argsToMap(0, 0, 1, 1, 1, 1, -1, -1, []byte(TestToken)))
 }
@@ -127,27 +132,27 @@ const (
 	NoSettingST
 )
 
-func UpdateSetting(settingType int) {
-	switch settingType {
-	case DefaultST:
-		addDefaultSetting()
-	case NoTriggerTraceST:
-		addNoTriggerTrace()
-	case TriggerTraceOnlyST:
-		addTriggerTraceOnly()
-	case RelaxedTriggerTraceOnlyST:
-		addRelaxedTriggerTraceOnly()
-	case StrictTriggerTraceOnlyST:
-		addStrictTriggerTraceOnly()
-	case LimitedTriggerTraceST:
-		addLimitedTriggerTrace()
-	case SampleThroughST:
-		addSampleThrough()
-	case DisabledST:
-		addDisabled()
-	case NoSettingST:
-		// Nothing to do
-	default:
-		panic("No such setting type.")
-	}
-}
+//func UpdateSetting(settingType int) {
+//	switch settingType {
+//	case DefaultST:
+//		addDefaultSetting()
+//	case NoTriggerTraceST:
+//		addNoTriggerTrace()
+//	case TriggerTraceOnlyST:
+//		addTriggerTraceOnly()
+//	case RelaxedTriggerTraceOnlyST:
+//		addRelaxedTriggerTraceOnly()
+//	case StrictTriggerTraceOnlyST:
+//		addStrictTriggerTraceOnly()
+//	case LimitedTriggerTraceST:
+//		addLimitedTriggerTrace()
+//	case SampleThroughST:
+//		addSampleThrough()
+//	case DisabledST:
+//		addDisabled()
+//	case NoSettingST:
+//		// Nothing to do
+//	default:
+//		panic("No such setting type.")
+//	}
+//}
