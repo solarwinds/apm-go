@@ -30,8 +30,13 @@ type sampler struct {
 	oboe oboe.Oboe
 }
 
-func NewSampler() sdktrace.Sampler {
-	return sampler{}
+func NewSampler(o oboe.Oboe) (sdktrace.Sampler, error) {
+	if o == nil {
+		return nil, fmt.Errorf("oboe must not be nil")
+	}
+	return sampler{
+		oboe: o,
+	}, nil
 }
 
 var _ sdktrace.Sampler = sampler{}

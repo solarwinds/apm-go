@@ -15,6 +15,7 @@
 package swohttp
 
 import (
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/solarwinds/apm-go/swo"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,8 @@ const (
 var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-01\z`)
 
 func TestHandlerNoXOptsResponse(t *testing.T) {
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 
 	cb, err := swo.Start()
 	require.NoError(t, err)
@@ -48,7 +50,8 @@ func TestHandlerNoXOptsResponse(t *testing.T) {
 }
 
 func TestHandlerWithXOptsResponse(t *testing.T) {
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 
 	cb, err := swo.Start()
 	require.NoError(t, err)

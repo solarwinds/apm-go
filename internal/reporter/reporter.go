@@ -21,6 +21,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
@@ -69,18 +70,18 @@ func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string) error        { return nil }
 func (r *nullReporter) GetServiceName() string            { return "" }
 
-func Start(rsrc *resource.Resource, registry interface{}) (Reporter, error) {
+func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter, error) {
 	log.SetLevelFromStr(config.DebugLevel())
 	if reg, ok := registry.(metrics.LegacyRegistry); !ok {
 		return nil, fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
 	} else {
-		rptr := initReporter(rsrc, reg)
+		rptr := initReporter(rsrc, reg, o)
 		sendInitMessage(rptr, rsrc)
 		return rptr, nil
 	}
 }
 
-func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) Reporter {
+func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
 	var rt string
 	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
@@ -95,7 +96,7 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry) Reporte
 	if rt == "none" {
 		return newNullReporter()
 	}
-	return newGRPCReporter(otelServiceName, registry)
+	return newGRPCReporter(otelServiceName, registry, o)
 }
 
 func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {

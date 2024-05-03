@@ -267,7 +267,7 @@ func getProxyCertPath() string {
 // initializes a new GRPC reporter from scratch (called once on program startup)
 //
 // returns	GRPC Reporter object
-func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry) Reporter {
+func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
 	// collector address override
 	addr := config.GetCollector()
 
@@ -314,6 +314,7 @@ func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry) Re
 		done: make(chan struct{}),
 
 		registry: registry,
+		oboe:     o,
 	}
 
 	r.start()

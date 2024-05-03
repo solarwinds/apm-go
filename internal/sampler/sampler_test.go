@@ -39,7 +39,9 @@ var (
 )
 
 func TestDescription(t *testing.T) {
-	s := NewSampler()
+	o := oboe.NewOboe()
+	s, err := NewSampler(o)
+	require.NoError(t, err)
 	assert.Equal(t, "SolarWinds APM Sampler", s.Description())
 }
 
@@ -279,10 +281,12 @@ func requireAttrEqual(t *testing.T, attrs attribute.Set, key string, expected at
 }
 
 func (s SamplingScenario) test(t *testing.T) {
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 	var err error
 
-	smplr := NewSampler()
+	smplr, err := NewSampler(o)
+	require.NoError(t, err)
 	traceState := trace.TraceState{}
 	if s.traceStateContainsSw {
 		flags := "00"
@@ -412,7 +416,8 @@ func TestHydrateTraceState(t *testing.T) {
 		SpanID:  spanId,
 	})
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "ok")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -426,7 +431,8 @@ func TestHydrateTraceStateBadTimestamp(t *testing.T) {
 	})
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, "not a valid signature")
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -442,7 +448,9 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
 	sig := "invalid signature"
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -469,17 +477,18 @@ func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
 
 func TestHydrateTraceStateValidSignature(t *testing.T) {
 	// set test reporter so we can use the hmac token for signing the xto
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceId,
 		SpanID:  spanId,
 	})
 	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
-	sig, err := reporter.HmacHashTT([]byte(opts))
+	sig, err := reporter.HmacHashTT(o, []byte(opts))
 	require.NoError(t, err)
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	xto := xtrace.GetXTraceOptions(ctx)
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "ok")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)

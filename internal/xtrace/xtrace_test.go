@@ -21,6 +21,7 @@ package xtrace
 import (
 	"context"
 	"fmt"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"testing"
@@ -29,19 +30,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var o = oboe.NewOboe()
+
 func TestGetXTraceOptions(t *testing.T) {
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	oboetestutils.AddDefaultSetting(o)
 	ctx := context.Background()
 	// Timestamp required in signature validation
 	opts := fmt.Sprintf("sw-keys=check-id:check-1013,website-id;booking-demo;ts=%d", time.Now().Unix())
 	ctx = context.WithValue(ctx, OptionsKey, opts)
-	sig, err := reporter.HmacHashTT([]byte(opts))
+	sig, err := reporter.HmacHashTT(o, []byte(opts))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx = context.WithValue(ctx, SignatureKey, sig)
 
-	xto := GetXTraceOptions(ctx)
+	xto := GetXTraceOptions(ctx, o)
 	assert.Equal(t, "check-id:check-1013,website-id", xto.SwKeys())
 	assert.Equal(t, []string{"booking-demo"}, xto.IgnoredKeys())
 	assert.Equal(t, sig, xto.Signature())
@@ -53,7 +56,7 @@ func TestGetXTraceOptionsInvalidType(t *testing.T) {
 	ctx = context.WithValue(ctx, OptionsKey, 123)
 	ctx = context.WithValue(ctx, SignatureKey, 321)
 
-	xto := GetXTraceOptions(ctx)
+	xto := GetXTraceOptions(ctx, o)
 	assert.Equal(t, "", xto.SwKeys())
 	assert.Equal(t, []string{}, xto.IgnoredKeys())
 	assert.Equal(t, "", xto.Signature())
@@ -61,7 +64,7 @@ func TestGetXTraceOptionsInvalidType(t *testing.T) {
 }
 
 func TestNoKeyNoValue(t *testing.T) {
-	xto := parseXTraceOptions("=", "")
+	xto := parseXTraceOptions(o, "=", "")
 	assert.Empty(t, xto.CustomKVs())
 	assert.Empty(t, xto.SwKeys())
 	assert.Empty(t, xto.IgnoredKeys())
@@ -69,7 +72,7 @@ func TestNoKeyNoValue(t *testing.T) {
 }
 
 func TestOrphanValue(t *testing.T) {
-	xto := parseXTraceOptions("=oops", "")
+	xto := parseXTraceOptions(o, "=oops", "")
 	assert.Empty(t, xto.CustomKVs())
 	assert.Empty(t, xto.SwKeys())
 	assert.Empty(t, xto.IgnoredKeys())
@@ -77,7 +80,7 @@ func TestOrphanValue(t *testing.T) {
 }
 
 func TestValidTT(t *testing.T) {
-	xto := parseXTraceOptions("trigger-trace", "")
+	xto := parseXTraceOptions(o, "trigger-trace", "")
 	assert.True(t, xto.TriggerTrace())
 	assert.Empty(t, xto.CustomKVs())
 	assert.Empty(t, xto.SwKeys())
@@ -86,7 +89,7 @@ func TestValidTT(t *testing.T) {
 }
 
 func TestTTKeyIgnored(t *testing.T) {
-	xto := parseXTraceOptions("trigger-trace=1", "")
+	xto := parseXTraceOptions(o, "trigger-trace=1", "")
 	assert.False(t, xto.TriggerTrace())
 	assert.Empty(t, xto.CustomKVs())
 	assert.Empty(t, xto.SwKeys())
@@ -95,83 +98,83 @@ func TestTTKeyIgnored(t *testing.T) {
 }
 
 func TestSwKeysKVStrip(t *testing.T) {
-	xto := parseXTraceOptions("sw-keys=   foo:key   ", "")
+	xto := parseXTraceOptions(o, "sw-keys=   foo:key   ", "")
 	assert.Equal(t, "foo:key", xto.SwKeys())
 	assert.Empty(t, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestSwKeysContainingSemicolonIgnoreAfter(t *testing.T) {
-	xto := parseXTraceOptions("sw-keys=check-id:check-1013,website-id;booking-demo", "")
+	xto := parseXTraceOptions(o, "sw-keys=check-id:check-1013,website-id;booking-demo", "")
 	assert.Equal(t, "check-id:check-1013,website-id", xto.SwKeys())
 	assert.Equal(t, []string{"booking-demo"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestCustomKeysMatchStoredInOptionsHeaderAndCustomKVs(t *testing.T) {
-	xto := parseXTraceOptions("custom-awesome-key=    foo ", "")
+	xto := parseXTraceOptions(o, "custom-awesome-key=    foo ", "")
 	assert.Equal(t, map[string]string{"custom-awesome-key": "foo"}, xto.CustomKVs())
 	assert.Empty(t, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestCustomKeysMatchButNoValueIgnored(t *testing.T) {
-	xto := parseXTraceOptions("custom-no-value", "")
+	xto := parseXTraceOptions(o, "custom-no-value", "")
 	assert.Equal(t, map[string]string{}, xto.CustomKVs())
 	assert.Equal(t, []string{"custom-no-value"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestCustomKeysMatchEqualInValue(t *testing.T) {
-	xto := parseXTraceOptions("custom-and=a-value=12345containing_equals=signs", "")
+	xto := parseXTraceOptions(o, "custom-and=a-value=12345containing_equals=signs", "")
 	assert.Equal(t, map[string]string{"custom-and": "a-value=12345containing_equals=signs"}, xto.CustomKVs())
 	assert.Empty(t, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestCustomKeysSpacesInKeyDisallowed(t *testing.T) {
-	xto := parseXTraceOptions("custom- key=this_is_bad;custom-key 7=this_is_bad_too", "")
+	xto := parseXTraceOptions(o, "custom- key=this_is_bad;custom-key 7=this_is_bad_too", "")
 	assert.Equal(t, map[string]string{}, xto.CustomKVs())
 	assert.Equal(t, []string{"custom- key", "custom-key 7"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestValidTs(t *testing.T) {
-	xto := parseXTraceOptions("ts=12345", "")
+	xto := parseXTraceOptions(o, "ts=12345", "")
 	assert.Equal(t, int64(12345), xto.Timestamp())
 	assert.Empty(t, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestInvalidTs(t *testing.T) {
-	xto := parseXTraceOptions("ts=invalid", "")
+	xto := parseXTraceOptions(o, "ts=invalid", "")
 	assert.Equal(t, int64(0), xto.Timestamp())
 	assert.Equal(t, []string{"ts"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestOtherKeyIgnored(t *testing.T) {
-	xto := parseXTraceOptions("customer-key=foo", "")
+	xto := parseXTraceOptions(o, "customer-key=foo", "")
 	assert.Equal(t, []string{"customer-key"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
 
 func TestSig(t *testing.T) {
-	xto := parseXTraceOptions("foo bar baz", "signature123")
+	xto := parseXTraceOptions(o, "foo bar baz", "signature123")
 	assert.Equal(t, "signature123", xto.Signature())
 	assert.Equal(t, []string{"foo bar baz"}, xto.IgnoredKeys())
 	assert.Equal(t, InvalidSignature, xto.SignatureState())
 }
 
 func TestSigWithoutOptions(t *testing.T) {
-	xto := parseXTraceOptions("", "signature123")
+	xto := parseXTraceOptions(o, "", "signature123")
 	assert.Equal(t, "signature123", xto.Signature())
 	assert.Empty(t, xto.IgnoredKeys())
 	assert.Equal(t, InvalidSignature, xto.SignatureState())
 }
 
 func TestDocumentedExample1(t *testing.T) {
-	xto := parseXTraceOptions("trigger-trace;sw-keys=check-id:check-1013,website-id:booking-demo", "")
+	xto := parseXTraceOptions(o, "trigger-trace;sw-keys=check-id:check-1013,website-id:booking-demo", "")
 	assert.True(t, xto.TriggerTrace())
 	assert.Empty(t, xto.CustomKVs())
 	assert.Equal(t, "check-id:check-1013,website-id:booking-demo", xto.SwKeys())
@@ -180,7 +183,7 @@ func TestDocumentedExample1(t *testing.T) {
 }
 
 func TestDocumentedExample2(t *testing.T) {
-	xto := parseXTraceOptions("trigger-trace;custom-key1=value1", "")
+	xto := parseXTraceOptions(o, "trigger-trace;custom-key1=value1", "")
 	assert.True(t, xto.TriggerTrace())
 	assert.Equal(t, map[string]string{"custom-key1": "value1"}, xto.CustomKVs())
 	assert.Empty(t, xto.SwKeys())
@@ -190,6 +193,7 @@ func TestDocumentedExample2(t *testing.T) {
 
 func TestDocumentedExample3(t *testing.T) {
 	xto := parseXTraceOptions(
+		o,
 		"trigger-trace;sw-keys=check-id:check-1013,website-id:booking-demo;ts=1564432370",
 		"5c7c733c727e5038d2cd537630206d072bbfc07c",
 	)
@@ -203,6 +207,7 @@ func TestDocumentedExample3(t *testing.T) {
 
 func TestStripAllOptions(t *testing.T) {
 	xto := parseXTraceOptions(
+		o,
 		" trigger-trace ;  custom-something=value; custom-OtherThing = other val ;  sw-keys = 029734wr70:9wqj21,0d9j1   ; ts = 12345 ; foo = bar ",
 		"",
 	)
@@ -220,6 +225,7 @@ func TestStripAllOptions(t *testing.T) {
 
 func TestAllOptionsHandleSequentialSemicolons(t *testing.T) {
 	xto := parseXTraceOptions(
+		o,
 		";foo=bar;;;custom-something=value_thing;;sw-keys=02973r70:1b2a3;;;;custom-key=val;ts=12345;;;;;;;trigger-trace;;;",
 		"",
 	)
@@ -237,6 +243,7 @@ func TestAllOptionsHandleSequentialSemicolons(t *testing.T) {
 
 func TestAllOptionsHandleSingleQuotes(t *testing.T) {
 	xto := parseXTraceOptions(
+		o,
 		"trigger-trace;custom-foo='bar;bar';custom-bar=foo",
 		"",
 	)
@@ -254,6 +261,7 @@ func TestAllOptionsHandleSingleQuotes(t *testing.T) {
 
 func TestAllOptionsHandleMissingValuesAndSemicolons(t *testing.T) {
 	xto := parseXTraceOptions(
+		o,
 		";trigger-trace;custom-something=value_thing;sw-keys=02973r70:9wqj21,0d9j1;1;2;3;4;5;=custom-key=val?;=",
 		"",
 	)

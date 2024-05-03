@@ -16,6 +16,7 @@ package swo
 
 import (
 	"context"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
@@ -23,7 +24,8 @@ import (
 )
 
 func TestLoggableTraceIDFromContext(t *testing.T) {
-	oboetestutils.UpdateSetting(oboetestutils.DefaultST)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 
 	ctx := context.Background()
 	lt := LoggableTrace(ctx)

@@ -21,6 +21,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/exporter"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
@@ -88,13 +89,17 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}, err
 	}
 	registry := metrics.NewLegacyRegistry()
-	_reporter, err := reporter.Start(resrc, registry)
+	o := oboe.NewOboe()
+	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
 		return func() {}, err
 	}
 
 	exprtr := exporter.NewExporter(_reporter)
-	smplr := sampler.NewSampler()
+	smplr, err := sampler.NewSampler(o)
+	if err != nil {
+		return func() {}, err
+	}
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
