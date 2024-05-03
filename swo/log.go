@@ -17,6 +17,7 @@ package swo
 import (
 	"context"
 	"fmt"
+	"github.com/solarwinds/apm-go/internal/state"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,10 +32,11 @@ type LoggableTraceContext struct {
 // Example: trace_id=d4261c67357f99f39958b14f99da7e6c span_id=1280450002ba77b3 trace_flags=01 resource.service.name=my-service
 func (l LoggableTraceContext) String() string {
 	return fmt.Sprintf(
-		"trace_id=%s span_id=%s trace_flags=%s",
+		"trace_id=%s span_id=%s trace_flags=%s resource.service.name=%s",
 		l.TraceID,
 		l.SpanID,
 		l.TraceFlags,
+		l.ServiceName,
 	)
 }
 
@@ -51,10 +53,9 @@ func LoggableTrace(ctx context.Context) LoggableTraceContext {
 // LoggableTraceFromSpanContext returns a LoggableTraceContext from a given SpanContext and the configured service name
 func LoggableTraceFromSpanContext(ctx trace.SpanContext) LoggableTraceContext {
 	return LoggableTraceContext{
-		TraceID:    ctx.TraceID(),
-		SpanID:     ctx.SpanID(),
-		TraceFlags: ctx.TraceFlags(),
-		// TODO FIXME
-		//ServiceName: reporter.GetServiceName(),
+		TraceID:     ctx.TraceID(),
+		SpanID:      ctx.SpanID(),
+		TraceFlags:  ctx.TraceFlags(),
+		ServiceName: state.GetServiceName(),
 	}
 }

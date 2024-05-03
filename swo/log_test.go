@@ -16,24 +16,23 @@ package swo
 
 import (
 	"context"
-	"github.com/solarwinds/apm-go/internal/oboe"
-	"github.com/solarwinds/apm-go/internal/oboetestutils"
+	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/trace"
 	"testing"
 )
 
 func TestLoggableTraceIDFromContext(t *testing.T) {
-	o := oboe.NewOboe()
-	oboetestutils.AddDefaultSetting(o)
-
+	prev := state.GetServiceName()
+	state.SetServiceName("test-service")
+	defer state.SetServiceName(prev)
 	ctx := context.Background()
 	lt := LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:    trace.TraceID{},
-		SpanID:     trace.SpanID{},
-		TraceFlags: 0,
-		//		ServiceName: "test-reporter-service",
+		TraceID:     trace.TraceID{},
+		SpanID:      trace.SpanID{},
+		TraceFlags:  0,
+		ServiceName: "test-service",
 	}, lt)
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x22},
@@ -42,20 +41,20 @@ func TestLoggableTraceIDFromContext(t *testing.T) {
 	})
 	require.False(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=00000000000000000000000000000000 span_id=0000000000000000 trace_flags=00",
+		"trace_id=00000000000000000000000000000000 span_id=0000000000000000 trace_flags=00 resource.service.name=test-service",
 		lt.String())
 
 	ctx = trace.ContextWithSpanContext(ctx, sc)
 	lt = LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:    sc.TraceID(),
-		SpanID:     sc.SpanID(),
-		TraceFlags: sc.TraceFlags(),
-		//ServiceName: "test-reporter-service",
+		TraceID:     sc.TraceID(),
+		SpanID:      sc.SpanID(),
+		TraceFlags:  sc.TraceFlags(),
+		ServiceName: "test-service",
 	}, lt)
 	require.True(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=22000000000000000000000000000000 span_id=1100000000000000 trace_flags=01",
+		"trace_id=22000000000000000000000000000000 span_id=1100000000000000 trace_flags=01 resource.service.name=test-service",
 		lt.String())
 
 	sc = trace.NewSpanContext(trace.SpanContextConfig{
@@ -66,13 +65,13 @@ func TestLoggableTraceIDFromContext(t *testing.T) {
 	ctx = trace.ContextWithSpanContext(ctx, sc)
 	lt = LoggableTrace(ctx)
 	require.Equal(t, LoggableTraceContext{
-		TraceID:    sc.TraceID(),
-		SpanID:     sc.SpanID(),
-		TraceFlags: sc.TraceFlags(),
-		//ServiceName: "test-reporter-service",
+		TraceID:     sc.TraceID(),
+		SpanID:      sc.SpanID(),
+		TraceFlags:  sc.TraceFlags(),
+		ServiceName: "test-service",
 	}, lt)
 	require.True(t, lt.IsValid())
 	require.Equal(t,
-		"trace_id=33000000000000000000000000000000 span_id=aa00000000000000 trace_flags=01",
+		"trace_id=33000000000000000000000000000000 span_id=aa00000000000000 trace_flags=01 resource.service.name=test-service",
 		lt.String())
 }

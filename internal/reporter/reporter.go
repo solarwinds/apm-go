@@ -23,6 +23,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/rand"
+	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/otel/attribute"
@@ -92,6 +93,7 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
+		state.SetServiceName(otelServiceName)
 	}
 	if rt == "none" {
 		return newNullReporter()
