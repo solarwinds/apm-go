@@ -15,6 +15,7 @@
 package metrics
 
 import (
+	"errors"
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
@@ -105,7 +106,7 @@ func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueu
 	appendHostId(bbuf)
 	bbuf.AppendInt32("MetricsFlushInterval", flushInterval)
 
-	bbuf.AppendInt64("Timestamp_u", int64(time.Now().UnixNano()/1000))
+	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
 
 	// measurements
 	// ==========================================
@@ -215,7 +216,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
 	}
 
 	r.apmHistograms.recordHistogram("", duration)
-	if err := s.processMeasurements(metricName, tagsList, r.apmMetrics); err == ErrExceedsMetricsCountLimit {
+	if err := s.processMeasurements(metricName, tagsList, r.apmMetrics); errors.Is(err, ErrExceedsMetricsCountLimit) {
 		if isAppoptics {
 			s.Transaction = OtherTransactionName
 			tagsList = s.appOpticsTagsList()

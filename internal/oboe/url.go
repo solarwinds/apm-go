@@ -59,7 +59,7 @@ func (c *urlCache) getURLTrace(url string) (TracingMode, error) {
 		return TraceUnknown, err
 	}
 
-	return NewTracingMode(config.TracingMode(string(traceStr))), nil
+	return NewTracingMode(config.TracingMode(traceStr)), nil
 }
 
 // urlFilter defines a URL filter

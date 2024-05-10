@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/config"
@@ -45,7 +46,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
@@ -198,7 +198,7 @@ func newGrpcConnection(name string, target string, opts ...GrpcConnOpt) (*grpcCo
 
 	err := gc.connect()
 	if err != nil {
-		return nil, errors.Wrap(err, name)
+		return nil, errors.Join(fmt.Errorf("failed to connect to %s", name), err)
 	}
 	return gc, nil
 }
@@ -523,7 +523,7 @@ func (c *grpcConnection) connect() error {
 		ProxyCertPath: c.proxyTLSCertPath,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to connect to target")
+		return errors.Join(fmt.Errorf("failed to connect to %s", c.address), err)
 	}
 
 	// close the old connection
@@ -635,7 +635,7 @@ func (r *grpcReporter) periodicTasks() {
 			// set up ticker for next round
 			r.conn.resetPing()
 			go func() {
-				if r.conn.ping(r.done, r.serviceKey.Load()) == errInvalidServiceKey {
+				if errors.Is(r.conn.ping(r.done, r.serviceKey.Load()), errInvalidServiceKey) {
 					r.ShutdownNow()
 				}
 			}()
@@ -1076,8 +1076,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 		if c.isActive() {
 			ctx, cancel := context.WithTimeout(context.Background(), grpcCtxTimeout)
 			if m.RequestSize() > c.maxReqBytes {
-				v := fmt.Sprintf("%d|%d", m.RequestSize(), c.maxReqBytes)
-				err = errors.Wrap(errRequestTooBig, v)
+				err = fmt.Errorf("rpc request exceeds byte limit; request size: %d, max size: %d", m.RequestSize(), c.maxReqBytes)
 			} else {
 				if m.ServiceKey() != "" {
 					err = m.Call(ctx, c.client)
@@ -1142,7 +1141,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 					// a proper redirect shouldn't cause delays
 					retriesNum = 0
 				} else {
-					log.Warning(errors.Wrap(errInvalidRedirectTarget, c.name))
+					log.Warning(fmt.Errorf("redirection target is empty for %s", c.name))
 				}
 			default:
 				log.Info(m.CallSummary())
@@ -1157,7 +1156,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 
 		if !m.RetryOnErr(err) {
 			if err != nil {
-				return errors.Wrap(errNoRetryOnErr, err.Error())
+				return errors.Join(errNoRetryOnErr, err)
 			} else {
 				return errNoRetryOnErr
 			}
@@ -1276,7 +1275,7 @@ func (d *DefaultDialer) Dial(p DialParams) (*grpc.ClientConn, error) {
 	} else {
 		certPool, err = x509.SystemCertPool()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to obtain system cert pool")
+			return nil, errors.Join(errors.New("unable to obtain system cert pool"), err)
 		}
 	}
 
@@ -1317,13 +1316,13 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 
 		proxy, err := url.Parse(p.Proxy)
 		if err != nil {
-			return nil, errors.Wrap(err, "error parsing the proxy url")
+			return nil, errors.Join(errors.New("error parsing the proxy url"), err)
 		}
 
 		if proxy.Scheme == "https" {
 			cert, err := os.ReadFile(p.ProxyCertPath)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to load proxy cert")
+				return nil, errors.Join(errors.New("failed to load proxy cert"), err)
 			}
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(cert)
@@ -1332,12 +1331,12 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 			tlsConfig := tls.Config{RootCAs: caCertPool}
 			conn, err = tls.Dial("tcp", proxy.Host, &tlsConfig)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to dial the https proxy")
+				return nil, errors.Join(errors.New("failed to dial the https proxy"), err)
 			}
 		} else if proxy.Scheme == "http" {
 			conn, err = (&net.Dialer{}).DialContext(ctx, "tcp", proxy.Host)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to dial the http proxy")
+				return nil, errors.Join(errors.New("failed to dial the http proxy"), err)
 			}
 		} else {
 			return nil, fmt.Errorf("proxy scheme not supported: %s", proxy.Scheme)

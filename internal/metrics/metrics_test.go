@@ -130,10 +130,10 @@ func TestAppendMACAddresses(t *testing.T) {
 func TestAddMetricsValue(t *testing.T) {
 	index := 0
 	bbuf := bson.NewBuffer()
-	addMetricsValue(bbuf, &index, "name1", int(111))
+	addMetricsValue(bbuf, &index, "name1", 111)
 	addMetricsValue(bbuf, &index, "name2", int64(222))
 	addMetricsValue(bbuf, &index, "name3", float32(333.33))
-	addMetricsValue(bbuf, &index, "name4", float64(444.44))
+	addMetricsValue(bbuf, &index, "name4", 444.44)
 	addMetricsValue(bbuf, &index, "name5", "hello")
 	bbuf.Finish()
 	m, err := bsonToMap(bbuf)
@@ -142,7 +142,7 @@ func TestAddMetricsValue(t *testing.T) {
 	assert.NotZero(t, m["0"])
 	m2 := m["0"].(map[string]interface{})
 	assert.Equal(t, "name1", m2["name"])
-	assert.Equal(t, int(111), m2["value"])
+	assert.Equal(t, 111, m2["value"])
 
 	assert.NotZero(t, m["1"])
 	m2 = m["1"].(map[string]interface{})
@@ -153,12 +153,12 @@ func TestAddMetricsValue(t *testing.T) {
 	m2 = m["2"].(map[string]interface{})
 	assert.Equal(t, "name3", m2["name"])
 	f64 := m2["value"].(float64)
-	assert.Equal(t, float64(333.33), round(f64, .5, 2))
+	assert.Equal(t, 333.33, round(f64, .5, 2))
 
 	assert.NotZero(t, m["3"])
 	m2 = m["3"].(map[string]interface{})
 	assert.Equal(t, "name4", m2["name"])
-	assert.Equal(t, float64(444.44), m2["value"])
+	assert.Equal(t, 444.44, m2["value"])
 
 	assert.NotZero(t, m["4"])
 	m2 = m["4"].(map[string]interface{})
@@ -427,12 +427,12 @@ func TestGenerateMetricsMessage(t *testing.T) {
 			{"Load1", float64(1)},
 			{"TotalRAM", int64(1)},
 			{"FreeRAM", int64(1)},
-			{"ProcessRAM", int(1)},
+			{"ProcessRAM", 1},
 		}...)
 	}
 	testCases = append(testCases, []testCase{
 		// runtime
-		{"trace.go.runtime.NumGoroutine", int(1)},
+		{"trace.go.runtime.NumGoroutine", 1},
 		{"trace.go.runtime.NumCgoCall", int64(1)},
 		// gc
 		{"trace.go.gc.LastGC", int64(1)},
