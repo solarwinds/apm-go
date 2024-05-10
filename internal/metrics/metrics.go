@@ -20,11 +20,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/hdrhist"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 	"runtime"
 	"sort"
 	"strconv"
@@ -91,40 +87,6 @@ var (
 	// ErrMetricsWithNonPositiveCount indicates the count is negative or zero
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
-
-type registry struct {
-	apmHistograms *histograms
-	apmMetrics    *measurements
-	customMetrics *measurements
-}
-
-func NewLegacyRegistry() LegacyRegistry {
-	return &registry{
-		apmHistograms: &histograms{
-			histograms: make(map[string]*histogram),
-			precision:  getPrecision(),
-		},
-		apmMetrics:    newMeasurements(false, metricsTransactionsMaxDefault),
-		customMetrics: newMeasurements(true, metricsCustomMetricsMaxDefault),
-	}
-}
-
-type MetricRegistry interface {
-	RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool)
-}
-
-type LegacyRegistry interface {
-	MetricRegistry
-	BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-		rcs map[string]*RateCounts, runtimeMetrics bool) []byte
-	BuildCustomMetricsMessage(flushInterval int32) []byte
-	ApmMetricsCap() int32
-	SetApmMetricsCap(int32)
-	CustomMetricsCap() int32
-	SetCustomMetricsCap(int32)
-}
-
-var _ LegacyRegistry = &registry{}
 
 // SpanMessage defines a span message
 type SpanMessage interface {
@@ -305,35 +267,6 @@ func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCount
 	addMetricsValue(bbuf, index, TriggeredTraceCount, ttTraced)
 }
 
-// BuildCustomMetricsMessage creates and encodes the custom metrics message.
-func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
-	m := r.customMetrics.CopyAndReset(flushInterval)
-	if m == nil {
-		return nil
-	}
-	bbuf := bson.NewBuffer()
-	if m.IsCustom {
-		bbuf.AppendBool("IsCustom", m.IsCustom)
-	}
-
-	appendHostId(bbuf)
-	bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
-
-	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
-
-	start := bbuf.AppendStartArray("measurements")
-	index := 0
-
-	for _, measurement := range m.m {
-		addMeasurementToBSON(bbuf, &index, measurement)
-	}
-
-	bbuf.AppendFinishObject(start)
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
-}
-
 // SetCap sets the maximum number of distinct metrics allowed.
 func (m *measurements) SetCap(cap int32) {
 	m.txnMap.SetCap(cap)
@@ -431,79 +364,6 @@ func addRuntimeMetrics(bbuf *bson.Buffer, index *int) {
 	addMetricsValue(bbuf, index, "trace.go.memory.HeapObjects", int64(mem.HeapObjects))
 	addMetricsValue(bbuf, index, "trace.go.memory.StackInuse", int64(mem.StackInuse))
 	addMetricsValue(bbuf, index, "trace.go.memory.StackSys", int64(mem.StackSys))
-}
-
-// BuildBuiltinMetricsMessage generates a metrics message in BSON format with all the currently available values
-// metricsFlushInterval	current metrics flush interval
-//
-// return				metrics message in BSON format
-func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
-	var m = r.apmMetrics.CopyAndReset(flushInterval)
-	if m == nil {
-		return nil
-	}
-
-	bbuf := bson.NewBuffer()
-
-	appendHostId(bbuf)
-	bbuf.AppendInt32("MetricsFlushInterval", flushInterval)
-
-	bbuf.AppendInt64("Timestamp_u", int64(time.Now().UnixNano()/1000))
-
-	// measurements
-	// ==========================================
-	start := bbuf.AppendStartArray("measurements")
-	index := 0
-
-	// request counters
-	addRequestCounters(bbuf, &index, rcs)
-
-	// Queue states
-	if qs != nil {
-		addMetricsValue(bbuf, &index, "NumSent", qs.numSent)
-		addMetricsValue(bbuf, &index, "NumOverflowed", qs.numOverflowed)
-		addMetricsValue(bbuf, &index, "NumFailed", qs.numFailed)
-		addMetricsValue(bbuf, &index, "TotalEvents", qs.totalEvents)
-		addMetricsValue(bbuf, &index, "QueueLargest", qs.queueLargest)
-	}
-
-	addHostMetrics(bbuf, &index)
-
-	if runtimeMetrics {
-		// runtime stats
-		addRuntimeMetrics(bbuf, &index)
-	}
-
-	for _, measurement := range m.m {
-		addMeasurementToBSON(bbuf, &index, measurement)
-	}
-
-	bbuf.AppendFinishObject(start)
-	// ==========================================
-
-	// histograms
-	// ==========================================
-	start = bbuf.AppendStartArray("histograms")
-	index = 0
-
-	r.apmHistograms.lock.Lock()
-
-	for _, h := range r.apmHistograms.histograms {
-		addHistogramToBSON(bbuf, &index, h)
-	}
-	r.apmHistograms.histograms = make(map[string]*histogram) // clear histograms
-
-	r.apmHistograms.lock.Unlock()
-	bbuf.AppendFinishObject(start)
-	// ==========================================
-
-	if m.txnMap.isOverflowed() {
-		bbuf.AppendBool("TransactionNameOverflow", true)
-	}
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
 }
 
 // append host ID to a BSON buffer
@@ -840,158 +700,4 @@ func (s *EventQueueStats) CopyAndReset() *EventQueueStats {
 	c.queueLargest = atomic.SwapInt64(&s.queueLargest, 0)
 
 	return c
-}
-
-func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, rate int, source int) []byte {
-	bbuf := bson.NewBuffer()
-
-	bbuf.AppendInt64("Duration", int64(span.Duration/time.Microsecond))
-	bbuf.AppendBool("HasError", span.HasError)
-	bbuf.AppendInt("SampleRate", rate)
-	bbuf.AppendInt("SampleSource", source)
-	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
-	bbuf.AppendString("TransactionName", span.Transaction)
-
-	if span.Method != "" {
-		bbuf.AppendString("Method", span.Method)
-	}
-	if span.Status != 0 {
-		bbuf.AppendInt("Status", span.Status)
-	}
-
-	// add request counters
-	start := bbuf.AppendStartArray("TraceDecision")
-
-	var sampled, limited, traced, through, ttTraced int64
-
-	for _, rc := range rcs {
-		sampled += rc.sampled
-		limited += rc.limited
-		traced += rc.traced
-		through += rc.through
-	}
-
-	if relaxed, ok := rcs[RCRelaxedTriggerTrace]; ok {
-		ttTraced += relaxed.Traced()
-	}
-	if strict, ok := rcs[RCStrictTriggerTrace]; ok {
-		ttTraced += strict.Traced()
-	}
-
-	var i = 0
-	if sampled != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Sample")
-		i++
-	}
-	if traced != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Trace")
-		i++
-	}
-	if limited != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "TokenBucketExhaustion")
-		i++
-	}
-	if through != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "ThroughTrace")
-		i++
-	}
-	if ttTraced != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Triggered")
-	}
-
-	bbuf.AppendFinishObject(start)
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
-}
-
-// -- otel --
-
-func (r *registry) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-	method := ""
-	status := int64(0)
-	isError := span.Status().Code == codes.Error
-	attrs := span.Attributes()
-	swoTags := make(map[string]string)
-	httpRoute := ""
-	for _, attr := range attrs {
-		if attr.Key == semconv.HTTPMethodKey {
-			method = attr.Value.AsString()
-		} else if attr.Key == semconv.HTTPStatusCodeKey {
-			status = attr.Value.AsInt64()
-		} else if attr.Key == semconv.HTTPRouteKey {
-			httpRoute = attr.Value.AsString()
-		}
-	}
-	isHttp := span.SpanKind() == trace.SpanKindServer && method != ""
-
-	if isHttp {
-		if status > 0 {
-			swoTags["http.status_code"] = strconv.FormatInt(status, 10)
-			if !isError && status/100 == 5 {
-				isError = true
-			}
-		}
-		swoTags["http.method"] = method
-	}
-
-	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils.GetTransactionName(span)
-	swoTags["sw.transaction"] = txnName
-
-	duration := span.EndTime().Sub(span.StartTime())
-	s := &HTTPSpanMessage{
-		BaseSpanMessage: BaseSpanMessage{Duration: duration, HasError: isError},
-		Transaction:     txnName,
-		Path:            httpRoute,
-		Status:          int(status),
-		Host:            "", // intentionally not set
-		Method:          method,
-	}
-
-	var tagsList []map[string]string
-	var metricName string
-	if !isAppoptics {
-		tagsList = []map[string]string{swoTags}
-		metricName = responseTime
-	} else {
-		tagsList = s.appOpticsTagsList()
-		metricName = transactionResponseTime
-	}
-
-	r.apmHistograms.recordHistogram("", duration)
-	if err := s.processMeasurements(metricName, tagsList, r.apmMetrics); err == ErrExceedsMetricsCountLimit {
-		if isAppoptics {
-			s.Transaction = OtherTransactionName
-			tagsList = s.appOpticsTagsList()
-		} else {
-			tagsList[0]["sw.transaction"] = OtherTransactionName
-		}
-		err := s.processMeasurements(metricName, tagsList, r.apmMetrics)
-		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
-		// which is handled above, and the reason we retry here.
-		if err != nil {
-			log.Errorf("Failed to process messages", err)
-		}
-	} else {
-		// We didn't hit ErrExceedsMetricsCountLimit
-		r.apmHistograms.recordHistogram(txnName, duration)
-	}
-
-}
-
-func (r *registry) ApmMetricsCap() int32 {
-	return r.apmMetrics.Cap()
-}
-
-func (r *registry) SetApmMetricsCap(cap int32) {
-	r.apmMetrics.SetCap(cap)
-}
-
-func (r *registry) CustomMetricsCap() int32 {
-	return r.customMetrics.Cap()
-}
-
-func (r *registry) SetCustomMetricsCap(cap int32) {
-	r.customMetrics.SetCap(cap)
 }
