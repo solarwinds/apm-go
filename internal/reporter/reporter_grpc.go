@@ -783,14 +783,11 @@ func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
 
 		if len(messages) != 0 {
 			method := newPostEventsMethod(r.serviceKey.Load(), messages)
-			err := r.conn.InvokeRPC(r.done, method)
-
-			switch err {
-			case errInvalidServiceKey:
-				r.ShutdownNow()
-			case nil:
+			if err := r.conn.InvokeRPC(r.done, method); err == nil {
 				log.Info(method.CallSummary())
-			default:
+			} else if errors.Is(err, errInvalidServiceKey) {
+				r.ShutdownNow()
+			} else {
 				log.Warningf("eventBatchSender: %s", err)
 			}
 		}
@@ -845,13 +842,11 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 
 	method := newPostMetricsMethod(r.serviceKey.Load(), msgs)
 
-	err := r.conn.InvokeRPC(r.done, method)
-	switch err {
-	case errInvalidServiceKey:
-		r.ShutdownNow()
-	case nil:
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		log.Info(method.CallSummary())
-	default:
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
+	} else {
 		log.Warningf("sendMetrics: %s", err)
 	}
 }
@@ -865,19 +860,16 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 	defer func() { ready <- true }()
 
 	method := newGetSettingsMethod(r.serviceKey.Load())
-	err := r.conn.InvokeRPC(r.done, method)
-
-	switch err {
-	case errInvalidServiceKey:
-		r.ShutdownNow()
-	case nil:
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info
 		if method.Resp.Warning != "" {
 			logger = log.Warning
 		}
 		logger(method.CallSummary())
 		r.updateSettings(method.Resp)
-	default:
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
+	} else {
 		log.Infof("getSettings: %s", err)
 	}
 }
@@ -974,14 +966,11 @@ func (r *grpcReporter) statusSender() {
 			}
 		}
 		method := newPostStatusMethod(r.serviceKey.Load(), messages)
-		err := r.conn.InvokeRPC(r.done, method)
-
-		switch err {
-		case errInvalidServiceKey:
-			r.ShutdownNow()
-		case nil:
+		if err := r.conn.InvokeRPC(r.done, method); err == nil {
 			log.Info(method.CallSummary())
-		default:
+		} else if errors.Is(err, errInvalidServiceKey) {
+			r.ShutdownNow()
+		} else {
 			log.Infof("statusSender: %s", err)
 		}
 	}
