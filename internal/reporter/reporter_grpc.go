@@ -921,25 +921,6 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 
 // ========================= Status Message Handling =============================
 
-// TODO use something similar for init message
-//func (r *grpcReporter) reportStatus(ctx *oboeContext, e *event) error {
-//	if r.Closed() {
-//		return ErrReporterIsClosed
-//	}
-//	if err := prepareEvent(ctx, e); err != nil {
-//		// don't continue if preparation failed
-//		return err
-//	}
-//
-//	select {
-//	case r.statusMessages <- (*e).bbuf.GetBuf():
-//		return nil
-//	default:
-//		return errors.New("status message queue is full")
-//	}
-//
-//}
-
 // long-running goroutine that listens on the status message channel, collects all messages
 // on that channel and attempts to send them to the collector using the GRPC method PostStatus()
 func (r *grpcReporter) statusSender() {
