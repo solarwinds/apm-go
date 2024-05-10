@@ -992,9 +992,6 @@ var (
 	// dropped.
 	errTooManyRedirections = errors.New("too many redirections")
 
-	// The destination returned by the collector is not valid.
-	errInvalidRedirectTarget = errors.New("redirection target is empty.")
-
 	// the operation or loop cannot continue as the reporter is exiting.
 	errReporterExiting = errors.New("reporter is exiting")
 
