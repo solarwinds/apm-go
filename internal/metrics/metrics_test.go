@@ -278,14 +278,14 @@ func TestAddMeasurementToBSON(t *testing.T) {
 	tags2 := make(map[string]string)
 	tags2[veryLongTagName] = veryLongTagValue
 
-	measurement1 := &Measurement{
+	measurement1 := &measurement{
 		Name:      "name1",
 		Tags:      tags1,
 		Count:     45,
 		Sum:       592.42,
 		ReportSum: false,
 	}
-	measurement2 := &Measurement{
+	measurement2 := &measurement{
 		Name:      "name2",
 		Tags:      tags2,
 		Count:     777,

@@ -48,7 +48,6 @@ const (
 
 // Special transaction names
 const (
-	CustomTransactionNamePrefix  = "custom"
 	OtherTransactionName         = "other"
 	MetricIDSeparator            = "&"
 	TagsKVSeparator              = ":"
@@ -109,8 +108,8 @@ type HTTPSpanMessage struct {
 	Method      string // HTTP method (e.g. GET, POST, ...)
 }
 
-// Measurement is a single measurement for reporting
-type Measurement struct {
+// measurement is a single measurement for reporting
+type measurement struct {
 	Name      string            // the name of the measurement (e.g. TransactionResponseTime)
 	Tags      map[string]string // map of KVs. It may be nil
 	Count     int               // count of this measurement
@@ -120,19 +119,19 @@ type Measurement struct {
 
 // measurements are a collection of mutex-protected measurements
 type measurements struct {
-	m             map[string]*Measurement
+	m             map[string]*measurement
 	txnMap        *txnMap
-	IsCustom      bool
-	FlushInterval int32
+	isCustom      bool
+	flushInterval int32
 	sync.Mutex    // protect access to this collection
 }
 
 func newMeasurements(isCustom bool, maxCount int32) *measurements {
 	return &measurements{
-		m:             make(map[string]*Measurement),
+		m:             make(map[string]*measurement),
 		txnMap:        newTxnMap(maxCount),
-		IsCustom:      isCustom,
-		FlushInterval: ReportingIntervalDefault,
+		isCustom:      isCustom,
+		flushInterval: ReportingIntervalDefault,
 	}
 }
 
@@ -283,9 +282,9 @@ func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 	defer m.Unlock()
 
 	clone := m.Clone()
-	m.m = make(map[string]*Measurement)
+	m.m = make(map[string]*measurement)
 	m.txnMap.reset()
-	m.FlushInterval = flushInterval
+	m.flushInterval = flushInterval
 	return clone
 }
 
@@ -294,8 +293,8 @@ func (m *measurements) Clone() *measurements {
 	return &measurements{
 		m:             m.m,
 		txnMap:        m.txnMap.clone(),
-		IsCustom:      m.IsCustom,
-		FlushInterval: m.FlushInterval,
+		isCustom:      m.isCustom,
+		flushInterval: m.flushInterval,
 	}
 }
 
@@ -537,11 +536,11 @@ func (m *measurements) record(name string, tagsList []map[string]string,
 		idTagsMap[id] = tags
 	}
 
-	var me *Measurement
+	var me *measurement
 	var ok bool
 
 	// create a new measurement if it doesn't exist
-	// the lock protects both measurements and Measurement
+	// the lock protects both measurements and measurement
 	m.Lock()
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
@@ -549,7 +548,7 @@ func (m *measurements) record(name string, tagsList []map[string]string,
 			// N.B. This overflow logic is a bit cumbersome and is ripe for a rewrite
 			if strings.Contains(id, otherTagExistsVal) ||
 				m.txnMap.isWithinLimit(id) {
-				me = &Measurement{
+				me = &measurement{
 					Name:      name,
 					Tags:      tags,
 					ReportSum: reportValue,
@@ -612,7 +611,7 @@ func (hi *histograms) recordHistogram(name string, duration time.Duration) {
 // bbuf		the BSON buffer to append the metric to
 // index	a running integer (0,1,2,...) which is needed for BSON arrays
 // m		measurement to be added
-func addMeasurementToBSON(bbuf *bson.Buffer, index *int, m *Measurement) {
+func addMeasurementToBSON(bbuf *bson.Buffer, index *int, m *measurement) {
 	start := bbuf.AppendStartObject(strconv.Itoa(*index))
 
 	bbuf.AppendString("name", m.Name)

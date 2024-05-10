@@ -67,12 +67,12 @@ func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
 		return nil
 	}
 	bbuf := bson.NewBuffer()
-	if m.IsCustom {
-		bbuf.AppendBool("IsCustom", m.IsCustom)
+	if m.isCustom {
+		bbuf.AppendBool("isCustom", m.isCustom)
 	}
 
 	appendHostId(bbuf)
-	bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
+	bbuf.AppendInt32("MetricsFlushInterval", m.flushInterval)
 
 	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
 
