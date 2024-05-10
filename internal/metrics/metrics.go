@@ -16,6 +16,7 @@ package metrics
 
 import (
 	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/hdrhist"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
@@ -24,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"os"
 	"runtime"
 	"sort"
 	"strconv"
@@ -96,24 +96,6 @@ type registry struct {
 	apmHistograms *histograms
 	apmMetrics    *measurements
 	customMetrics *measurements
-}
-
-func getPrecision() int {
-	pEnv := "SW_APM_HISTOGRAM_PRECISION"
-	precision := os.Getenv(pEnv)
-	if precision != "" {
-		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
-		if p, err := strconv.Atoi(precision); err == nil {
-			if p >= 0 && p <= 5 {
-				return p
-			} else {
-				log.Errorf("value of %v must be between 0 and 5: %v", pEnv, precision)
-			}
-		} else {
-			log.Errorf("value of %v is not an int: %v", pEnv, precision)
-		}
-	}
-	return metricsHistPrecisionDefault
 }
 
 func NewLegacyRegistry() LegacyRegistry {
@@ -189,6 +171,15 @@ func NewMeasurements(isCustom bool, maxCount int32) *measurements {
 		transMap:      NewTransMap(maxCount),
 		IsCustom:      isCustom,
 		FlushInterval: ReportingIntervalDefault,
+	}
+}
+
+func getPrecision() int {
+	if precision := config.GetPrecision(); precision >= 0 && precision <= 5 {
+		return precision
+	} else {
+		log.Errorf("value of config.Precision or SW_APM_HISTOGRAM_PRECISION must be between 0 and 5: %v", precision)
+		return metricsHistPrecisionDefault
 	}
 }
 
