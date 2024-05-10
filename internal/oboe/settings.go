@@ -147,6 +147,8 @@ const (
 )
 
 // setting flags
+//
+//goland:noinspection GoUnusedConst
 const (
 	FlagOk                  settingFlag = 0x0
 	FlagInvalid             settingFlag = 1 << FlagInvalidOffset

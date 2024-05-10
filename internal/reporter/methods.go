@@ -16,10 +16,10 @@ package reporter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 )
 
@@ -145,7 +145,7 @@ func (pe *PostEventsMethod) CallSummary() string {
 
 // RetryOnErr denotes if retry is needed for this RPC method
 func (pe *PostEventsMethod) RetryOnErr(err error) bool {
-	return errRequestTooBig != errors.Cause(err)
+	return !errors.Is(err, errRequestTooBig)
 }
 
 func (pe *PostEventsMethod) ServiceKey() string {
@@ -230,7 +230,7 @@ func (pm *PostMetricsMethod) CallSummary() string {
 
 // RetryOnErr denotes if retry is needed for this RPC method
 func (pm *PostMetricsMethod) RetryOnErr(err error) bool {
-	return errRequestTooBig != errors.Cause(err)
+	return !errors.Is(err, errRequestTooBig)
 }
 
 func (pm *PostMetricsMethod) ServiceKey() string {
@@ -307,7 +307,7 @@ func (ps *PostStatusMethod) Call(ctx context.Context,
 
 // RetryOnErr denotes if retry is needed for this RPC method
 func (ps *PostStatusMethod) RetryOnErr(err error) bool {
-	return errRequestTooBig != errors.Cause(err)
+	return !errors.Is(err, errRequestTooBig)
 }
 
 func (ps *PostStatusMethod) ServiceKey() string {
