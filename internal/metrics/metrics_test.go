@@ -207,24 +207,8 @@ func TestGetTransactionFromURL(t *testing.T) {
 	}
 }
 
-func TestTransMap(t *testing.T) {
-	m := NewTransMap(3)
-	assert.EqualValues(t, 3, m.Cap())
-	assert.True(t, m.IsWithinLimit("t1"))
-	assert.True(t, m.IsWithinLimit("t2"))
-	assert.True(t, m.IsWithinLimit("t3"))
-	assert.False(t, m.IsWithinLimit("t4"))
-	assert.True(t, m.IsWithinLimit("t2"))
-	assert.True(t, m.Overflow())
-
-	m.SetCap(4)
-	m.Reset()
-	assert.EqualValues(t, 4, m.Cap())
-	assert.False(t, m.Overflow())
-}
-
 func TestRecordMeasurement(t *testing.T) {
-	var me = NewMeasurements(false, 100)
+	var me = newMeasurements(false, 100)
 
 	t1 := make(map[string]string)
 	t1["t1"] = "tag1"
@@ -485,7 +469,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 
 	reg = NewLegacyRegistry().(*registry)
 	for i := 0; i <= metricsTransactionsMaxDefault; i++ {
-		if !reg.apmMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
+		if !reg.apmMetrics.txnMap.isWithinLimit("Transaction-" + strconv.Itoa(i)) {
 			break
 		}
 	}

@@ -104,8 +104,8 @@ func NewLegacyRegistry() LegacyRegistry {
 			histograms: make(map[string]*histogram),
 			precision:  getPrecision(),
 		},
-		apmMetrics:    NewMeasurements(false, metricsTransactionsMaxDefault),
-		customMetrics: NewMeasurements(true, metricsCustomMetricsMaxDefault),
+		apmMetrics:    newMeasurements(false, metricsTransactionsMaxDefault),
+		customMetrics: newMeasurements(true, metricsCustomMetricsMaxDefault),
 	}
 }
 
@@ -159,16 +159,16 @@ type Measurement struct {
 // measurements are a collection of mutex-protected measurements
 type measurements struct {
 	m             map[string]*Measurement
-	transMap      *TransMap
+	txnMap        *txnMap
 	IsCustom      bool
 	FlushInterval int32
 	sync.Mutex    // protect access to this collection
 }
 
-func NewMeasurements(isCustom bool, maxCount int32) *measurements {
+func newMeasurements(isCustom bool, maxCount int32) *measurements {
 	return &measurements{
 		m:             make(map[string]*Measurement),
-		transMap:      NewTransMap(maxCount),
+		txnMap:        newTxnMap(maxCount),
 		IsCustom:      isCustom,
 		FlushInterval: ReportingIntervalDefault,
 	}
@@ -276,102 +276,6 @@ func (c *RateCounts) Through() int64 {
 	return atomic.LoadInt64(&c.through)
 }
 
-// TransMap records the received transaction names in a metrics report cycle. It will refuse
-// new transaction names if reaching the capacity.
-type TransMap struct {
-	// The map to store transaction names
-	transactionNames map[string]struct{}
-	// The maximum capacity of the transaction map. The value is got from server settings which
-	// is updated periodically.
-	// The default value metricsTransactionsMaxDefault is used when a new TransMap
-	// is initialized.
-	currCap int32
-	// The maximum capacity which is set by the server settings. This update usually happens in
-	// between two metrics reporting cycles. To avoid affecting the map capacity of the current reporting
-	// cycle, the new capacity got from the server is stored in nextCap and will only be flushed to currCap
-	// when the Reset() is called.
-	nextCap int32
-	// Whether there is an overflow. Overflow means the user tried to store more transaction names
-	// than the capacity defined by settings.
-	// This flag is cleared in every metrics cycle.
-	overflow bool
-	// The mutex to protect this whole struct. If the performance is a concern we should use separate
-	// mutexes for each of the fields. But for now it seems not necessary.
-	mutex sync.Mutex
-}
-
-// NewTransMap initializes a new TransMap struct
-func NewTransMap(cap int32) *TransMap {
-	return &TransMap{
-		transactionNames: make(map[string]struct{}),
-		currCap:          cap,
-		nextCap:          cap,
-		overflow:         false,
-	}
-}
-
-// SetCap sets the capacity of the transaction map
-func (t *TransMap) SetCap(cap int32) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.nextCap = cap
-}
-
-// Cap returns the current capacity
-func (t *TransMap) Cap() int32 {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.currCap
-}
-
-// Reset resets the transaction map to a initialized state. The new capacity got from the
-// server will be used in next metrics reporting cycle after reset.
-func (t *TransMap) Reset() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.transactionNames = make(map[string]struct{})
-	t.currCap = t.nextCap
-	t.overflow = false
-}
-
-// Clone returns a shallow copy
-func (t *TransMap) Clone() *TransMap {
-	return &TransMap{
-		transactionNames: t.transactionNames,
-		currCap:          t.currCap,
-		nextCap:          t.nextCap,
-		overflow:         t.overflow,
-	}
-}
-
-// IsWithinLimit checks if the transaction name is stored in the TransMap. It will store this new
-// transaction name and return true if not stored before and the map isn't full, or return false
-// otherwise.
-func (t *TransMap) IsWithinLimit(name string) bool {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	if _, ok := t.transactionNames[name]; !ok {
-		// only record if we haven't reached the limits yet
-		if int32(len(t.transactionNames)) < t.currCap {
-			t.transactionNames[name] = struct{}{}
-			return true
-		}
-		t.overflow = true
-		return false
-	}
-
-	return true
-}
-
-// Overflow returns true is the transaction map is overflow (reached its limit)
-// or false if otherwise.
-func (t *TransMap) Overflow() bool {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.overflow
-}
-
 // addRequestCounters add various request-related counters to the metrics message buffer.
 func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCounts) {
 	var requested, traced, limited, ttTraced int64
@@ -432,12 +336,12 @@ func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
 
 // SetCap sets the maximum number of distinct metrics allowed.
 func (m *measurements) SetCap(cap int32) {
-	m.transMap.SetCap(cap)
+	m.txnMap.SetCap(cap)
 }
 
 // Cap returns the maximum number of distinct metrics allowed.
 func (m *measurements) Cap() int32 {
-	return m.transMap.Cap()
+	return m.txnMap.cap()
 }
 
 // CopyAndReset resets the custom metrics and return a copy of the old one.
@@ -447,7 +351,7 @@ func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 
 	clone := m.Clone()
 	m.m = make(map[string]*Measurement)
-	m.transMap.Reset()
+	m.txnMap.reset()
 	m.FlushInterval = flushInterval
 	return clone
 }
@@ -456,7 +360,7 @@ func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 func (m *measurements) Clone() *measurements {
 	return &measurements{
 		m:             m.m,
-		transMap:      m.transMap.Clone(),
+		txnMap:        m.txnMap.clone(),
 		IsCustom:      m.IsCustom,
 		FlushInterval: m.FlushInterval,
 	}
@@ -594,7 +498,7 @@ func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueu
 	bbuf.AppendFinishObject(start)
 	// ==========================================
 
-	if m.transMap.Overflow() {
+	if m.txnMap.isOverflowed() {
 		bbuf.AppendBool("TransactionNameOverflow", true)
 	}
 
@@ -784,7 +688,7 @@ func (m *measurements) record(name string, tagsList []map[string]string,
 		if me, ok = m.m[id]; !ok {
 			// N.B. This overflow logic is a bit cumbersome and is ripe for a rewrite
 			if strings.Contains(id, otherTagExistsVal) ||
-				m.transMap.IsWithinLimit(id) {
+				m.txnMap.isWithinLimit(id) {
 				me = &Measurement{
 					Name:      name,
 					Tags:      tags,
