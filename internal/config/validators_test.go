@@ -84,7 +84,7 @@ func TestIsValidReporterType(t *testing.T) {
 	assert.Equal(t, false, IsValidReporterType("xxx"))
 	assert.Equal(t, false, IsValidReporterType(""))
 	assert.Equal(t, false, IsValidReporterType("udpabc"))
-	assert.Equal(t, true, IsValidReporterType("serverless"))
+	assert.Equal(t, false, IsValidReporterType("serverless"))
 }
 
 func TestConverters(t *testing.T) {

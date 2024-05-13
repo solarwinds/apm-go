@@ -46,8 +46,7 @@ const (
 
 // reporter types
 const (
-	reporterTypeSSL        = "ssl"
-	reporterTypeServerless = "serverless"
+	reporterTypeSSL = "ssl"
 )
 
 var (
@@ -105,7 +104,7 @@ func IsValidFile(file string) bool {
 // IsValidReporterType checks if the reporter type is valid.
 func IsValidReporterType(t string) bool {
 	t = strings.ToLower(strings.TrimSpace(t))
-	return t == reporterTypeSSL || t == reporterTypeServerless
+	return t == reporterTypeSSL
 }
 
 // IsValidEc2MetadataTimeout checks if the timeout is within the designated range

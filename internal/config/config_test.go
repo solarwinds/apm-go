@@ -602,7 +602,8 @@ func TestTransactionName(t *testing.T) {
 	envs = []string{
 		"SW_APM_SERVICE_KEY=ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
 		"SW_APM_TRANSACTION_NAME=test_name",
-		"SW_APM_REPORTER=serverless",
+		"AWS_LAMBDA_FUNCTION_NAME=my_function",
+		"LAMBDA_TASK_ROOT=some_path",
 	}
 	SetEnvs(envs)
 	c = NewConfig()
