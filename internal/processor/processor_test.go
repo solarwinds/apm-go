@@ -31,17 +31,41 @@ type recordMock struct {
 	called      bool
 }
 
+func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
+	r.span = span
+	r.isAppoptics = isAppoptics
+	r.called = true
+}
+
+func (r *recordMock) BuildBuiltinMetricsMessage(int32, *metrics.EventQueueStats, map[string]*metrics.RateCounts, bool) []byte {
+	panic("should not be called in this test")
+}
+
+func (r *recordMock) BuildCustomMetricsMessage(int32) []byte {
+	panic("should not be called in this test")
+}
+
+func (r *recordMock) ApmMetricsCap() int32 {
+	panic("should not be called in this test")
+}
+
+func (r *recordMock) SetApmMetricsCap(int32) {
+	panic("should not be called in this test")
+}
+
+func (r *recordMock) CustomMetricsCap() int32 {
+	panic("should not be called in this test")
+}
+
+func (r *recordMock) SetCustomMetricsCap(int32) {
+	panic("should not be called in this test")
+}
+
+var _ metrics.LegacyRegistry = &recordMock{}
+
 func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-		mock.span = span
-		mock.isAppoptics = isAppoptics
-		mock.called = true
-	}
-	defer func() {
-		recordFunc = metrics.RecordSpan
-	}()
-	sp := &inboundMetricsSpanProcessor{}
+	sp := NewInboundMetricsSpanProcessor(mock, false)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -80,15 +104,7 @@ func (ro recordOnlySampler) Description() string {
 
 func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-		mock.span = span
-		mock.isAppoptics = isAppoptics
-		mock.called = true
-	}
-	defer func() {
-		recordFunc = metrics.RecordSpan
-	}()
-	sp := &inboundMetricsSpanProcessor{}
+	sp := NewInboundMetricsSpanProcessor(mock, false)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 		sdktrace.WithSampler(recordOnlySampler{}),
@@ -114,15 +130,7 @@ func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
 
 func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-		mock.span = span
-		mock.isAppoptics = isAppoptics
-		mock.called = true
-	}
-	defer func() {
-		recordFunc = metrics.RecordSpan
-	}()
-	sp := &inboundMetricsSpanProcessor{}
+	sp := NewInboundMetricsSpanProcessor(mock, false)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx, s1 := tracer.Start(context.Background(), "span name")
@@ -145,15 +153,7 @@ func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 
 func TestInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
 	mock := &recordMock{}
-	recordFunc = func(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-		mock.span = span
-		mock.isAppoptics = isAppoptics
-		mock.called = true
-	}
-	defer func() {
-		recordFunc = metrics.RecordSpan
-	}()
-	sp := &inboundMetricsSpanProcessor{}
+	sp := NewInboundMetricsSpanProcessor(mock, false)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()

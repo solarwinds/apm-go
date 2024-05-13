@@ -20,6 +20,8 @@ import (
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
@@ -41,35 +43,6 @@ var (
 	errInvalidLogLevel = errors.New("invalid log level")
 )
 
-// WaitForReady checks if the agent is ready. It returns true is the agent is ready,
-// or false if it is not.
-//
-// A call to this method will block until the agent is ready or the context is
-// canceled, or the agent is already closed.
-// The agent is considered ready if there is a valid default setting for sampling.
-func WaitForReady(ctx context.Context) bool {
-	if Closed() {
-		return false
-	}
-	return reporter.WaitForReady(ctx)
-}
-
-// Shutdown flush the metrics and stops the agent. The call will block until the agent
-// flushes and is successfully shutdown or the context is canceled. It returns nil
-// for successful shutdown and or error when the context is canceled or the agent
-// has already been closed before.
-//
-// This function should be called only once.
-func Shutdown(ctx context.Context) error {
-	return reporter.Shutdown(ctx)
-}
-
-// Closed denotes if the agent is closed (by either calling Shutdown explicitly
-// or being triggered from some internal error).
-func Closed() bool {
-	return reporter.Closed()
-}
-
 // SetLogLevel changes the logging level of the library
 // Valid logging levels: DEBUG, INFO, WARN, ERROR
 func SetLogLevel(level string) error {
@@ -89,11 +62,6 @@ func GetLogLevel() string {
 // SetLogOutput sets the output destination for the internal logger.
 func SetLogOutput(w io.Writer) {
 	log.SetOutput(w)
-}
-
-// SetServiceKey sets the service key of the agent
-func SetServiceKey(key string) error {
-	return reporter.SetServiceKey(key)
 }
 
 func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
@@ -120,13 +88,21 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	reporter.Start(resrc)
+	registry := metrics.NewLegacyRegistry()
+	o := oboe.NewOboe()
+	_reporter, err := reporter.Start(resrc, registry, o)
+	if err != nil {
+		return func() {}, err
+	}
 
-	exprtr := exporter.NewExporter()
-	smplr := sampler.NewSampler()
+	exprtr := exporter.NewExporter(_reporter)
+	smplr, err := sampler.NewSampler(o)
+	if err != nil {
+		return func() {}, err
+	}
 	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	proc := processor.NewInboundMetricsSpanProcessor(isAppoptics)
+	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},

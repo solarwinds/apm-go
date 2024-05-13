@@ -22,17 +22,17 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func NewInboundMetricsSpanProcessor(isAppoptics bool) sdktrace.SpanProcessor {
+func NewInboundMetricsSpanProcessor(registry metrics.MetricRegistry, isAppoptics bool) sdktrace.SpanProcessor {
 	return &inboundMetricsSpanProcessor{
+		registry:    registry,
 		isAppoptics: isAppoptics,
 	}
 }
 
 var _ sdktrace.SpanProcessor = &inboundMetricsSpanProcessor{}
 
-var recordFunc = metrics.RecordSpan
-
 type inboundMetricsSpanProcessor struct {
+	registry    metrics.MetricRegistry
 	isAppoptics bool
 }
 
@@ -62,7 +62,7 @@ func maybeClearEntrySpan(span sdktrace.ReadOnlySpan) {
 
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	if entryspans.IsEntrySpan(span) {
-		recordFunc(span, s.isAppoptics)
+		s.registry.RecordSpan(span, s.isAppoptics)
 		maybeClearEntrySpan(span)
 	}
 }

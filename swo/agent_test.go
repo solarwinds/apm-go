@@ -20,15 +20,13 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"os"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSetGetLogLevel(t *testing.T) {
@@ -45,14 +43,6 @@ func TestSetGetLogLevel(t *testing.T) {
 	assert.Equal(t, newLevel, nl)
 
 	require.NoError(t, SetLogLevel(oldLevel))
-}
-
-func TestShutdown(t *testing.T) {
-	require.NoError(t, Shutdown(context.Background()))
-	assert.True(t, Closed())
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*24)
-	defer cancel()
-	assert.False(t, WaitForReady(ctx))
 }
 
 func TestSetLogOutput(t *testing.T) {

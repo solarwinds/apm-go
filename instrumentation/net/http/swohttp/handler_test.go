@@ -15,7 +15,6 @@
 package swohttp
 
 import (
-	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/swo"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -32,12 +31,10 @@ const (
 	XTraceOptionsResponse = "X-Trace-Options-Response"
 )
 
-var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-01\z`)
+// TODO future: we should figure out a way to mock oboe so we can test for sampled == 01
+var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-00\z`)
 
 func TestHandlerNoXOptsResponse(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
-
 	cb, err := swo.Start()
 	require.NoError(t, err)
 	defer cb()
@@ -49,9 +46,6 @@ func TestHandlerNoXOptsResponse(t *testing.T) {
 }
 
 func TestHandlerWithXOptsResponse(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
-
 	cb, err := swo.Start()
 	require.NoError(t, err)
 	defer cb()
@@ -61,7 +55,8 @@ func TestHandlerWithXOptsResponse(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Equal(t, XTrace+","+XTraceOptionsResponse, resp.Header.Get(ACEHdr))
 	require.Regexp(t, xtraceRegexp, resp.Header.Get(XTrace))
-	require.Regexp(t, "trigger-trace=ok", resp.Header.Get(XTraceOptionsResponse))
+	// TODO: it'd be nice to have this actually receive settings from oboe and test for `trigger-trace=ok`
+	require.Regexp(t, "trigger-trace=settings-not-available", resp.Header.Get(XTraceOptionsResponse))
 }
 
 func doRequest(t *testing.T, xtOpts string) *http.Response {

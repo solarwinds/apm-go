@@ -21,10 +21,13 @@ import (
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/reporter/mocks"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"io"
 	stdlog "log"
@@ -85,12 +88,9 @@ func TestGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	oldReporter := globalReporter
-	setGlobalReporter("ssl", "")
-
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	registry := metrics.NewLegacyRegistry()
+	o := oboe.NewOboe()
+	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 
 	// Test WaitForReady
 	// The reporter is not ready when there is no default setting.
@@ -130,7 +130,7 @@ func TestGRPCReporter(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	removeSetting()
+	o.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
@@ -140,7 +140,6 @@ func TestGRPCReporter(t *testing.T) {
 
 	// stop test reporter
 	server.Stop()
-	globalReporter = oldReporter
 
 	// assert data received
 	require.Len(t, server.events, 1)
@@ -176,12 +175,9 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	oldReporter := globalReporter
-	setGlobalReporter("ssl", "")
-
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	registry := metrics.NewLegacyRegistry()
+	o := oboe.NewOboe()
+	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 	r.ShutdownNow()
 
 	require.Equal(t, true, r.Closed())
@@ -190,7 +186,6 @@ func TestShutdownGRPCReporter(t *testing.T) {
 
 	// stop test reporter
 	server.Stop()
-	globalReporter = oldReporter
 }
 
 func TestSetServiceKey(t *testing.T) {
@@ -238,13 +233,12 @@ func TestInvalidKey(t *testing.T) {
 
 	// set gRPC reporter
 	config.Load()
-	oldReporter := globalReporter
 
 	log.SetLevel(log.INFO)
-	setGlobalReporter("ssl", "")
-	require.IsType(t, &grpcReporter{}, globalReporter)
+	registry := metrics.NewLegacyRegistry()
 
-	r := globalReporter.(*grpcReporter)
+	o := oboe.NewOboe()
+	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("hello-from-invalid-key")
 	require.NoError(t, r.ReportEvent(ev1))
@@ -258,7 +252,6 @@ func TestInvalidKey(t *testing.T) {
 
 	// Tear down everything.
 	server.Stop()
-	globalReporter = oldReporter
 	setEnv("SW_APM_SERVICE_KEY", oldKey)
 
 	patterns := []string{
@@ -453,8 +446,10 @@ func TestInitReporter(t *testing.T) {
 	// Test disable agent
 	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
-	initReporter(resource.Empty())
-	require.IsType(t, &nullReporter{}, globalReporter)
+	registry := metrics.NewLegacyRegistry()
+	o := oboe.NewOboe()
+	r := initReporter(resource.Empty(), registry, o)
+	require.IsType(t, &nullReporter{}, r)
 
 	// Test enable agent
 	require.NoError(t, os.Unsetenv("SW_APM_ENABLED"))
@@ -462,9 +457,9 @@ func TestInitReporter(t *testing.T) {
 	config.Load()
 	require.True(t, config.GetEnabled())
 
-	initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")))
-	require.IsType(t, &grpcReporter{}, globalReporter)
-	require.Equal(t, "my service name", globalReporter.GetServiceName())
+	r = initReporter(resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry, o)
+	require.IsType(t, &grpcReporter{}, r)
+	require.Equal(t, "my service name", r.GetServiceName())
 }
 
 func TestCollectMetricsNextInterval(t *testing.T) {
@@ -497,14 +492,10 @@ func testProxy(t *testing.T, proxyUrl string) {
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
-	oldReporter := globalReporter
-	defer func() { globalReporter = oldReporter }()
+	registry := metrics.NewLegacyRegistry()
 
-	setGlobalReporter("ssl", "")
-
-	require.IsType(t, &grpcReporter{}, globalReporter)
-
-	r := globalReporter.(*grpcReporter)
+	o := oboe.NewOboe()
+	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 
 	// Test WaitForReady
 	// The reporter is not ready when there is no default setting.
@@ -547,7 +538,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
-	removeSetting()
+	o.RemoveSetting()
 	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
@@ -587,4 +578,33 @@ func TestHttpProxy(t *testing.T) {
 
 func TestHttpsProxy(t *testing.T) {
 	testProxy(t, "https://usr:pwd@localhost:12345")
+}
+
+func TestCreateInitMessage(t *testing.T) {
+	tid := trace.TraceID{0x01, 0x02, 0x03, 0x04}
+	r, err := resource.New(context.Background(), resource.WithAttributes(
+		attribute.String("foo", "bar"),
+		// service.name should be omitted
+		attribute.String("service.name", "my cool service"),
+	))
+	require.NoError(t, err)
+	a := time.Now()
+	evt := CreateInitMessage(tid, r)
+	b := time.Now()
+	require.NoError(t, err)
+	require.NotNil(t, evt)
+	e, ok := evt.(*event)
+	require.True(t, ok)
+	require.Equal(t, tid, e.taskID)
+	require.NotEqual(t, [8]byte{}, e.opID)
+	require.True(t, e.t.After(a))
+	require.True(t, e.t.Before(b))
+	require.Equal(t, []attribute.KeyValue{
+		attribute.String("foo", "bar"),
+		attribute.Bool("__Init", true),
+		attribute.String("APM.Version", utils.Version()),
+	}, e.kvs)
+	require.Equal(t, LabelUnset, e.label)
+	require.Equal(t, "", e.layer)
+	require.False(t, e.parent.IsValid())
 }

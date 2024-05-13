@@ -12,27 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package metrics
 
 import (
-	"runtime"
-	"strings"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-var (
-	// The SolarWinds Observability Go APM library version
-	version = "1.1.0-pre"
+func TestTxnMap(t *testing.T) {
+	m := newTxnMap(3)
+	assert.EqualValues(t, 3, m.cap())
+	assert.True(t, m.isWithinLimit("t1"))
+	assert.True(t, m.isWithinLimit("t2"))
+	assert.True(t, m.isWithinLimit("t3"))
+	assert.False(t, m.isWithinLimit("t4"))
+	assert.True(t, m.isWithinLimit("t2"))
+	assert.True(t, m.isOverflowed())
 
-	// The Go version
-	goVersion = strings.TrimPrefix(runtime.Version(), "go")
-)
-
-// Version returns the agent's version
-func Version() string {
-	return version
-}
-
-// GoVersion returns the Go version
-func GoVersion() string {
-	return goVersion
+	m.SetCap(4)
+	m.reset()
+	assert.EqualValues(t, 4, m.cap())
+	assert.False(t, m.isOverflowed())
 }

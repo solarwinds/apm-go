@@ -12,27 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package xtrace
 
-import (
-	"runtime"
-	"strings"
+import "github.com/solarwinds/apm-go/internal/log"
+
+type AuthStatus int
+
+const (
+	AuthOK = iota
+	AuthBadTimestamp
+	AuthNoSignatureKey
+	AuthBadSignature
 )
 
-var (
-	// The SolarWinds Observability Go APM library version
-	version = "1.1.0-pre"
-
-	// The Go version
-	goVersion = strings.TrimPrefix(runtime.Version(), "go")
-)
-
-// Version returns the agent's version
-func Version() string {
-	return version
+func (a AuthStatus) IsError() bool {
+	return a != AuthOK
 }
 
-// GoVersion returns the Go version
-func GoVersion() string {
-	return goVersion
+func (a AuthStatus) Msg() string {
+	switch a {
+	case AuthOK:
+		return "ok"
+	case AuthBadTimestamp:
+		return "bad-timestamp"
+	case AuthNoSignatureKey:
+		return "no-signature-key"
+	case AuthBadSignature:
+		return "bad-signature"
+	}
+	log.Debugf("could not read msg for unknown AuthStatus: %s", a)
+	return ""
 }

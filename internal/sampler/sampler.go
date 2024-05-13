@@ -17,7 +17,7 @@ package sampler
 import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/swotel"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"github.com/solarwinds/apm-go/internal/xtrace"
@@ -27,10 +27,16 @@ import (
 )
 
 type sampler struct {
+	oboe oboe.Oboe
 }
 
-func NewSampler() sdktrace.Sampler {
-	return sampler{}
+func NewSampler(o oboe.Oboe) (sdktrace.Sampler, error) {
+	if o == nil {
+		return nil, fmt.Errorf("oboe must not be nil")
+	}
+	return sampler{
+		oboe: o,
+	}, nil
 }
 
 var _ sdktrace.Sampler = sampler{}
@@ -89,11 +95,11 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 	} else {
 		// TODO url
 		url := ""
-		xto := xtrace.GetXTraceOptions(params.ParentContext)
+		xto := xtrace.GetXTraceOptions(params.ParentContext, s.oboe)
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := reporter.ShouldTraceRequestWithURL(swState.IsValid(), url, ttMode, swState)
+		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
 			decision = sdktrace.Drop
@@ -137,17 +143,17 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 
 }
 
-func getTtMode(xto xtrace.Options) reporter.TriggerTraceMode {
+func getTtMode(xto xtrace.Options) oboe.TriggerTraceMode {
 	if xto.TriggerTrace() {
 		switch xto.SignatureState() {
 		case xtrace.ValidSignature:
-			return reporter.ModeRelaxedTriggerTrace
+			return oboe.ModeRelaxedTriggerTrace
 		case xtrace.InvalidSignature:
-			return reporter.ModeInvalidTriggerTrace
+			return oboe.ModeInvalidTriggerTrace
 		default:
-			return reporter.ModeStrictTriggerTrace
+			return oboe.ModeStrictTriggerTrace
 		}
 	} else {
-		return reporter.ModeTriggerTraceNotPresent
+		return oboe.ModeTriggerTraceNotPresent
 	}
 }

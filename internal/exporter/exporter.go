@@ -30,9 +30,10 @@ import (
 )
 
 type exporter struct {
+	r reporter.Reporter
 }
 
-func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
+func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	evt := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
 	layer := fmt.Sprintf("%s:%s", strings.ToUpper(s.SpanKind().String()), s.Name())
 	evt.SetLayer(layer)
@@ -68,7 +69,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 
 	evt.AddKVs(s.Attributes())
 
-	if err := reporter.ReportEvent(evt); err != nil {
+	if err := e.r.ReportEvent(evt); err != nil {
 		log.Warning("cannot send entry event", err)
 		return
 	}
@@ -88,7 +89,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			}
 		}
 		evt.AddKVs(otEvt.Attributes)
-		if err := reporter.ReportEvent(evt); err != nil {
+		if err := e.r.ReportEvent(evt); err != nil {
 			log.Warningf("could not send %s event: %s", s.Name(), err)
 			continue
 		}
@@ -96,7 +97,7 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 
 	evt = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
 	evt.AddKV(attribute.String(constants.Layer, layer))
-	if err := reporter.ReportEvent(evt); err != nil {
+	if err := e.r.ReportEvent(evt); err != nil {
 		log.Warning("cannot send exit event", err)
 		return
 	}
@@ -104,17 +105,19 @@ func exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	reporter.WaitForReady(ctx)
+	e.r.WaitForReady(ctx)
 	for _, s := range spans {
-		exportSpan(ctx, s)
+		e.exportSpan(ctx, s)
 	}
 	return nil
 }
 
 func (e *exporter) Shutdown(ctx context.Context) error {
-	return reporter.Shutdown(ctx)
+	return e.r.Shutdown(ctx)
 }
 
-func NewExporter() sdktrace.SpanExporter {
-	return &exporter{}
+func NewExporter(r reporter.Reporter) sdktrace.SpanExporter {
+	return &exporter{
+		r: r,
+	}
 }

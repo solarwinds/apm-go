@@ -16,7 +16,8 @@ package sampler
 import (
 	"context"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/solarwinds/apm-go/internal/swotel"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/solarwinds/apm-go/internal/xtrace"
@@ -37,7 +38,9 @@ var (
 )
 
 func TestDescription(t *testing.T) {
-	s := NewSampler()
+	o := oboe.NewOboe()
+	s, err := NewSampler(o)
+	require.NoError(t, err)
 	assert.Equal(t, "SolarWinds APM Sampler", s.Description())
 }
 
@@ -126,7 +129,7 @@ func TestScenario6(t *testing.T) {
 		xtraceSignature:  false,
 
 		oboeDecision: true,
-		ttMode:       reporter.ModeStrictTriggerTrace,
+		ttMode:       oboe.ModeStrictTriggerTrace,
 		decision:     sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -144,7 +147,7 @@ func TestScenario7(t *testing.T) {
 		xtraceSignature:         false,
 
 		oboeDecision: true,
-		ttMode:       reporter.ModeStrictTriggerTrace,
+		ttMode:       oboe.ModeStrictTriggerTrace,
 		decision:     sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -164,7 +167,7 @@ func TestScenario8(t *testing.T) {
 		xtraceSignature:      false,
 
 		oboeDecision: true,
-		ttMode:       reporter.ModeStrictTriggerTrace,
+		ttMode:       oboe.ModeStrictTriggerTrace,
 		decision:     sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -181,7 +184,7 @@ func TestScenarioSwKeys(t *testing.T) {
 		xtraceSwKeys:            true,
 
 		oboeDecision: true,
-		ttMode:       reporter.ModeTriggerTraceNotPresent,
+		ttMode:       oboe.ModeTriggerTraceNotPresent,
 		decision:     sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -195,7 +198,7 @@ func TestScenarioSwKeysUnsampled(t *testing.T) {
 		oboeDecision:         false,
 		xtraceSwKeys:         true,
 
-		ttMode:   reporter.ModeTriggerTraceNotPresent,
+		ttMode:   oboe.ModeTriggerTraceNotPresent,
 		decision: sdktrace.RecordOnly,
 	}
 	scen.test(t)
@@ -210,7 +213,7 @@ func TestScenarioCustomKeys(t *testing.T) {
 		xtraceCustomKeys:        true,
 
 		oboeDecision: true,
-		ttMode:       reporter.ModeTriggerTraceNotPresent,
+		ttMode:       oboe.ModeTriggerTraceNotPresent,
 		decision:     sdktrace.RecordAndSample,
 	}
 	scen.test(t)
@@ -224,7 +227,7 @@ func TestScenarioCustomKeysUnsampled(t *testing.T) {
 		oboeDecision:         false,
 		xtraceCustomKeys:     false,
 
-		ttMode:   reporter.ModeTriggerTraceNotPresent,
+		ttMode:   oboe.ModeTriggerTraceNotPresent,
 		decision: sdktrace.RecordOnly,
 	}
 	scen.test(t)
@@ -266,7 +269,7 @@ type SamplingScenario struct {
 	oboeDecision bool
 
 	// expectations
-	ttMode   reporter.TriggerTraceMode
+	ttMode   oboe.TriggerTraceMode
 	decision sdktrace.SamplingDecision
 }
 
@@ -277,11 +280,12 @@ func requireAttrEqual(t *testing.T, attrs attribute.Set, key string, expected at
 }
 
 func (s SamplingScenario) test(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 	var err error
 
-	smplr := NewSampler()
+	smplr, err := NewSampler(o)
+	require.NoError(t, err)
 	traceState := trace.TraceState{}
 	if s.traceStateContainsSw {
 		flags := "00"
@@ -344,10 +348,10 @@ func (s SamplingScenario) test(t *testing.T) {
 		bucketCap := "1000000"
 		bucketRate := bucketCap
 		sampleRate := 1000000
-		sampleSource := reporter.SAMPLE_SOURCE_DEFAULT
+		sampleSource := oboe.SampleSourceDefault
 		if s.triggerTrace && !s.traceStateSwSampled {
 			sampleRate = -1
-			sampleSource = reporter.SAMPLE_SOURCE_UNSET
+			sampleSource = oboe.SampleSourceUnset
 		}
 		if s.traceStateSwSampled {
 			bucketCap, bucketRate, sampleRate, sampleSource = "-1", "-1", -1, -1
@@ -411,7 +415,8 @@ func TestHydrateTraceState(t *testing.T) {
 		SpanID:  spanId,
 	})
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "ok")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -425,7 +430,8 @@ func TestHydrateTraceStateBadTimestamp(t *testing.T) {
 	})
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, "trigger-trace")
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, "not a valid signature")
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -441,7 +447,9 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
 	sig := "invalid signature"
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -449,8 +457,6 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 }
 
 func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.NoSettingST))
-	defer r.Close(0)
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceId,
 		SpanID:  spanId,
@@ -459,7 +465,8 @@ func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
 	sig := "0000"
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	xto := xtrace.GetXTraceOptions(ctx)
+	o := oboe.NewOboe()
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "ok")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)
@@ -468,18 +475,18 @@ func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
 
 func TestHydrateTraceStateValidSignature(t *testing.T) {
 	// set test reporter so we can use the hmac token for signing the xto
-	r := reporter.SetTestReporter(reporter.TestReporterSettingType(reporter.DefaultST))
-	defer r.Close(0)
+	o := oboe.NewOboe()
+	oboetestutils.AddDefaultSetting(o)
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceId,
 		SpanID:  spanId,
 	})
 	opts := fmt.Sprintf("trigger-trace;ts=%d", time.Now().Unix())
 	ctx := context.WithValue(context.Background(), xtrace.OptionsKey, opts)
-	sig, err := reporter.HmacHashTT([]byte(opts))
+	sig, err := xtrace.HmacHashTT(o, []byte(opts))
 	require.NoError(t, err)
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
-	xto := xtrace.GetXTraceOptions(ctx)
+	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "ok")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
 	require.NoError(t, err)

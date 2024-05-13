@@ -34,8 +34,7 @@ import (
 
 func TestExportSpan(t *testing.T) {
 	r := &capturingReporter{}
-	defer reporter.SetGlobalReporter(r)()
-	tr, cb := testutils.TracerWithExporter(NewExporter())
+	tr, cb := testutils.TracerWithExporter(NewExporter(r))
 	defer cb()
 
 	ctx := context.Background()
@@ -156,8 +155,7 @@ func TestExportSpan(t *testing.T) {
 
 func TestExportSpanBacktrace(t *testing.T) {
 	r := &capturingReporter{}
-	defer reporter.SetGlobalReporter(r)()
-	tr, cb := testutils.TracerWithExporter(NewExporter())
+	tr, cb := testutils.TracerWithExporter(NewExporter(r))
 	defer cb()
 
 	ctx := context.Background()
@@ -199,8 +197,7 @@ func getBsonFromEvent(t *testing.T, event reporter.Event) map[string]interface{}
 
 func TestExportSpanStatusCodes(t *testing.T) {
 	r := &capturingReporter{}
-	defer reporter.SetGlobalReporter(r)()
-	tr, cb := testutils.TracerWithExporter(NewExporter())
+	tr, cb := testutils.TracerWithExporter(NewExporter(r))
 	defer cb()
 
 	permutations := []struct {

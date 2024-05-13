@@ -19,15 +19,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/host/aws"
 	"github.com/solarwinds/apm-go/internal/host/azure"
 	"github.com/solarwinds/apm-go/internal/host/k8s"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
@@ -42,7 +46,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
 
@@ -195,7 +198,7 @@ func newGrpcConnection(name string, target string, opts ...GrpcConnOpt) (*grpcCo
 
 	err := gc.connect()
 	if err != nil {
-		return nil, errors.Wrap(err, name)
+		return nil, errors.Join(fmt.Errorf("failed to connect to %s", name), err)
 	}
 	return gc, nil
 }
@@ -239,6 +242,12 @@ type grpcReporter struct {
 	// The flag to indicate gracefully stopping the reporter. It should be accessed atomically.
 	// A (default) zero value means shutdown abruptly.
 	gracefully int32
+
+	// metrics
+	registry metrics.LegacyRegistry
+
+	// oboe
+	oboe oboe.Oboe
 }
 
 // gRPC reporter errors
@@ -259,7 +268,7 @@ func getProxyCertPath() string {
 // initializes a new GRPC reporter from scratch (called once on program startup)
 //
 // returns	GRPC Reporter object
-func newGRPCReporter(otelServiceName string) Reporter {
+func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
 	// collector address override
 	addr := config.GetCollector()
 
@@ -304,6 +313,9 @@ func newGRPCReporter(otelServiceName string) Reporter {
 
 		cond: sync.NewCond(&sync.Mutex{}),
 		done: make(chan struct{}),
+
+		registry: registry,
+		oboe:     o,
 	}
 
 	r.start()
@@ -511,7 +523,7 @@ func (c *grpcConnection) connect() error {
 		ProxyCertPath: c.proxyTLSCertPath,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to connect to target")
+		return errors.Join(fmt.Errorf("failed to connect to %s", c.address), err)
 	}
 
 	// close the old connection
@@ -623,7 +635,7 @@ func (r *grpcReporter) periodicTasks() {
 			// set up ticker for next round
 			r.conn.resetPing()
 			go func() {
-				if r.conn.ping(r.done, r.serviceKey.Load()) == errInvalidServiceKey {
+				if errors.Is(r.conn.ping(r.done, r.serviceKey.Load()), errInvalidServiceKey) {
 					r.ShutdownNow()
 				}
 			}()
@@ -771,14 +783,11 @@ func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
 
 		if len(messages) != 0 {
 			method := newPostEventsMethod(r.serviceKey.Load(), messages)
-			err := r.conn.InvokeRPC(r.done, method)
-
-			switch err {
-			case errInvalidServiceKey:
-				r.ShutdownNow()
-			case nil:
+			if err := r.conn.InvokeRPC(r.done, method); err == nil {
 				log.Info(method.CallSummary())
-			default:
+			} else if errors.Is(err, errInvalidServiceKey) {
+				r.ShutdownNow()
+			} else {
 				log.Warningf("eventBatchSender: %s", err)
 			}
 		}
@@ -810,13 +819,12 @@ func (r *grpcReporter) collectMetrics(collectReady chan bool) {
 
 	var messages [][]byte
 	// generate a new metrics message
-	builtin := metrics.BuildBuiltinMetricsMessage(metrics.ApmMetrics.CopyAndReset(i),
-		r.conn.queueStats.CopyAndReset(), FlushRateCounts(), config.GetRuntimeMetrics())
+	builtin := r.registry.BuildBuiltinMetricsMessage(i, r.conn.queueStats.CopyAndReset(), r.oboe.FlushRateCounts(), config.GetRuntimeMetrics())
 	if builtin != nil {
 		messages = append(messages, builtin)
 	}
 
-	custom := metrics.BuildMessage(metrics.CustomMetrics.CopyAndReset(i), false)
+	custom := r.registry.BuildCustomMetricsMessage(i)
 	if custom != nil {
 		messages = append(messages, custom)
 	}
@@ -834,13 +842,11 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 
 	method := newPostMetricsMethod(r.serviceKey.Load(), msgs)
 
-	err := r.conn.InvokeRPC(r.done, method)
-	switch err {
-	case errInvalidServiceKey:
-		r.ShutdownNow()
-	case nil:
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		log.Info(method.CallSummary())
-	default:
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
+	} else {
 		log.Warningf("sendMetrics: %s", err)
 	}
 }
@@ -854,19 +860,16 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 	defer func() { ready <- true }()
 
 	method := newGetSettingsMethod(r.serviceKey.Load())
-	err := r.conn.InvokeRPC(r.done, method)
-
-	switch err {
-	case errInvalidServiceKey:
-		r.ShutdownNow()
-	case nil:
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info
 		if method.Resp.Warning != "" {
 			logger = log.Warning
 		}
 		logger(method.CallSummary())
 		r.updateSettings(method.Resp)
-	default:
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
+	} else {
 		log.Infof("getSettings: %s", err)
 	}
 }
@@ -875,26 +878,26 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
-		updateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
+		r.oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
-		mi := parseInt32(s.Arguments, kvMetricsFlushInterval, r.collectMetricInterval)
+		mi := ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)
 		atomic.StoreInt32(&r.collectMetricInterval, mi)
 
 		// update events flush interval
 		o := config.ReporterOpts()
-		ei := parseInt32(s.Arguments, kvEventsFlushInterval, int32(o.GetEventFlushInterval()))
+		ei := ParseInt32(s.Arguments, constants.KvEventsFlushInterval, int32(o.GetEventFlushInterval()))
 		o.SetEventFlushInterval(int64(ei))
 
 		// update MaxTransactions
-		mt := parseInt32(s.Arguments, kvMaxTransactions, metrics.ApmMetrics.Cap())
-		metrics.ApmMetrics.SetCap(mt)
+		mt := ParseInt32(s.Arguments, constants.KvMaxTransactions, r.registry.ApmMetricsCap())
+		r.registry.SetApmMetricsCap(mt)
 
-		maxCustomMetrics := parseInt32(s.Arguments, kvMaxCustomMetrics, metrics.CustomMetrics.Cap())
-		metrics.CustomMetrics.SetCap(maxCustomMetrics)
+		maxCustomMetrics := ParseInt32(s.Arguments, constants.KvMaxCustomMetrics, r.registry.CustomMetricsCap())
+		r.registry.SetCustomMetricsCap(maxCustomMetrics)
 	}
 
-	if !r.isReady() && hasDefaultSetting() {
+	if !r.isReady() && r.oboe.HasDefaultSetting() {
 		r.cond.L.Lock()
 		r.setReady(true)
 		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
@@ -909,33 +912,14 @@ func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	OboeCheckSettingsTimeout()
-	if r.isReady() && !hasDefaultSetting() {
+	r.oboe.CheckSettingsTimeout()
+	if r.isReady() && !r.oboe.HasDefaultSetting() {
 		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
 		r.setReady(false)
 	}
 }
 
 // ========================= Status Message Handling =============================
-
-// TODO use something similar for init message
-//func (r *grpcReporter) reportStatus(ctx *oboeContext, e *event) error {
-//	if r.Closed() {
-//		return ErrReporterIsClosed
-//	}
-//	if err := prepareEvent(ctx, e); err != nil {
-//		// don't continue if preparation failed
-//		return err
-//	}
-//
-//	select {
-//	case r.statusMessages <- (*e).bbuf.GetBuf():
-//		return nil
-//	default:
-//		return errors.New("status message queue is full")
-//	}
-//
-//}
 
 // long-running goroutine that listens on the status message channel, collects all messages
 // on that channel and attempts to send them to the collector using the GRPC method PostStatus()
@@ -963,14 +947,11 @@ func (r *grpcReporter) statusSender() {
 			}
 		}
 		method := newPostStatusMethod(r.serviceKey.Load(), messages)
-		err := r.conn.InvokeRPC(r.done, method)
-
-		switch err {
-		case errInvalidServiceKey:
-			r.ShutdownNow()
-		case nil:
+		if err := r.conn.InvokeRPC(r.done, method); err == nil {
 			log.Info(method.CallSummary())
-		default:
+		} else if errors.Is(err, errInvalidServiceKey) {
+			r.ShutdownNow()
+		} else {
 			log.Infof("statusSender: %s", err)
 		}
 	}
@@ -1010,9 +991,6 @@ var (
 	// The maximum number of redirections has reached and the message will be
 	// dropped.
 	errTooManyRedirections = errors.New("too many redirections")
-
-	// The destination returned by the collector is not valid.
-	errInvalidRedirectTarget = errors.New("redirection target is empty.")
 
 	// the operation or loop cannot continue as the reporter is exiting.
 	errReporterExiting = errors.New("reporter is exiting")
@@ -1065,8 +1043,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 		if c.isActive() {
 			ctx, cancel := context.WithTimeout(context.Background(), grpcCtxTimeout)
 			if m.RequestSize() > c.maxReqBytes {
-				v := fmt.Sprintf("%d|%d", m.RequestSize(), c.maxReqBytes)
-				err = errors.Wrap(errRequestTooBig, v)
+				err = fmt.Errorf("rpc request exceeds byte limit; request size: %d, max size: %d", m.RequestSize(), c.maxReqBytes)
 			} else {
 				if m.ServiceKey() != "" {
 					err = m.Call(ctx, c.client)
@@ -1131,7 +1108,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 					// a proper redirect shouldn't cause delays
 					retriesNum = 0
 				} else {
-					log.Warning(errors.Wrap(errInvalidRedirectTarget, c.name))
+					log.Warning(fmt.Errorf("redirection target is empty for %s", c.name))
 				}
 			default:
 				log.Info(m.CallSummary())
@@ -1146,7 +1123,7 @@ func (c *grpcConnection) InvokeRPC(exit chan struct{}, m Method) error {
 
 		if !m.RetryOnErr(err) {
 			if err != nil {
-				return errors.Wrap(errNoRetryOnErr, err.Error())
+				return errors.Join(errNoRetryOnErr, err)
 			} else {
 				return errNoRetryOnErr
 			}
@@ -1265,7 +1242,7 @@ func (d *DefaultDialer) Dial(p DialParams) (*grpc.ClientConn, error) {
 	} else {
 		certPool, err = x509.SystemCertPool()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to obtain system cert pool")
+			return nil, errors.Join(errors.New("unable to obtain system cert pool"), err)
 		}
 	}
 
@@ -1306,13 +1283,13 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 
 		proxy, err := url.Parse(p.Proxy)
 		if err != nil {
-			return nil, errors.Wrap(err, "error parsing the proxy url")
+			return nil, errors.Join(errors.New("error parsing the proxy url"), err)
 		}
 
 		if proxy.Scheme == "https" {
 			cert, err := os.ReadFile(p.ProxyCertPath)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to load proxy cert")
+				return nil, errors.Join(errors.New("failed to load proxy cert"), err)
 			}
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(cert)
@@ -1321,12 +1298,12 @@ func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, e
 			tlsConfig := tls.Config{RootCAs: caCertPool}
 			conn, err = tls.Dial("tcp", proxy.Host, &tlsConfig)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to dial the https proxy")
+				return nil, errors.Join(errors.New("failed to dial the https proxy"), err)
 			}
 		} else if proxy.Scheme == "http" {
 			conn, err = (&net.Dialer{}).DialContext(ctx, "tcp", proxy.Host)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to dial the http proxy")
+				return nil, errors.Join(errors.New("failed to dial the http proxy"), err)
 			}
 		} else {
 			return nil, fmt.Errorf("proxy scheme not supported: %s", proxy.Scheme)
@@ -1400,4 +1377,25 @@ func printRPCMsg(m Method) {
 		str = append(str, utils.SPrintBson(msg))
 	}
 	log.Debugf("%s", str)
+}
+
+func bytesToInt32(b []byte) (int32, error) {
+	if len(b) != 4 {
+		return -1, fmt.Errorf("invalid length: %d", len(b))
+	}
+	return int32(binary.LittleEndian.Uint32(b)), nil
+}
+
+func ParseInt32(args map[string][]byte, key string, fb int32) int32 {
+	ret := fb
+	if c, ok := args[key]; ok {
+		v, err := bytesToInt32(c)
+		if err == nil && v >= 0 {
+			ret = v
+			log.Debugf("parsed %s=%d", key, v)
+		} else {
+			log.Warningf("parse error: %s=%d err=%v fallback=%d", key, v, err, fb)
+		}
+	}
+	return ret
 }

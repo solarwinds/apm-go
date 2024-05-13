@@ -130,10 +130,10 @@ func TestAppendMACAddresses(t *testing.T) {
 func TestAddMetricsValue(t *testing.T) {
 	index := 0
 	bbuf := bson.NewBuffer()
-	addMetricsValue(bbuf, &index, "name1", int(111))
+	addMetricsValue(bbuf, &index, "name1", 111)
 	addMetricsValue(bbuf, &index, "name2", int64(222))
 	addMetricsValue(bbuf, &index, "name3", float32(333.33))
-	addMetricsValue(bbuf, &index, "name4", float64(444.44))
+	addMetricsValue(bbuf, &index, "name4", 444.44)
 	addMetricsValue(bbuf, &index, "name5", "hello")
 	bbuf.Finish()
 	m, err := bsonToMap(bbuf)
@@ -142,7 +142,7 @@ func TestAddMetricsValue(t *testing.T) {
 	assert.NotZero(t, m["0"])
 	m2 := m["0"].(map[string]interface{})
 	assert.Equal(t, "name1", m2["name"])
-	assert.Equal(t, int(111), m2["value"])
+	assert.Equal(t, 111, m2["value"])
 
 	assert.NotZero(t, m["1"])
 	m2 = m["1"].(map[string]interface{})
@@ -153,12 +153,12 @@ func TestAddMetricsValue(t *testing.T) {
 	m2 = m["2"].(map[string]interface{})
 	assert.Equal(t, "name3", m2["name"])
 	f64 := m2["value"].(float64)
-	assert.Equal(t, float64(333.33), round(f64, .5, 2))
+	assert.Equal(t, 333.33, round(f64, .5, 2))
 
 	assert.NotZero(t, m["3"])
 	m2 = m["3"].(map[string]interface{})
 	assert.Equal(t, "name4", m2["name"])
-	assert.Equal(t, float64(444.44), m2["value"])
+	assert.Equal(t, 444.44, m2["value"])
 
 	assert.NotZero(t, m["4"])
 	m2 = m["4"].(map[string]interface{})
@@ -207,24 +207,8 @@ func TestGetTransactionFromURL(t *testing.T) {
 	}
 }
 
-func TestTransMap(t *testing.T) {
-	m := NewTransMap(3)
-	assert.EqualValues(t, 3, m.Cap())
-	assert.True(t, m.IsWithinLimit("t1"))
-	assert.True(t, m.IsWithinLimit("t2"))
-	assert.True(t, m.IsWithinLimit("t3"))
-	assert.False(t, m.IsWithinLimit("t4"))
-	assert.True(t, m.IsWithinLimit("t2"))
-	assert.True(t, m.Overflow())
-
-	m.SetCap(4)
-	m.Reset()
-	assert.EqualValues(t, 4, m.Cap())
-	assert.False(t, m.Overflow())
-}
-
 func TestRecordMeasurement(t *testing.T) {
-	var me = NewMeasurements(false, 100)
+	var me = newMeasurements(false, 100)
 
 	t1 := make(map[string]string)
 	t1["t1"] = "tag1"
@@ -294,14 +278,14 @@ func TestAddMeasurementToBSON(t *testing.T) {
 	tags2 := make(map[string]string)
 	tags2[veryLongTagName] = veryLongTagValue
 
-	measurement1 := &Measurement{
+	measurement1 := &measurement{
 		Name:      "name1",
 		Tags:      tags1,
 		Count:     45,
 		Sum:       592.42,
 		ReportSum: false,
 	}
-	measurement2 := &Measurement{
+	measurement2 := &measurement{
 		Name:      "name2",
 		Tags:      tags2,
 		Count:     777,
@@ -397,8 +381,9 @@ func TestAddHistogramToBSON(t *testing.T) {
 }
 
 func TestGenerateMetricsMessage(t *testing.T) {
-	testMetrics := NewMeasurements(false, metricsTransactionsMaxDefault)
-	bbuf := bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
+	reg := NewLegacyRegistry().(*registry)
+	flushInterval := int32(60)
+	bbuf := bson.WithBuf(reg.BuildBuiltinMetricsMessage(flushInterval, &EventQueueStats{},
 		map[string]*RateCounts{ // requested, sampled, limited, traced, through
 			RCRegular:             {10, 2, 5, 5, 1},
 			RCRelaxedTriggerTrace: {3, 0, 1, 2, 0},
@@ -442,12 +427,12 @@ func TestGenerateMetricsMessage(t *testing.T) {
 			{"Load1", float64(1)},
 			{"TotalRAM", int64(1)},
 			{"FreeRAM", int64(1)},
-			{"ProcessRAM", int(1)},
+			{"ProcessRAM", 1},
 		}...)
 	}
 	testCases = append(testCases, []testCase{
 		// runtime
-		{"trace.go.runtime.NumGoroutine", int(1)},
+		{"trace.go.runtime.NumGoroutine", 1},
 		{"trace.go.runtime.NumCgoCall", int64(1)},
 		// gc
 		{"trace.go.gc.LastGC", int64(1)},
@@ -482,14 +467,14 @@ func TestGenerateMetricsMessage(t *testing.T) {
 
 	assert.Nil(t, m["TransactionNameOverflow"])
 
-	testMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
+	reg = NewLegacyRegistry().(*registry)
 	for i := 0; i <= metricsTransactionsMaxDefault; i++ {
-		if !testMetrics.transMap.IsWithinLimit("Transaction-" + strconv.Itoa(i)) {
+		if !reg.apmMetrics.txnMap.isWithinLimit("Transaction-" + strconv.Itoa(i)) {
 			break
 		}
 	}
 
-	m, err = bsonToMap(bson.WithBuf(BuildBuiltinMetricsMessage(testMetrics, &EventQueueStats{},
+	m, err = bsonToMap(bson.WithBuf(reg.BuildBuiltinMetricsMessage(flushInterval, &EventQueueStats{},
 		map[string]*RateCounts{RCRegular: {}, RCRelaxedTriggerTrace: {}, RCStrictTriggerTrace: {}}, true)))
 	require.NoError(t, err)
 
@@ -545,13 +530,6 @@ func TestRateCounts(t *testing.T) {
 	assert.Equal(t, &RateCounts{}, rc)
 }
 
-func resetHistograms() {
-	apmHistograms = &histograms{
-		histograms: make(map[string]*histogram),
-		precision:  metricsHistPrecisionDefault,
-	}
-}
-
 func TestRecordSpan(t *testing.T) {
 	tr, teardown := testutils.TracerSetup()
 	defer teardown()
@@ -568,11 +546,11 @@ func TestRecordSpan(t *testing.T) {
 		),
 	)
 	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
+	reg := NewLegacyRegistry().(*registry)
 
-	// This affects global state (ApmMetrics below)
-	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), false)
 
-	m := ApmMetrics.CopyAndReset(60)
+	m := reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	v := m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:my cool route&"]
 	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
@@ -588,8 +566,8 @@ func TestRecordSpan(t *testing.T) {
 		v.Tags)
 	assert.Equal(t, responseTime, v.Name)
 
-	h := apmHistograms.histograms
-	resetHistograms()
+	h := reg.apmHistograms.histograms
+	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -602,9 +580,9 @@ func TestRecordSpan(t *testing.T) {
 	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
 
 	// Now test for AO
-	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), true)
 
-	m = ApmMetrics.CopyAndReset(60)
+	m = reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	k1 := "TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&"
 	k2 := "TransactionResponseTime&true&HttpStatus:200&TransactionName:my cool route&"
@@ -629,8 +607,7 @@ func TestRecordSpan(t *testing.T) {
 		m.m[k3].Tags,
 	)
 
-	h = apmHistograms.histograms
-	resetHistograms()
+	h = reg.apmHistograms.histograms
 	assert.NotEmpty(t, h)
 	globalHisto = h[""]
 	granularHisto = h["my cool route"]
@@ -660,10 +637,10 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 	)
 	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
-	// This affects global state (ApmMetrics below)
-	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
+	reg := NewLegacyRegistry().(*registry)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), false)
 
-	m := ApmMetrics.CopyAndReset(60)
+	m := reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	v := m.m["ResponseTime&true&http.method:GET&http.status_code:500&sw.is_error:true&sw.transaction:my cool route&"]
 	assert.NotNil(t, v, fmt.Sprintf("Map: %v", m.m))
@@ -679,8 +656,8 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 		v.Tags)
 	assert.Equal(t, responseTime, v.Name)
 
-	h := apmHistograms.histograms
-	resetHistograms()
+	h := reg.apmHistograms.histograms
+	reg = NewLegacyRegistry().(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -693,9 +670,9 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 	assert.Equal(t, int64(1), granularHisto.hist.TotalCount())
 
 	// Now test for AO
-	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), true)
 
-	m = ApmMetrics.CopyAndReset(60)
+	m = reg.apmMetrics.CopyAndReset(60)
 	assert.NotEmpty(t, m.m)
 	k1 := "TransactionResponseTime&true&HttpMethod:GET&TransactionName:my cool route&"
 	k2 := "TransactionResponseTime&true&HttpStatus:500&TransactionName:my cool route&"
@@ -719,8 +696,7 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 		map[string]string{"TransactionName": "my cool route"},
 		m.m[k3].Tags,
 	)
-	h = apmHistograms.histograms
-	resetHistograms()
+	h = reg.apmHistograms.histograms
 	assert.NotEmpty(t, h)
 	globalHisto = h[""]
 	granularHisto = h["my cool route"]
@@ -764,16 +740,16 @@ func TestRecordSpanOverflow(t *testing.T) {
 	)
 	span2.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
+	reg := NewLegacyRegistry().(*registry)
 	// The cap only takes affect after the following reset
-	ApmMetrics.SetCap(1)
-	ApmMetrics.CopyAndReset(60)
-	assert.Equal(t, int32(1), ApmMetrics.Cap())
+	reg.SetApmMetricsCap(1)
+	reg.apmMetrics.CopyAndReset(60)
+	assert.Equal(t, int32(1), reg.ApmMetricsCap())
 
-	// This affects global state (ApmMetrics below)
-	RecordSpan(span.(sdktrace.ReadOnlySpan), false)
-	RecordSpan(span2.(sdktrace.ReadOnlySpan), false)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), false)
+	reg.RecordSpan(span2.(sdktrace.ReadOnlySpan), false)
 
-	m := ApmMetrics.CopyAndReset(60)
+	m := reg.apmMetrics.CopyAndReset(60)
 	// We expect to have a record for `my cool route` and one for `other`
 	assert.Equal(t, 2, len(m.m))
 	v := m.m["ResponseTime&true&http.method:GET&http.status_code:200&sw.is_error:false&sw.transaction:my cool route&"]
@@ -804,8 +780,7 @@ func TestRecordSpanOverflow(t *testing.T) {
 		v.Tags)
 	assert.Equal(t, responseTime, v.Name)
 
-	h := apmHistograms.histograms
-	resetHistograms()
+	h := reg.apmHistograms.histograms
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -851,15 +826,15 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 
 	// The cap only takes affect after the following reset
 	// Appoptics-style will generate 3 metrics, so we'll set the cap to that here
-	ApmMetrics.SetCap(3)
-	ApmMetrics.CopyAndReset(60)
-	assert.Equal(t, int32(3), ApmMetrics.Cap())
+	reg := NewLegacyRegistry().(*registry)
+	reg.SetApmMetricsCap(3)
+	reg.apmMetrics.CopyAndReset(60)
+	assert.Equal(t, int32(3), reg.ApmMetricsCap())
 
-	// This affects global state (ApmMetrics below)
-	RecordSpan(span.(sdktrace.ReadOnlySpan), true)
-	RecordSpan(span2.(sdktrace.ReadOnlySpan), true)
+	reg.RecordSpan(span.(sdktrace.ReadOnlySpan), true)
+	reg.RecordSpan(span2.(sdktrace.ReadOnlySpan), true)
 
-	m := ApmMetrics.CopyAndReset(60)
+	m := reg.apmMetrics.CopyAndReset(60)
 	// We expect to have 3 records for `my cool route` and 3 for `other`
 	assert.Equal(t, 6, len(m.m))
 
@@ -878,8 +853,7 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 		assert.Equal(t, 1, v.Count)
 	}
 
-	h := apmHistograms.histograms
-	resetHistograms()
+	h := reg.apmHistograms.histograms
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]

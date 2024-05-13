@@ -17,7 +17,7 @@ package swo
 import (
 	"context"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/state"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -56,6 +56,6 @@ func LoggableTraceFromSpanContext(ctx trace.SpanContext) LoggableTraceContext {
 		TraceID:     ctx.TraceID(),
 		SpanID:      ctx.SpanID(),
 		TraceFlags:  ctx.TraceFlags(),
-		ServiceName: reporter.GetServiceName(),
+		ServiceName: state.GetServiceName(),
 	}
 }

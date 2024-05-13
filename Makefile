@@ -26,15 +26,18 @@ removecert:
 test: certgen runtest removecert
 testfast: certgen runtestfast removecert
 
-examples:
-	@cd examples && go test -race -timeout 1m -short ./... && echo "All examples passed."
-
 vet:
 	@go vet -composites=false ./... && echo "Go vet analysis passed."
 
 clean:
 	@go clean -testcache
 
-sure: clean test examples vet
+lint:
+	golangci-lint run ./...
 
-.PHONY: certgen test removecert examples vet clean
+license-check:
+	./license_check.sh
+
+sure: clean test vet lint license-check
+
+.PHONY: certgen test removecert vet clean lint license-check

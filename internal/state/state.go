@@ -12,27 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package state
 
-import (
-	"runtime"
-	"strings"
-)
+var serviceName string
 
-var (
-	// The SolarWinds Observability Go APM library version
-	version = "1.1.0-pre"
-
-	// The Go version
-	goVersion = strings.TrimPrefix(runtime.Version(), "go")
-)
-
-// Version returns the agent's version
-func Version() string {
-	return version
+func SetServiceName(svc string) {
+	serviceName = svc
 }
 
-// GoVersion returns the Go version
-func GoVersion() string {
-	return goVersion
+func GetServiceName() string {
+	return serviceName
 }

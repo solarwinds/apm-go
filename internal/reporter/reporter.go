@@ -16,14 +16,21 @@ package reporter
 
 import (
 	"context"
-	"encoding/binary"
+	"fmt"
+	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/rand"
+	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/w3cfmt"
+	"github.com/solarwinds/apm-go/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"math"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
+	"time"
 )
 
 // defines what methods a Reporter should offer (internal to Reporter package)
@@ -47,24 +54,6 @@ type Reporter interface {
 	GetServiceName() string
 }
 
-// KVs from getSettingsResult arguments
-const (
-	kvSignatureKey                      = "SignatureKey"
-	kvBucketCapacity                    = "BucketCapacity"
-	kvBucketRate                        = "BucketRate"
-	kvTriggerTraceRelaxedBucketCapacity = "TriggerRelaxedBucketCapacity"
-	kvTriggerTraceRelaxedBucketRate     = "TriggerRelaxedBucketRate"
-	kvTriggerTraceStrictBucketCapacity  = "TriggerStrictBucketCapacity"
-	kvTriggerTraceStrictBucketRate      = "TriggerStrictBucketRate"
-	kvMetricsFlushInterval              = "MetricsFlushInterval"
-	kvEventsFlushInterval               = "EventsFlushInterval"
-	kvMaxTransactions                   = "MaxTransactions"
-	kvMaxCustomMetrics                  = "MaxCustomMetrics"
-)
-
-// currently used reporter
-var globalReporter Reporter = &nullReporter{}
-
 var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
 )
@@ -82,13 +71,18 @@ func (r *nullReporter) WaitForReady(context.Context) bool { return true }
 func (r *nullReporter) SetServiceKey(string) error        { return nil }
 func (r *nullReporter) GetServiceName() string            { return "" }
 
-func Start(r *resource.Resource) {
+func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter, error) {
 	log.SetLevelFromStr(config.DebugLevel())
-	initReporter(r)
-	sendInitMessage(r)
+	if reg, ok := registry.(metrics.LegacyRegistry); !ok {
+		return nil, fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
+	} else {
+		rptr := initReporter(rsrc, reg, o)
+		sendInitMessage(rptr, rsrc)
+		return rptr, nil
+	}
 }
 
-func initReporter(r *resource.Resource) {
+func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
 	var rt string
 	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability APM agent is disabled.")
@@ -99,118 +93,39 @@ func initReporter(r *resource.Resource) {
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
+		state.SetServiceName(otelServiceName)
 	}
-	setGlobalReporter(rt, otelServiceName)
+	if rt == "none" {
+		return newNullReporter()
+	}
+	return newGRPCReporter(otelServiceName, registry, o)
 }
 
-func setGlobalReporter(reporterType string, otelServiceName string) {
-	// Close the previous reporter
-	if globalReporter != nil {
-		globalReporter.ShutdownNow()
+func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {
+	evt := NewEventWithRandomOpID(tid, time.Now())
+	evt.SetLabel(LabelUnset)
+	for _, kv := range r.Attributes() {
+		if kv.Key != semconv.ServiceNameKey {
+			evt.AddKV(kv)
+		}
 	}
 
-	switch strings.ToLower(reporterType) {
-	case "none":
-		globalReporter = newNullReporter()
-	default:
-		globalReporter = newGRPCReporter(otelServiceName)
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.Bool("__Init", true),
+		attribute.String("APM.Version", utils.Version()),
+	})
+	return evt
+}
+
+func sendInitMessage(r Reporter, rsrc *resource.Resource) {
+	if r.Closed() {
+		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
+		return
 	}
-}
-
-// WaitForReady waits until the reporter becomes ready or the context is canceled.
-func WaitForReady(ctx context.Context) bool {
-	// globalReporter is not protected by a mutex as currently it's only modified
-	// from the init() function.
-	return globalReporter.WaitForReady(ctx)
-}
-
-// Shutdown flushes the metrics and stops the reporter. It blocked until the reporter
-// is shutdown or the context is canceled.
-func Shutdown(ctx context.Context) error {
-	return globalReporter.Shutdown(ctx)
-}
-
-// Closed indicates if the reporter has been shutdown
-func Closed() bool {
-	return globalReporter.Closed()
-}
-
-func ShouldTraceRequestWithURL(traced bool, url string, ttMode TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	return shouldTraceRequestWithURL(traced, url, ttMode, swState)
-}
-
-func shouldTraceRequestWithURL(traced bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	return oboeSampleRequest(traced, url, triggerTrace, swState)
-}
-
-func argsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
-	metricsFlushInterval, maxTransactions int, token []byte) map[string][]byte {
-	args := make(map[string][]byte)
-
-	if capacity > -1 {
-		bits := math.Float64bits(capacity)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvBucketCapacity] = bytes
+	tid := trace.TraceID{0}
+	rand.Random(tid[:])
+	evt := CreateInitMessage(tid, rsrc)
+	if err := r.ReportStatus(evt); err != nil {
+		log.Error("could not send init message", err)
 	}
-	if ratePerSec > -1 {
-		bits := math.Float64bits(ratePerSec)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvBucketRate] = bytes
-	}
-	if tRCap > -1 {
-		bits := math.Float64bits(tRCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceRelaxedBucketCapacity] = bytes
-	}
-	if tRRate > -1 {
-		bits := math.Float64bits(tRRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceRelaxedBucketRate] = bytes
-	}
-	if tSCap > -1 {
-		bits := math.Float64bits(tSCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceStrictBucketCapacity] = bytes
-	}
-	if tSRate > -1 {
-		bits := math.Float64bits(tSRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[kvTriggerTraceStrictBucketRate] = bytes
-	}
-	if metricsFlushInterval > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(metricsFlushInterval))
-		args[kvMetricsFlushInterval] = bytes
-	}
-	if maxTransactions > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(maxTransactions))
-		args[kvMaxTransactions] = bytes
-	}
-
-	args[kvSignatureKey] = token
-
-	return args
-}
-
-func SetServiceKey(key string) error {
-	return globalReporter.SetServiceKey(key)
-}
-
-func ReportStatus(e Event) error {
-	return globalReporter.ReportStatus(e)
-}
-
-func ReportEvent(e Event) error {
-	return globalReporter.ReportEvent(e)
-}
-
-func GetServiceName() string {
-	return globalReporter.GetServiceName()
 }

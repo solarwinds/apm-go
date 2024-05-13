@@ -16,15 +16,11 @@ package metrics
 
 import (
 	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/hdrhist"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
-	"os"
 	"runtime"
 	"sort"
 	"strconv"
@@ -52,7 +48,6 @@ const (
 
 // Special transaction names
 const (
-	CustomTransactionNamePrefix  = "custom"
 	OtherTransactionName         = "other"
 	MetricIDSeparator            = "&"
 	TagsKVSeparator              = ":"
@@ -92,18 +87,9 @@ var (
 	ErrMetricsWithNonPositiveCount = errors.New("metrics with non-positive count")
 )
 
-// Package-level state
-
-var ApmMetrics = NewMeasurements(false, metricsTransactionsMaxDefault)
-var CustomMetrics = NewMeasurements(true, metricsCustomMetricsMaxDefault)
-var apmHistograms = &histograms{
-	histograms: make(map[string]*histogram),
-	precision:  metricsHistPrecisionDefault,
-}
-
 // SpanMessage defines a span message
 type SpanMessage interface {
-	Process(m *Measurements)
+	Process(m *measurements)
 }
 
 // BaseSpanMessage is the base span message with properties found in all types of span messages
@@ -122,8 +108,8 @@ type HTTPSpanMessage struct {
 	Method      string // HTTP method (e.g. GET, POST, ...)
 }
 
-// Measurement is a single measurement for reporting
-type Measurement struct {
+// measurement is a single measurement for reporting
+type measurement struct {
 	Name      string            // the name of the measurement (e.g. TransactionResponseTime)
 	Tags      map[string]string // map of KVs. It may be nil
 	Count     int               // count of this measurement
@@ -131,21 +117,30 @@ type Measurement struct {
 	ReportSum bool              // include the sum in the report?
 }
 
-// Measurements are a collection of mutex-protected measurements
-type Measurements struct {
-	m             map[string]*Measurement
-	transMap      *TransMap
-	IsCustom      bool
-	FlushInterval int32
+// measurements are a collection of mutex-protected measurements
+type measurements struct {
+	m             map[string]*measurement
+	txnMap        *txnMap
+	isCustom      bool
+	flushInterval int32
 	sync.Mutex    // protect access to this collection
 }
 
-func NewMeasurements(isCustom bool, maxCount int32) *Measurements {
-	return &Measurements{
-		m:             make(map[string]*Measurement),
-		transMap:      NewTransMap(maxCount),
-		IsCustom:      isCustom,
-		FlushInterval: ReportingIntervalDefault,
+func newMeasurements(isCustom bool, maxCount int32) *measurements {
+	return &measurements{
+		m:             make(map[string]*measurement),
+		txnMap:        newTxnMap(maxCount),
+		isCustom:      isCustom,
+		flushInterval: ReportingIntervalDefault,
+	}
+}
+
+func getPrecision() int {
+	if precision := config.GetPrecision(); precision >= 0 && precision <= 5 {
+		return precision
+	} else {
+		log.Errorf("value of config.Precision or SW_APM_HISTOGRAM_PRECISION must be between 0 and 5: %v", precision)
+		return metricsHistPrecisionDefault
 	}
 }
 
@@ -242,121 +237,6 @@ func (c *RateCounts) Through() int64 {
 	return atomic.LoadInt64(&c.through)
 }
 
-// TransMap records the received transaction names in a metrics report cycle. It will refuse
-// new transaction names if reaching the capacity.
-type TransMap struct {
-	// The map to store transaction names
-	transactionNames map[string]struct{}
-	// The maximum capacity of the transaction map. The value is got from server settings which
-	// is updated periodically.
-	// The default value metricsTransactionsMaxDefault is used when a new TransMap
-	// is initialized.
-	currCap int32
-	// The maximum capacity which is set by the server settings. This update usually happens in
-	// between two metrics reporting cycles. To avoid affecting the map capacity of the current reporting
-	// cycle, the new capacity got from the server is stored in nextCap and will only be flushed to currCap
-	// when the Reset() is called.
-	nextCap int32
-	// Whether there is an overflow. Overflow means the user tried to store more transaction names
-	// than the capacity defined by settings.
-	// This flag is cleared in every metrics cycle.
-	overflow bool
-	// The mutex to protect this whole struct. If the performance is a concern we should use separate
-	// mutexes for each of the fields. But for now it seems not necessary.
-	mutex sync.Mutex
-}
-
-// NewTransMap initializes a new TransMap struct
-func NewTransMap(cap int32) *TransMap {
-	return &TransMap{
-		transactionNames: make(map[string]struct{}),
-		currCap:          cap,
-		nextCap:          cap,
-		overflow:         false,
-	}
-}
-
-// SetCap sets the capacity of the transaction map
-func (t *TransMap) SetCap(cap int32) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.nextCap = cap
-}
-
-// Cap returns the current capacity
-func (t *TransMap) Cap() int32 {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.currCap
-}
-
-// Reset resets the transaction map to a initialized state. The new capacity got from the
-// server will be used in next metrics reporting cycle after reset.
-func (t *TransMap) Reset() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.transactionNames = make(map[string]struct{})
-	t.currCap = t.nextCap
-	t.overflow = false
-}
-
-// Clone returns a shallow copy
-func (t *TransMap) Clone() *TransMap {
-	return &TransMap{
-		transactionNames: t.transactionNames,
-		currCap:          t.currCap,
-		nextCap:          t.nextCap,
-		overflow:         t.overflow,
-	}
-}
-
-// IsWithinLimit checks if the transaction name is stored in the TransMap. It will store this new
-// transaction name and return true if not stored before and the map isn't full, or return false
-// otherwise.
-func (t *TransMap) IsWithinLimit(name string) bool {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	if _, ok := t.transactionNames[name]; !ok {
-		// only record if we haven't reached the limits yet
-		if int32(len(t.transactionNames)) < t.currCap {
-			t.transactionNames[name] = struct{}{}
-			return true
-		}
-		t.overflow = true
-		return false
-	}
-
-	return true
-}
-
-// Overflow returns true is the transaction map is overflow (reached its limit)
-// or false if otherwise.
-func (t *TransMap) Overflow() bool {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	return t.overflow
-}
-
-// TODO: use config package, and add validator (0-5)
-// initialize values according to env variables
-func init() {
-	pEnv := "SW_APM_HISTOGRAM_PRECISION"
-	precision := os.Getenv(pEnv)
-	if precision != "" {
-		log.Infof("Non-default SW_APM_HISTOGRAM_PRECISION: %s", precision)
-		if p, err := strconv.Atoi(precision); err == nil {
-			if p >= 0 && p <= 5 {
-				apmHistograms.precision = p
-			} else {
-				log.Errorf("value of %v must be between 0 and 5: %v", pEnv, precision)
-			}
-		} else {
-			log.Errorf("value of %v is not an int: %v", pEnv, precision)
-		}
-	}
-}
-
 // addRequestCounters add various request-related counters to the metrics message buffer.
 func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCounts) {
 	var requested, traced, limited, ttTraced int64
@@ -386,77 +266,40 @@ func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCount
 	addMetricsValue(bbuf, index, TriggeredTraceCount, ttTraced)
 }
 
-// BuildMessage creates and encodes the custom metrics message.
-func BuildMessage(m *Measurements, serverless bool) []byte {
-	if m == nil {
-		return nil
-	}
-
-	bbuf := bson.NewBuffer()
-	if m.IsCustom {
-		bbuf.AppendBool("IsCustom", m.IsCustom)
-	}
-
-	if !serverless {
-		appendHostId(bbuf)
-		bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
-	}
-
-	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
-
-	start := bbuf.AppendStartArray("measurements")
-	index := 0
-
-	for _, measurement := range m.m {
-		addMeasurementToBSON(bbuf, &index, measurement)
-	}
-
-	bbuf.AppendFinishObject(start)
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
-}
-
 // SetCap sets the maximum number of distinct metrics allowed.
-func (m *Measurements) SetCap(cap int32) {
-	m.transMap.SetCap(cap)
+func (m *measurements) SetCap(cap int32) {
+	m.txnMap.SetCap(cap)
 }
 
 // Cap returns the maximum number of distinct metrics allowed.
-func (m *Measurements) Cap() int32 {
-	return m.transMap.Cap()
+func (m *measurements) Cap() int32 {
+	return m.txnMap.cap()
 }
 
 // CopyAndReset resets the custom metrics and return a copy of the old one.
-func (m *Measurements) CopyAndReset(flushInterval int32) *Measurements {
+func (m *measurements) CopyAndReset(flushInterval int32) *measurements {
 	m.Lock()
 	defer m.Unlock()
 
-	if len(m.m) == 0 {
-		m.FlushInterval = flushInterval
-		m.transMap.Reset()
-		return nil
-	}
-
 	clone := m.Clone()
-	m.m = make(map[string]*Measurement)
-	m.transMap.Reset()
-	m.FlushInterval = flushInterval
+	m.m = make(map[string]*measurement)
+	m.txnMap.reset()
+	m.flushInterval = flushInterval
 	return clone
 }
 
 // Clone returns a shallow copy
-func (m *Measurements) Clone() *Measurements {
-	return &Measurements{
+func (m *measurements) Clone() *measurements {
+	return &measurements{
 		m:             m.m,
-		transMap:      m.transMap.Clone(),
-		IsCustom:      m.IsCustom,
-		FlushInterval: m.FlushInterval,
+		txnMap:        m.txnMap.clone(),
+		isCustom:      m.isCustom,
+		flushInterval: m.flushInterval,
 	}
 }
 
 // Summary submits the summary measurement to the reporter.
-func (m *Measurements) Summary(name string, value float64, opts MetricOptions) error {
+func (m *measurements) Summary(name string, value float64, opts MetricOptions) error {
 	if err := opts.validate(); err != nil {
 		return err
 	}
@@ -464,7 +307,7 @@ func (m *Measurements) Summary(name string, value float64, opts MetricOptions) e
 }
 
 // Increment submits the incremental measurement to the reporter.
-func (m *Measurements) Increment(name string, opts MetricOptions) error {
+func (m *measurements) Increment(name string, opts MetricOptions) error {
 	if err := opts.validate(); err != nil {
 		return err
 	}
@@ -520,78 +363,6 @@ func addRuntimeMetrics(bbuf *bson.Buffer, index *int) {
 	addMetricsValue(bbuf, index, "trace.go.memory.HeapObjects", int64(mem.HeapObjects))
 	addMetricsValue(bbuf, index, "trace.go.memory.StackInuse", int64(mem.StackInuse))
 	addMetricsValue(bbuf, index, "trace.go.memory.StackSys", int64(mem.StackSys))
-}
-
-// BuildBuiltinMetricsMessage generates a metrics message in BSON format with all the currently available values
-// metricsFlushInterval	current metrics flush interval
-//
-// return				metrics message in BSON format
-func BuildBuiltinMetricsMessage(m *Measurements, qs *EventQueueStats,
-	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
-	if m == nil {
-		return nil
-	}
-
-	bbuf := bson.NewBuffer()
-
-	appendHostId(bbuf)
-	bbuf.AppendInt32("MetricsFlushInterval", m.FlushInterval)
-
-	bbuf.AppendInt64("Timestamp_u", int64(time.Now().UnixNano()/1000))
-
-	// measurements
-	// ==========================================
-	start := bbuf.AppendStartArray("measurements")
-	index := 0
-
-	// request counters
-	addRequestCounters(bbuf, &index, rcs)
-
-	// Queue states
-	if qs != nil {
-		addMetricsValue(bbuf, &index, "NumSent", qs.numSent)
-		addMetricsValue(bbuf, &index, "NumOverflowed", qs.numOverflowed)
-		addMetricsValue(bbuf, &index, "NumFailed", qs.numFailed)
-		addMetricsValue(bbuf, &index, "TotalEvents", qs.totalEvents)
-		addMetricsValue(bbuf, &index, "QueueLargest", qs.queueLargest)
-	}
-
-	addHostMetrics(bbuf, &index)
-
-	if runtimeMetrics {
-		// runtime stats
-		addRuntimeMetrics(bbuf, &index)
-	}
-
-	for _, measurement := range m.m {
-		addMeasurementToBSON(bbuf, &index, measurement)
-	}
-
-	bbuf.AppendFinishObject(start)
-	// ==========================================
-
-	// histograms
-	// ==========================================
-	start = bbuf.AppendStartArray("histograms")
-	index = 0
-
-	apmHistograms.lock.Lock()
-
-	for _, h := range apmHistograms.histograms {
-		addHistogramToBSON(bbuf, &index, h)
-	}
-	apmHistograms.histograms = make(map[string]*histogram) // clear histograms
-
-	apmHistograms.lock.Unlock()
-	bbuf.AppendFinishObject(start)
-	// ==========================================
-
-	if m.transMap.Overflow() {
-		bbuf.AppendBool("TransactionNameOverflow", true)
-	}
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
 }
 
 // append host ID to a BSON buffer
@@ -718,7 +489,7 @@ func (s *HTTPSpanMessage) appOpticsTagsList() []map[string]string {
 // processes HTTP measurements, record one for primary key, and one for each secondary key
 // transactionName	the transaction name to be used for these measurements
 func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[string]string,
-	m *Measurements) error {
+	m *measurements) error {
 	if tagsList == nil {
 		return errors.New("tagsList must not be nil")
 	}
@@ -726,7 +497,7 @@ func (s *HTTPSpanMessage) processMeasurements(metricName string, tagsList []map[
 	return m.record(metricName, tagsList, duration, 1, true)
 }
 
-func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
+func (m *measurements) recordWithSoloTags(name string, tags map[string]string,
 	value float64, count int, reportValue bool) error {
 	return m.record(name, []map[string]string{tags}, value, count, reportValue)
 }
@@ -737,7 +508,7 @@ func (m *Measurements) recordWithSoloTags(name string, tags map[string]string,
 // value		measurement value
 // count		measurement count
 // reportValue	should the sum of all values be reported?
-func (m *Measurements) record(name string, tagsList []map[string]string,
+func (m *measurements) record(name string, tagsList []map[string]string,
 	value float64, count int, reportValue bool) error {
 	if len(tagsList) == 0 {
 		return nil
@@ -765,19 +536,19 @@ func (m *Measurements) record(name string, tagsList []map[string]string,
 		idTagsMap[id] = tags
 	}
 
-	var me *Measurement
+	var me *measurement
 	var ok bool
 
 	// create a new measurement if it doesn't exist
-	// the lock protects both Measurements and Measurement
+	// the lock protects both measurements and measurement
 	m.Lock()
 	defer m.Unlock()
 	for id, tags := range idTagsMap {
 		if me, ok = m.m[id]; !ok {
 			// N.B. This overflow logic is a bit cumbersome and is ripe for a rewrite
 			if strings.Contains(id, otherTagExistsVal) ||
-				m.transMap.IsWithinLimit(id) {
-				me = &Measurement{
+				m.txnMap.isWithinLimit(id) {
+				me = &measurement{
 					Name:      name,
 					Tags:      tags,
 					ReportSum: reportValue,
@@ -840,7 +611,7 @@ func (hi *histograms) recordHistogram(name string, duration time.Duration) {
 // bbuf		the BSON buffer to append the metric to
 // index	a running integer (0,1,2,...) which is needed for BSON arrays
 // m		measurement to be added
-func addMeasurementToBSON(bbuf *bson.Buffer, index *int, m *Measurement) {
+func addMeasurementToBSON(bbuf *bson.Buffer, index *int, m *measurement) {
 	start := bbuf.AppendStartObject(strconv.Itoa(*index))
 
 	bbuf.AppendString("name", m.Name)
@@ -928,142 +699,4 @@ func (s *EventQueueStats) CopyAndReset() *EventQueueStats {
 	c.queueLargest = atomic.SwapInt64(&s.queueLargest, 0)
 
 	return c
-}
-
-func BuildServerlessMessage(span HTTPSpanMessage, rcs map[string]*RateCounts, rate int, source int) []byte {
-	bbuf := bson.NewBuffer()
-
-	bbuf.AppendInt64("Duration", int64(span.Duration/time.Microsecond))
-	bbuf.AppendBool("HasError", span.HasError)
-	bbuf.AppendInt("SampleRate", rate)
-	bbuf.AppendInt("SampleSource", source)
-	bbuf.AppendInt64("Timestamp_u", time.Now().UnixNano()/1000)
-	bbuf.AppendString("TransactionName", span.Transaction)
-
-	if span.Method != "" {
-		bbuf.AppendString("Method", span.Method)
-	}
-	if span.Status != 0 {
-		bbuf.AppendInt("Status", span.Status)
-	}
-
-	// add request counters
-	start := bbuf.AppendStartArray("TraceDecision")
-
-	var sampled, limited, traced, through, ttTraced int64
-
-	for _, rc := range rcs {
-		sampled += rc.sampled
-		limited += rc.limited
-		traced += rc.traced
-		through += rc.through
-	}
-
-	if relaxed, ok := rcs[RCRelaxedTriggerTrace]; ok {
-		ttTraced += relaxed.Traced()
-	}
-	if strict, ok := rcs[RCStrictTriggerTrace]; ok {
-		ttTraced += strict.Traced()
-	}
-
-	var i = 0
-	if sampled != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Sample")
-		i++
-	}
-	if traced != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Trace")
-		i++
-	}
-	if limited != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "TokenBucketExhaustion")
-		i++
-	}
-	if through != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "ThroughTrace")
-		i++
-	}
-	if ttTraced != 0 {
-		bbuf.AppendString(strconv.Itoa(i), "Triggered")
-	}
-
-	bbuf.AppendFinishObject(start)
-
-	bbuf.Finish()
-	return bbuf.GetBuf()
-}
-
-// -- otel --
-
-func RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-	method := ""
-	status := int64(0)
-	isError := span.Status().Code == codes.Error
-	attrs := span.Attributes()
-	swoTags := make(map[string]string)
-	httpRoute := ""
-	for _, attr := range attrs {
-		if attr.Key == semconv.HTTPMethodKey {
-			method = attr.Value.AsString()
-		} else if attr.Key == semconv.HTTPStatusCodeKey {
-			status = attr.Value.AsInt64()
-		} else if attr.Key == semconv.HTTPRouteKey {
-			httpRoute = attr.Value.AsString()
-		}
-	}
-	isHttp := span.SpanKind() == trace.SpanKindServer && method != ""
-
-	if isHttp {
-		if status > 0 {
-			swoTags["http.status_code"] = strconv.FormatInt(status, 10)
-			if !isError && status/100 == 5 {
-				isError = true
-			}
-		}
-		swoTags["http.method"] = method
-	}
-
-	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils.GetTransactionName(span)
-	swoTags["sw.transaction"] = txnName
-
-	duration := span.EndTime().Sub(span.StartTime())
-	s := &HTTPSpanMessage{
-		BaseSpanMessage: BaseSpanMessage{Duration: duration, HasError: isError},
-		Transaction:     txnName,
-		Path:            httpRoute,
-		Status:          int(status),
-		Host:            "", // intentionally not set
-		Method:          method,
-	}
-
-	var tagsList []map[string]string
-	var metricName string
-	if !isAppoptics {
-		tagsList = []map[string]string{swoTags}
-		metricName = responseTime
-	} else {
-		tagsList = s.appOpticsTagsList()
-		metricName = transactionResponseTime
-	}
-
-	apmHistograms.recordHistogram("", duration)
-	if err := s.processMeasurements(metricName, tagsList, ApmMetrics); err == ErrExceedsMetricsCountLimit {
-		if isAppoptics {
-			s.Transaction = OtherTransactionName
-			tagsList = s.appOpticsTagsList()
-		} else {
-			tagsList[0]["sw.transaction"] = OtherTransactionName
-		}
-		err := s.processMeasurements(metricName, tagsList, ApmMetrics)
-		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit
-		// which is handled above, and the reason we retry here.
-		if err != nil {
-			log.Errorf("Failed to process messages", err)
-		}
-	} else {
-		// We didn't hit ErrExceedsMetricsCountLimit
-		apmHistograms.recordHistogram(txnName, duration)
-	}
-
 }

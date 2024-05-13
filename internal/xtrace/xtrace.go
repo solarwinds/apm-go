@@ -16,11 +16,17 @@ package xtrace
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/reporter"
+	"github.com/solarwinds/apm-go/internal/oboe"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -46,7 +52,7 @@ const (
 var optRegex = regexp.MustCompile(";+")
 var customKeyRegex = regexp.MustCompile(`^custom-[^\s]*$`)
 
-func GetXTraceOptions(ctx context.Context) Options {
+func GetXTraceOptions(ctx context.Context, o oboe.Oboe) Options {
 	xtoStr, ok := ctx.Value(OptionsKey).(string)
 	if !ok {
 		xtoStr = ""
@@ -56,10 +62,10 @@ func GetXTraceOptions(ctx context.Context) Options {
 		xtoSig = ""
 	}
 
-	return parseXTraceOptions(xtoStr, xtoSig)
+	return parseXTraceOptions(o, xtoStr, xtoSig)
 }
 
-func parseXTraceOptions(opts string, sig string) Options {
+func parseXTraceOptions(o oboe.Oboe, opts string, sig string) Options {
 	x := Options{
 		opts:        opts,
 		sig:         sig,
@@ -107,7 +113,7 @@ func parseXTraceOptions(opts string, sig string) Options {
 	if sig == "" {
 		x.sigState = NoSignature
 	} else {
-		x.authStatus = reporter.ValidateXTraceOptionsSignature(sig, strconv.FormatInt(x.timestamp, 10), opts)
+		x.authStatus = validateXTraceOptionsSignature(o, sig, strconv.FormatInt(x.timestamp, 10), opts)
 		if x.authStatus.IsError() {
 			log.Warning("Invalid xtrace options signature", x.authStatus.Msg())
 			x.sigState = InvalidSignature
@@ -127,7 +133,7 @@ type Options struct {
 	tt          bool
 	ignoredKeys []string
 	sigState    SignatureState
-	authStatus  reporter.AuthStatus
+	authStatus  AuthStatus
 }
 
 func (x Options) SwKeys() string {
@@ -168,4 +174,51 @@ func (x Options) IncludeResponse() bool {
 
 func (x Options) SigAuthMsg() string {
 	return x.authStatus.Msg()
+}
+
+func validateXTraceOptionsSignature(o oboe.Oboe, signature, ts, data string) AuthStatus {
+	var err error
+	_, err = tsInScope(ts)
+	if err != nil {
+		return AuthBadTimestamp
+	}
+
+	token, err := o.GetTriggerTraceToken()
+	if err != nil {
+		return AuthNoSignatureKey
+	}
+
+	if hmacHash(token, []byte(data)) != signature {
+		return AuthBadSignature
+	}
+	return AuthOK
+}
+
+func HmacHashTT(o oboe.Oboe, data []byte) (string, error) {
+	token, err := o.GetTriggerTraceToken()
+	if err != nil {
+		return "", err
+	}
+	return hmacHash(token, data), nil
+}
+
+func hmacHash(token, data []byte) string {
+	h := hmac.New(sha1.New, token)
+	h.Write(data)
+	sha := hex.EncodeToString(h.Sum(nil))
+	return sha
+}
+
+func tsInScope(tsStr string) (string, error) {
+	ts, err := strconv.ParseInt(tsStr, 10, 64)
+	if err != nil {
+		return "", errors.Wrap(err, "tsInScope")
+	}
+
+	t := time.Unix(ts, 0)
+	if t.Before(time.Now().Add(time.Minute*-5)) ||
+		t.After(time.Now().Add(time.Minute*5)) {
+		return "", fmt.Errorf("timestamp out of scope: %s", tsStr)
+	}
+	return strconv.FormatInt(ts, 10), nil
 }
