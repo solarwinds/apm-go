@@ -25,13 +25,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/solarwinds/apm-go/internal/log"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -92,9 +93,6 @@ type Config struct {
 
 	// The file path of the cert file for gRPC connection
 	TrustedPath string `yaml:"TrustedPath,omitempty" env:"SW_APM_TRUSTEDPATH"`
-
-	// The reporter type, ssl or serverless
-	ReporterType string `yaml:"ReporterType,omitempty" env:"SW_APM_REPORTER" default:"ssl"`
 
 	Sampling *SamplingConfig `yaml:"Sampling,omitempty"`
 
@@ -364,22 +362,12 @@ func (c *Config) validate() error {
 		c.Ec2MetadataTimeout = t
 	}
 
-	if hasLambdaEnv() {
-		c.ReporterType = reporterTypeServerless
-	} else {
-		c.ReporterType = strings.ToLower(strings.TrimSpace(c.ReporterType))
-	}
-	if ok := IsValidReporterType(c.ReporterType); !ok {
-		log.Info(InvalidEnv("ReporterType", c.ReporterType))
-		c.ReporterType = getFieldDefaultValue(c, "ReporterType")
-	}
-
-	if c.TransactionName != "" && c.ReporterType != reporterTypeServerless {
+	if c.TransactionName != "" && !hasLambdaEnv() {
 		log.Info(InvalidEnv("TransactionName", c.TransactionName))
 		c.TransactionName = getFieldDefaultValue(c, "TransactionName")
 	}
 
-	if c.ReporterType != reporterTypeServerless {
+	if !hasLambdaEnv() {
 		if c.ServiceKey != "" {
 			c.ServiceKey = ToServiceKey(c.ServiceKey)
 			if ok := IsValidServiceKey(c.ServiceKey); !ok {
@@ -777,13 +765,6 @@ func (c *Config) GetTrustedPath() string {
 	c.RLock()
 	defer c.RUnlock()
 	return c.TrustedPath
-}
-
-// GetReporterType returns the reporter type
-func (c *Config) GetReporterType() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.ReporterType
 }
 
 // GetTracingMode returns the local tracing mode

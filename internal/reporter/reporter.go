@@ -17,6 +17,9 @@ package reporter
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
@@ -29,8 +32,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
-	"time"
 )
 
 // defines what methods a Reporter should offer (internal to Reporter package)
@@ -83,19 +84,13 @@ func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter
 }
 
 func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
-	var rt string
-	if !config.GetEnabled() {
-		log.Warning("SolarWinds Observability APM agent is disabled.")
-		rt = "none"
-	} else {
-		rt = config.GetReporterType()
-	}
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
 		state.SetServiceName(otelServiceName)
 	}
-	if rt == "none" {
+	if !config.GetEnabled() {
+		log.Warning("SolarWinds Observability APM agent is disabled.")
 		return newNullReporter()
 	}
 	return newGRPCReporter(otelServiceName, registry, o)
