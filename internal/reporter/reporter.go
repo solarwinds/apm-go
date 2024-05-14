@@ -84,19 +84,13 @@ func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter
 }
 
 func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
-	var rt string
-	if !config.GetEnabled() {
-		log.Warning("SolarWinds Observability APM agent is disabled.")
-		rt = "none"
-	} else {
-		rt = "ssl"
-	}
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
 		state.SetServiceName(otelServiceName)
 	}
-	if rt == "none" {
+	if !config.GetEnabled() {
+		log.Warning("SolarWinds Observability APM agent is disabled.")
 		return newNullReporter()
 	}
 	return newGRPCReporter(otelServiceName, registry, o)
