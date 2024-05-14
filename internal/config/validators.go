@@ -44,11 +44,6 @@ const (
 	invalidCharReplacer = ""
 )
 
-// reporter types
-const (
-	reporterTypeSSL = "ssl"
-)
-
 var (
 	// IsValidServiceKey verifies if the service key is a valid one.
 	// A valid service key is something like 'service_token:service_name'.
@@ -99,12 +94,6 @@ func IsValidHost(host string) bool {
 func IsValidFile(file string) bool {
 	// TODO
 	return true
-}
-
-// IsValidReporterType checks if the reporter type is valid.
-func IsValidReporterType(t string) bool {
-	t = strings.ToLower(strings.TrimSpace(t))
-	return t == reporterTypeSSL
 }
 
 // IsValidEc2MetadataTimeout checks if the timeout is within the designated range

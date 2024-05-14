@@ -29,9 +29,6 @@ var GetServiceKey = conf.GetServiceKey
 // GetTrustedPath is a wrapper to the method of the global config
 var GetTrustedPath = conf.GetTrustedPath
 
-// GetReporterType is a wrapper to the method of the global config
-var GetReporterType = conf.GetReporterType
-
 // GetTracingMode is a wrapper to the method of the global config
 var GetTracingMode = conf.GetTracingMode
 

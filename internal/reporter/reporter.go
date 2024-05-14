@@ -17,6 +17,9 @@ package reporter
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
@@ -29,8 +32,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
-	"time"
 )
 
 // defines what methods a Reporter should offer (internal to Reporter package)
@@ -88,7 +89,7 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.
 		log.Warning("SolarWinds Observability APM agent is disabled.")
 		rt = "none"
 	} else {
-		rt = config.GetReporterType()
+		rt = "ssl"
 	}
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {

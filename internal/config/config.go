@@ -94,9 +94,6 @@ type Config struct {
 	// The file path of the cert file for gRPC connection
 	TrustedPath string `yaml:"TrustedPath,omitempty" env:"SW_APM_TRUSTEDPATH"`
 
-	// The reporter type, ssl or none
-	ReporterType string `yaml:"ReporterType,omitempty" env:"SW_APM_REPORTER" default:"ssl"`
-
 	Sampling *SamplingConfig `yaml:"Sampling,omitempty"`
 
 	// Whether the domain should be prepended to the transaction name.
@@ -363,13 +360,6 @@ func (c *Config) validate() error {
 		log.Info(InvalidEnv("Ec2MetadataTimeout", strconv.Itoa(c.Ec2MetadataTimeout)))
 		t, _ := strconv.Atoi(getFieldDefaultValue(c, "Ec2MetadataTimeout"))
 		c.Ec2MetadataTimeout = t
-	}
-
-	c.ReporterType = strings.ToLower(strings.TrimSpace(c.ReporterType))
-
-	if ok := IsValidReporterType(c.ReporterType); !ok {
-		log.Info(InvalidEnv("ReporterType", c.ReporterType))
-		c.ReporterType = getFieldDefaultValue(c, "ReporterType")
 	}
 
 	if c.TransactionName != "" && !hasLambdaEnv() {
@@ -775,13 +765,6 @@ func (c *Config) GetTrustedPath() string {
 	c.RLock()
 	defer c.RUnlock()
 	return c.TrustedPath
-}
-
-// GetReporterType returns the reporter type
-func (c *Config) GetReporterType() string {
-	c.RLock()
-	defer c.RUnlock()
-	return c.ReporterType
 }
 
 // GetTracingMode returns the local tracing mode

@@ -132,10 +132,9 @@ func TestConfigInit(t *testing.T) {
 	c.reset()
 
 	defaultC := Config{
-		Collector:    defaultSSLCollector,
-		ServiceKey:   "",
-		TrustedPath:  "",
-		ReporterType: "ssl",
+		Collector:   defaultSSLCollector,
+		ServiceKey:  "",
+		TrustedPath: "",
 		Sampling: &SamplingConfig{
 			TracingMode:           "enabled",
 			tracingModeConfigured: false,
@@ -253,10 +252,9 @@ func TestEnvsLoading(t *testing.T) {
 	SetEnvs(envs)
 
 	envConfig := Config{
-		Collector:    "collector.test.com",
-		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		TrustedPath:  "/collector.crt",
-		ReporterType: "ssl",
+		Collector:   "collector.test.com",
+		ServiceKey:  "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		TrustedPath: "/collector.crt",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -300,10 +298,9 @@ func TestEnvsLoading(t *testing.T) {
 
 func TestYamlConfig(t *testing.T) {
 	yamlConfig := Config{
-		Collector:    "yaml.test.com",
-		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189218:go",
-		TrustedPath:  "/yaml-collector.crt",
-		ReporterType: "ssl",
+		Collector:   "yaml.test.com",
+		ServiceKey:  "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189218:go",
+		TrustedPath: "/yaml-collector.crt",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -383,10 +380,9 @@ func TestYamlConfig(t *testing.T) {
 	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.yaml")
 
 	envConfig := Config{
-		Collector:    "collector.test.com",
-		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		TrustedPath:  "/collector.crt",
-		ReporterType: "ssl",
+		Collector:   "collector.test.com",
+		ServiceKey:  "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		TrustedPath: "/collector.crt",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -496,10 +492,9 @@ func TestInvalidConfig(t *testing.T) {
 	}()
 
 	invalid := Config{
-		Collector:    "",
-		ServiceKey:   "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
-		TrustedPath:  "",
-		ReporterType: "invalid",
+		Collector:   "",
+		ServiceKey:  "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go",
+		TrustedPath: "",
 		Sampling: &SamplingConfig{
 			TracingMode:           "disabled",
 			tracingModeConfigured: true,
@@ -531,9 +526,6 @@ func TestInvalidConfig(t *testing.T) {
 
 	assert.Equal(t, defaultSSLCollector, invalid.Collector)
 	assert.Contains(t, buf.String(), "invalid env, discarded - Collector:", buf.String())
-
-	assert.Equal(t, "ssl", invalid.ReporterType)
-	assert.Contains(t, buf.String(), "invalid env, discarded - ReporterType:", buf.String())
 
 	assert.Equal(t, 1000, invalid.Ec2MetadataTimeout)
 	assert.Contains(t, buf.String(), "invalid env, discarded - Ec2MetadataTimeout:", buf.String())

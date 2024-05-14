@@ -77,16 +77,6 @@ func TestIsValidTracingMode(t *testing.T) {
 	assert.Equal(t, false, IsValidTracingMode("NEVER"))
 }
 
-func TestIsValidReporterType(t *testing.T) {
-	assert.Equal(t, false, IsValidReporterType("udp"))
-	assert.Equal(t, true, IsValidReporterType("ssl"))
-	assert.Equal(t, false, IsValidReporterType("Udp"))
-	assert.Equal(t, false, IsValidReporterType("xxx"))
-	assert.Equal(t, false, IsValidReporterType(""))
-	assert.Equal(t, false, IsValidReporterType("udpabc"))
-	assert.Equal(t, false, IsValidReporterType("serverless"))
-}
-
 func TestConverters(t *testing.T) {
 	assert.Equal(t, DisabledTracingMode, NormalizeTracingMode("disabled"))
 	assert.Equal(t, DisabledTracingMode, NormalizeTracingMode("never"))
