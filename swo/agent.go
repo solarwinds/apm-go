@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"io"
 	stdlog "log"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -77,6 +78,10 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		resource.WithTelemetrySDK(),
 		resource.WithAttributes(resourceAttrs...),
 	)
+}
+
+func isLambda() bool {
+	return os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" && os.Getenv("LAMBDA_TASK_ROOT") != ""
 }
 
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel

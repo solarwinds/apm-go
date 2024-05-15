@@ -103,3 +103,22 @@ func TestSetTransactionName(t *testing.T) {
 	require.Equal(t, "this should work", entryspans.GetTransactionName(s.SpanContext().TraceID()))
 
 }
+
+func TestIsLambda(t *testing.T) {
+	_ = os.Setenv("LAMBDA_TASK_ROOT", "")
+	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "")
+	require.False(t, isLambda())
+	_ = os.Unsetenv("LAMBDA_TASK_ROOT")
+	_ = os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
+	require.False(t, isLambda())
+
+	_ = os.Setenv("LAMBDA_TASK_ROOT", "test task root")
+	require.False(t, isLambda())
+	_ = os.Unsetenv("LAMBDA_TASK_ROOT")
+	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "test function name")
+	require.False(t, isLambda())
+
+	_ = os.Setenv("LAMBDA_TASK_ROOT", "test task root")
+	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "test function name")
+	require.True(t, isLambda())
+}
