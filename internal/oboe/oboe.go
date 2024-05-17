@@ -18,16 +18,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
-	"math"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -48,6 +49,7 @@ const (
 
 type Oboe interface {
 	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
+	UpdateSettingFromFile()
 	CheckSettingsTimeout()
 	GetSetting() (*settings, bool)
 	RemoveSetting()
@@ -236,6 +238,46 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 
 	tStrictRate := parseFloat64(args, constants.KvTriggerTraceStrictBucketRate, 0)
 	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
+	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
+
+	merged := mergeLocalSetting(ns)
+
+	key := settingKey{
+		sType: settingType(sType),
+		layer: layer,
+	}
+
+	o.Lock()
+	o.settings[key] = merged
+	o.Unlock()
+}
+
+func (o *oboe) UpdateSettingFromFile() {
+	ns := newOboeSettings()
+
+	var sType int = 1     // always DEFAULT_SAMPLE_RATE
+	var layer string = "" // not set since type is always DEFAULT_SAMPLE_RATE
+
+	ns.source = settingType(sType).toSampleSource()
+	ns.layer = layer
+
+	// TODO get these from json file; placeholders from example file for now
+	ns.timestamp = time.Now()
+	ns.flags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
+	ns.originalFlags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
+	ns.value = adjustSampleRate(1000000)
+	ns.ttl = 120
+
+	rate := float64(0.374)
+	capacity := float64(6.8)
+	ns.bucket.setRateCap(rate, capacity)
+
+	tRelaxedRate := float64(1)
+	tRelaxedCapacity := float64(20)
+	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
+
+	tStrictRate := float64(0.1)
+	tStrictCapacity := float64(6)
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
 	merged := mergeLocalSetting(ns)

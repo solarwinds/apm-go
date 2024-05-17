@@ -16,6 +16,11 @@ package swo
 
 import (
 	"context"
+	"io"
+	stdlog "log"
+	"strings"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
@@ -32,9 +37,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	stdlog "log"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -88,8 +90,16 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
+	config.Load() // earlier so we can call HasLambdaEnv earlier
 	registry := metrics.NewLegacyRegistry()
 	o := oboe.NewOboe()
+
+	// TODO only if in lambda
+	settingsTicker := time.NewTicker(30 * time.Second)
+	for range settingsTicker.C {
+		o.UpdateSettingFromFile()
+	}
+
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
 		return func() {}, err
@@ -100,7 +110,6 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if err != nil {
 		return func() {}, err
 	}
-	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
 	prop := propagation.NewCompositeTextMapPropagator(
@@ -117,6 +126,11 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	)
 	otel.SetTracerProvider(tp)
 	return func() {
+		// stop ticker
+		// TODO only if in lambda
+		settingsTicker.Stop()
+
+		// shut down TracerProvider, and log error if issues
 		if err := tp.Shutdown(context.Background()); err != nil {
 			stdlog.Fatal(err)
 		}
