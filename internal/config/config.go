@@ -340,8 +340,8 @@ const (
 	may be different from your setting.`
 )
 
-// hasLambdaEnv checks if the AWS Lambda env var is set.
-func hasLambdaEnv() bool {
+// HasLambdaEnv checks if the AWS Lambda env var is set.
+func HasLambdaEnv() bool {
 	return os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" && os.Getenv("LAMBDA_TASK_ROOT") != ""
 }
 
@@ -362,12 +362,12 @@ func (c *Config) validate() error {
 		c.Ec2MetadataTimeout = t
 	}
 
-	if c.TransactionName != "" && !hasLambdaEnv() {
+	if c.TransactionName != "" && !HasLambdaEnv() {
 		log.Info(InvalidEnv("TransactionName", c.TransactionName))
 		c.TransactionName = getFieldDefaultValue(c, "TransactionName")
 	}
 
-	if !hasLambdaEnv() {
+	if !HasLambdaEnv() {
 		if c.ServiceKey != "" {
 			c.ServiceKey = ToServiceKey(c.ServiceKey)
 			if ok := IsValidServiceKey(c.ServiceKey); !ok {
