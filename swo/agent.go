@@ -19,7 +19,6 @@ import (
 	"io"
 	stdlog "log"
 	"strings"
-	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
@@ -95,10 +94,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	o := oboe.NewOboe()
 
 	// TODO only if in lambda
-	settingsTicker := time.NewTicker(30 * time.Second)
-	for range settingsTicker.C {
-		o.UpdateSettingFromFile()
-	}
+	go o.StartSettingTicker()
 
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
@@ -128,7 +124,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	return func() {
 		// stop ticker
 		// TODO only if in lambda
-		settingsTicker.Stop()
+		o.StopSettingTicker()
 
 		// shut down TracerProvider, and log error if issues
 		if err := tp.Shutdown(context.Background()); err != nil {

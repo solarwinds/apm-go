@@ -50,6 +50,8 @@ const (
 type Oboe interface {
 	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
 	UpdateSettingFromFile()
+	StartSettingTicker()
+	StopSettingTicker()
 	CheckSettingsTimeout()
 	GetSetting() (*settings, bool)
 	RemoveSetting()
@@ -67,7 +69,8 @@ func NewOboe() Oboe {
 
 type oboe struct {
 	sync.RWMutex
-	settings map[settingKey]*settings
+	settings       map[settingKey]*settings
+	settingsTicker *time.Ticker
 }
 
 var _ Oboe = &oboe{}
@@ -290,6 +293,17 @@ func (o *oboe) UpdateSettingFromFile() {
 	o.Lock()
 	o.settings[key] = merged
 	o.Unlock()
+}
+
+func (o *oboe) StartSettingTicker() {
+	o.settingsTicker = time.NewTicker(10 * time.Second)
+	for range o.settingsTicker.C {
+		o.UpdateSettingFromFile()
+	}
+}
+
+func (o *oboe) StopSettingTicker() {
+	o.settingsTicker.Stop()
 }
 
 // CheckSettingsTimeout checks and deletes expired settings
