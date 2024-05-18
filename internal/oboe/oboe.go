@@ -16,9 +16,13 @@ package oboe
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	stdlog "log"
 	"math"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -258,13 +262,30 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 func (o *oboe) UpdateSettingFromFile() {
 	ns := newOboeSettings()
 
+	// TODO tracing mode disabled if cannot open/parse/get all settings
+	settingFile, err := os.Open("/tmp/solarwinds-apm-settings.json")
+	if err != nil {
+		stdlog.Fatal("Could not open Lambda settings file")
+	}
+	settingBytes, err := io.ReadAll(settingFile)
+	if err != nil {
+		stdlog.Fatal("Could not read Lambda settings file")
+	}
+	// Settings file is an array with a single settings object
+	var settingLambdas []settingLambda
+	json.Unmarshal(settingBytes, &settingLambdas)
+	var settingLambda settingLambda = settingLambdas[0]
+	// debug
+	stdlog.Printf("settingLambda: %v", settingLambda)
+	stdlog.Printf("settingLambda.Arguments: %v", settingLambda.Arguments)
+
 	var sType int = 1     // always DEFAULT_SAMPLE_RATE
 	var layer string = "" // not set since type is always DEFAULT_SAMPLE_RATE
 
 	ns.source = settingType(sType).toSampleSource()
 	ns.layer = layer
 
-	// TODO get these from json file; placeholders from example file for now
+	// TODO get these from settingLambda; placeholders from example file for now
 	ns.timestamp = time.Now()
 	ns.flags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
 	ns.originalFlags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
