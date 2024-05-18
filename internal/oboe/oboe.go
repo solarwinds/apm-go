@@ -285,23 +285,22 @@ func (o *oboe) UpdateSettingFromFile() {
 	ns.source = settingType(sType).toSampleSource()
 	ns.layer = layer
 
-	// TODO get these from settingLambda; placeholders from example file for now
-	ns.timestamp = time.Now()
-	ns.flags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
-	ns.originalFlags = flagStringToBin("SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE")
-	ns.value = adjustSampleRate(1000000)
-	ns.ttl = 120
+	ns.timestamp = time.Unix(int64(settingLambda.Timestamp), 0)
+	ns.flags = flagStringToBin(settingLambda.Flags)
+	ns.originalFlags = flagStringToBin(settingLambda.Flags)
+	ns.value = adjustSampleRate(int64(settingLambda.Value))
+	ns.ttl = int64(settingLambda.Ttl)
 
-	rate := float64(0.374)
-	capacity := float64(6.8)
+	rate := float64(settingLambda.Arguments.BucketRate)
+	capacity := float64(settingLambda.Arguments.BucketCapacity)
 	ns.bucket.setRateCap(rate, capacity)
 
-	tRelaxedRate := float64(1)
-	tRelaxedCapacity := float64(20)
+	tRelaxedRate := float64(settingLambda.Arguments.TriggerRelaxedBucketRate)
+	tRelaxedCapacity := float64(settingLambda.Arguments.TriggerRelaxedBucketCapacity)
 	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
 
-	tStrictRate := float64(0.1)
-	tStrictCapacity := float64(6)
+	tStrictRate := float64(settingLambda.Arguments.TriggerStrictBucketRate)
+	tStrictCapacity := float64(settingLambda.Arguments.TriggerStrictBucketCapacity)
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
 	merged := mergeLocalSetting(ns)
