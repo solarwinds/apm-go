@@ -94,7 +94,15 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	o := oboe.NewOboe()
 
 	// TODO only if in lambda
-	go o.StartSettingTicker()
+	// Attempt to get lambda settings first time; disable tracing if error
+	ok := o.UpdateSettingFromFile()
+	if !ok {
+		// TODO tracing mode disabled if cannot open/parse/get all settings
+		stdlog.Print("TODO: could not update setting from file; tracing disabled")
+	} else {
+		// start regular settings file reading
+		go o.StartSettingTicker()
+	}
 
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {

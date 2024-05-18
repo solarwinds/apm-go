@@ -50,7 +50,7 @@ const (
 
 type Oboe interface {
 	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
-	UpdateSettingFromFile()
+	UpdateSettingFromFile() bool
 	StartSettingTicker()
 	StopSettingTicker()
 	CheckSettingsTimeout()
@@ -256,11 +256,12 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 	o.Unlock()
 }
 
-func (o *oboe) UpdateSettingFromFile() {
+// UpdateSettingFromFile returns bool if reading file and update successful
+func (o *oboe) UpdateSettingFromFile() bool {
 	settingLambda, err := newSettingLambdaFromFile()
 	if err != nil {
 		stdlog.Fatalf("Could not update setting from file: %s", err)
-		return
+		return false
 	}
 
 	var sType int = 1     // always DEFAULT_SAMPLE_RATE
@@ -298,6 +299,8 @@ func (o *oboe) UpdateSettingFromFile() {
 	o.Lock()
 	o.settings[key] = merged
 	o.Unlock()
+
+	return true
 }
 
 func (o *oboe) StartSettingTicker() {
