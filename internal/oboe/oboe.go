@@ -262,42 +262,14 @@ func (o *oboe) UpdateSettingFromFile() {
 		stdlog.Fatalf("Could not update setting from file: %s", err)
 		return
 	}
-
-	var sType int = 1     // always DEFAULT_SAMPLE_RATE
-	var layer string = "" // not set since type is always DEFAULT_SAMPLE_RATE
-
-	ns := newOboeSettings()
-	ns.source = settingType(sType).toSampleSource()
-	ns.layer = layer
-
-	ns.timestamp = time.Unix(int64(settingLambda.Timestamp), 0)
-	ns.flags = flagStringToBin(settingLambda.Flags)
-	ns.originalFlags = flagStringToBin(settingLambda.Flags)
-	ns.value = adjustSampleRate(int64(settingLambda.Value))
-	ns.ttl = int64(settingLambda.Ttl)
-
-	rate := float64(settingLambda.Arguments.BucketRate)
-	capacity := float64(settingLambda.Arguments.BucketCapacity)
-	ns.bucket.setRateCap(rate, capacity)
-
-	tRelaxedRate := float64(settingLambda.Arguments.TriggerRelaxedBucketRate)
-	tRelaxedCapacity := float64(settingLambda.Arguments.TriggerRelaxedBucketCapacity)
-	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
-
-	tStrictRate := float64(settingLambda.Arguments.TriggerStrictBucketRate)
-	tStrictCapacity := float64(settingLambda.Arguments.TriggerStrictBucketCapacity)
-	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
-
-	merged := mergeLocalSetting(ns)
-
-	key := settingKey{
-		sType: settingType(sType),
-		layer: layer,
-	}
-
-	o.Lock()
-	o.settings[key] = merged
-	o.Unlock()
+	o.UpdateSetting(
+		settingLambda.sType,
+		settingLambda.layer,
+		settingLambda.flags,
+		settingLambda.value,
+		settingLambda.ttl,
+		settingLambda.args,
+	)
 }
 
 func (o *oboe) StartSettingTicker() {
