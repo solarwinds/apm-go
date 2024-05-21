@@ -94,7 +94,8 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	o := oboe.NewOboe()
 
 	// TODO only if in lambda
-	go o.StartSettingTicker()
+	fbw := oboe.NewFileBasedWatcher(&o)
+	go fbw.Start()
 
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
@@ -124,7 +125,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	return func() {
 		// stop ticker
 		// TODO only if in lambda
-		o.StopSettingTicker()
+		fbw.Stop()
 
 		// shut down TracerProvider, and log error if issues
 		if err := tp.Shutdown(context.Background()); err != nil {

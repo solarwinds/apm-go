@@ -18,7 +18,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	stdlog "log"
 	"math"
 	"strings"
 	"sync"
@@ -50,9 +49,6 @@ const (
 
 type Oboe interface {
 	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
-	UpdateSettingFromFile()
-	StartSettingTicker()
-	StopSettingTicker()
 	CheckSettingsTimeout()
 	GetSetting() (*settings, bool)
 	RemoveSetting()
@@ -70,8 +66,7 @@ func NewOboe() Oboe {
 
 type oboe struct {
 	sync.RWMutex
-	settings       map[settingKey]*settings
-	settingsTicker *time.Ticker
+	settings map[settingKey]*settings
 }
 
 var _ Oboe = &oboe{}
@@ -254,33 +249,6 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 	o.Lock()
 	o.settings[key] = merged
 	o.Unlock()
-}
-
-func (o *oboe) UpdateSettingFromFile() {
-	settingLambda, err := newSettingLambdaFromFile()
-	if err != nil {
-		stdlog.Fatalf("Could not update setting from file: %s", err)
-		return
-	}
-	o.UpdateSetting(
-		settingLambda.sType,
-		settingLambda.layer,
-		settingLambda.flags,
-		settingLambda.value,
-		settingLambda.ttl,
-		settingLambda.args,
-	)
-}
-
-func (o *oboe) StartSettingTicker() {
-	o.settingsTicker = time.NewTicker(10 * time.Second)
-	for range o.settingsTicker.C {
-		o.UpdateSettingFromFile()
-	}
-}
-
-func (o *oboe) StopSettingTicker() {
-	o.settingsTicker.Stop()
 }
 
 // CheckSettingsTimeout checks and deletes expired settings
