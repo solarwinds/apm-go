@@ -43,6 +43,7 @@ type settingArguments struct {
 }
 
 func newSettingLambdaFromFile() (*settingLambda, error) {
+	// TODO tracing mode disabled if cannot open/parse/get all settings
 	settingFile, err := os.Open("/tmp/solarwinds-apm-settings.json")
 	if err != nil {
 		return nil, err
