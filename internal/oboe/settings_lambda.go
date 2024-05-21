@@ -15,15 +15,13 @@
 package oboe
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"io"
 	stdlog "log"
-	"math"
 	"os"
 
-	"github.com/solarwinds/apm-go/internal/constants"
+	"github.com/solarwinds/apm-go/internal/utils"
 )
 
 type settingLambdaFromFile struct {
@@ -39,7 +37,7 @@ type settingLambdaFromFile struct {
 type settingArguments struct {
 	BucketCapacity               float64 `json:"BucketCapacity"`
 	BucketRate                   float64 `json:"BucketRate"`
-	MetricsFlushInterval         float64 `json:"MetricsFlushInterval"`
+	MetricsFlushInterval         int     `json:"MetricsFlushInterval"`
 	TriggerRelaxedBucketCapacity float64 `json:"TriggerRelaxedBucketCapacity"`
 	TriggerRelaxedBucketRate     float64 `json:"TriggerRelaxedBucketRate"`
 	TriggerStrictBucketCapacity  float64 `json:"TriggerStrictBucketCapacity"`
@@ -55,24 +53,21 @@ type settingLambdaNormalized struct {
 	args  map[string][]byte
 }
 
-// TODO(?): consolidate with internal/oboetestutils/oboe.go argsToMap
-func floatToBytes(float float64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, math.Float64bits(float))
-	return bytes
-}
-
 func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaNormalized {
 	flags := []byte(fromFile.Flags)
 
-	args := make(map[string][]byte)
-	args[constants.KvBucketCapacity] = floatToBytes(fromFile.Arguments.BucketCapacity)
-	args[constants.KvBucketRate] = floatToBytes(fromFile.Arguments.BucketRate)
-	args[constants.KvMetricsFlushInterval] = floatToBytes(fromFile.Arguments.MetricsFlushInterval)
-	args[constants.KvTriggerTraceRelaxedBucketCapacity] = floatToBytes(fromFile.Arguments.TriggerRelaxedBucketCapacity)
-	args[constants.KvTriggerTraceRelaxedBucketRate] = floatToBytes(fromFile.Arguments.TriggerRelaxedBucketRate)
-	args[constants.KvTriggerTraceStrictBucketCapacity] = floatToBytes(fromFile.Arguments.TriggerStrictBucketCapacity)
-	args[constants.KvTriggerTraceStrictBucketRate] = floatToBytes(fromFile.Arguments.TriggerStrictBucketRate)
+	var unusedToken = "TOKEN"
+	args := utils.ArgsToMap(
+		fromFile.Arguments.BucketCapacity,
+		fromFile.Arguments.BucketRate,
+		fromFile.Arguments.TriggerRelaxedBucketCapacity,
+		fromFile.Arguments.TriggerRelaxedBucketRate,
+		fromFile.Arguments.TriggerStrictBucketCapacity,
+		fromFile.Arguments.TriggerStrictBucketRate,
+		fromFile.Arguments.MetricsFlushInterval,
+		-1,
+		[]byte(unusedToken),
+	)
 
 	settingNorm := settingLambdaNormalized{
 		1,  // always DEFAULT_SAMPLE_RATE
