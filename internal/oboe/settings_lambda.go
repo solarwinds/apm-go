@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	stdlog "log"
 	"os"
 
 	"github.com/solarwinds/apm-go/internal/utils"
@@ -100,12 +99,7 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 	}
 
 	var settingLambda settingLambdaFromFile = settingLambdas[0]
-	// tmp: debug
-	stdlog.Printf("settingLambda: %v", settingLambda)
-	stdlog.Printf("settingLambda.Arguments: %v", settingLambda.Arguments)
 
 	var settingLambdaNormalized = newSettingLambdaNormalized(&settingLambda)
-	// tmp: debug
-	stdlog.Printf("settingLambdaNormalized: %v", settingLambdaNormalized)
 	return settingLambdaNormalized, nil
 }
