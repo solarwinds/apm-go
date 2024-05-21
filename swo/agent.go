@@ -89,24 +89,18 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	config.Load() // earlier so we can call HasLambdaEnv earlier
 	registry := metrics.NewLegacyRegistry()
 	o := oboe.NewOboe()
-
-	// TODO only if in lambda
-	fbw := oboe.NewFileBasedWatcher(&o)
-	go fbw.Start()
-
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
 		return func() {}, err
 	}
-
 	exprtr := exporter.NewExporter(_reporter)
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
 		return func() {}, err
 	}
+	config.Load()
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
 	prop := propagation.NewCompositeTextMapPropagator(
@@ -123,11 +117,6 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	)
 	otel.SetTracerProvider(tp)
 	return func() {
-		// stop ticker
-		// TODO only if in lambda
-		fbw.Stop()
-
-		// shut down TracerProvider, and log error if issues
 		if err := tp.Shutdown(context.Background()); err != nil {
 			stdlog.Fatal(err)
 		}
