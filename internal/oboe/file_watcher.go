@@ -24,6 +24,8 @@ const (
 	tickUnit = time.Second
 )
 
+var exit = make(chan bool, 1)
+
 type FileBasedWatcher interface {
 	UpdateSettingFromFile()
 	Start()
@@ -33,13 +35,11 @@ type FileBasedWatcher interface {
 func NewFileBasedWatcher(oboe *Oboe) FileBasedWatcher {
 	return &fileBasedWatcher{
 		*oboe,
-		time.NewTicker(tick * tickUnit),
 	}
 }
 
 type fileBasedWatcher struct {
-	o      Oboe
-	ticker *time.Ticker
+	o Oboe
 }
 
 func (fbw *fileBasedWatcher) UpdateSettingFromFile() {
@@ -59,11 +59,22 @@ func (fbw *fileBasedWatcher) UpdateSettingFromFile() {
 }
 
 func (fbw *fileBasedWatcher) Start() {
-	for range fbw.ticker.C {
-		fbw.UpdateSettingFromFile()
-	}
+	ticker := time.NewTicker(tick * tickUnit)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-exit:
+				return
+			case <-ticker.C:
+				stdlog.Print("Updating settings from file.")
+				fbw.UpdateSettingFromFile()
+			}
+		}
+	}()
 }
 
 func (fbw *fileBasedWatcher) Stop() {
-	fbw.ticker.Stop()
+	stdlog.Print("Stopping settings file watcher.")
+	exit <- true
 }
