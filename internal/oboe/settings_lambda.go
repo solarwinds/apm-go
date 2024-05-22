@@ -27,10 +27,10 @@ type settingLambdaFromFile struct {
 	Arguments *settingArguments `json:"arguments"`
 	Flags     string            `json:"flags"`
 	Layer     string            `json:"layer"`
-	Timestamp int               `json:"timestamp"`
+	Timestamp int64             `json:"timestamp"`
 	Ttl       int64             `json:"ttl"`
 	Stype     int               `json:"type"`
-	Value     int               `json:"value"`
+	Value     int64             `json:"value"`
 }
 
 type settingArguments struct {
