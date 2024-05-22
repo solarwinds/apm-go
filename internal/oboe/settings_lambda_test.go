@@ -113,7 +113,7 @@ func TestNewSettingLambdaFromFileErrorUnmarshal(t *testing.T) {
 	require.NoFileExists(t, SettingsFile)
 
 	content := []byte("hello\ngo\n")
-	os.WriteFile(SettingsFile, content, 0644)
+	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
 	res, err := newSettingLambdaFromFile()
 	assert.Nil(t, res)
 	assert.Error(t, err)
@@ -125,7 +125,7 @@ func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
 	require.NoFileExists(t, SettingsFile)
 
 	content := []byte("[]")
-	os.WriteFile(SettingsFile, content, 0644)
+	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
 	res, err := newSettingLambdaFromFile()
 	assert.Nil(t, res)
 	assert.Error(t, err)
@@ -137,7 +137,7 @@ func TestNewSettingLambdaFromFile(t *testing.T) {
 	require.NoFileExists(t, SettingsFile)
 
 	content := []byte("[{\"arguments\":{\"BucketCapacity\":1,\"BucketRate\":1,\"MetricsFlushInterval\":1,\"TriggerRelaxedBucketCapacity\":1,\"TriggerRelaxedBucketRate\":1,\"TriggerStrictBucketCapacity\":1,\"TriggerStrictBucketRate\":1},\"flags\":\"SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE\",\"layer\":\"\",\"timestamp\":1715900164,\"ttl\":120,\"type\":0,\"value\":1000000}]")
-	os.WriteFile(SettingsFile, content, 0644)
+	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
 	result, err := newSettingLambdaFromFile()
 	assert.Nil(t, err)
 	assert.Equal(t, int32(1), result.sType)
