@@ -32,6 +32,8 @@ type FileBasedWatcher interface {
 	Stop()
 }
 
+// NewFileBasedWatcher returns a FileBasedWatcher that periodically
+// does oboe.UpdateSetting using values from a settings JSON file.
 func NewFileBasedWatcher(oboe *Oboe) FileBasedWatcher {
 	return &fileBasedWatcher{
 		*oboe,

@@ -136,6 +136,8 @@ func IsHigherOrEqualGoVersion(version string) bool {
 	return true
 }
 
+// ArgsToMap uses settings as float/int/bytes to create a map of string keys
+// to bytes, for usability by oboe UpdateSetting.
 func ArgsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
 	metricsFlushInterval, maxTransactions int, token []byte) map[string][]byte {
 	args := make(map[string][]byte)
