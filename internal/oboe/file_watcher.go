@@ -54,7 +54,11 @@ type fileBasedWatcher struct {
 func (fbw *fileBasedWatcher) updateCacheFromFile(sl *settingLambdaNormalized) {
 	ttlBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(ttlBytes, uint64(sl.ttl))
-	fbw.settingsCache.Set(keyTtl, ttlBytes, int(sl.ttl))
+	err := fbw.settingsCache.Set(keyTtl, ttlBytes, int(sl.ttl))
+	if err != nil {
+		stdlog.Fatalf("There was an issue with setting settingsCache: %s", err)
+		// TODO: disable APM Go
+	}
 }
 
 // updateSettingFromFile updates oboe settings using normalized settings from file.
@@ -92,7 +96,7 @@ func (fbw *fileBasedWatcher) Start() {
 			case <-ticker.C:
 				_, expireAt, err := fbw.settingsCache.GetWithExpiration(keyTtl)
 				if err != nil {
-					stdlog.Fatalf("There was an issue with settingsCache: %s", err)
+					stdlog.Fatalf("There was an issue with getting settingsCache: %s", err)
 					// TODO: disable APM Go
 				} else {
 					// If cached settings expired, update cache and
