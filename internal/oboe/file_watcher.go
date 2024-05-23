@@ -65,14 +65,15 @@ func (fbw *fileBasedWatcher) updateCacheFromFile(sl *settingLambdaNormalized) {
 
 // updateSettingFromFile updates oboe settings using normalized settings from file.
 func (fbw *fileBasedWatcher) updateSettingFromFile(sl *settingLambdaNormalized) {
-	fbw.o.UpdateSetting(
-		sl.sType,
-		sl.layer,
-		sl.flags,
-		sl.value,
-		sl.ttl,
-		sl.args,
-	)
+	stdlog.Printf("TODO: Implement updateSettingFromFile. Received normalized settings %v", sl)
+	// fbw.o.UpdateSetting(
+	// 	sl.sType,
+	// 	sl.layer,
+	// 	sl.flags,
+	// 	sl.value,
+	// 	sl.ttl,
+	// 	sl.args,
+	// )
 }
 
 func (fbw *fileBasedWatcher) updateSettingAndCacheFromFile() {
@@ -99,7 +100,7 @@ func (fbw *fileBasedWatcher) Start() {
 				// expired values are Not Found
 				_, notFound := fbw.settingsCache.Get(keyTtl)
 				if notFound != nil {
-					stdlog.Printf("Updating settings and cache from file.")
+					stdlog.Printf("Checking settings from file.")
 					fbw.updateSettingAndCacheFromFile()
 				}
 			}
