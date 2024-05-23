@@ -17,6 +17,7 @@ package oboe
 import (
 	"encoding/binary"
 	stdlog "log"
+	"math"
 	"time"
 
 	"github.com/coocood/freecache"
@@ -52,8 +53,9 @@ type fileBasedWatcher struct {
 
 // updateCacheFromFile sets "ttl" as byte representation of ttl in seconds.
 func (fbw *fileBasedWatcher) updateCacheFromFile(sl *settingLambdaNormalized) {
+	ttlBits := math.Float64bits(float64(sl.ttl))
 	ttlBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(ttlBytes, uint64(sl.ttl))
+	binary.LittleEndian.PutUint64(ttlBytes, ttlBits)
 	err := fbw.settingsCache.Set(keyTtl, ttlBytes, int(sl.ttl))
 	if err != nil {
 		stdlog.Fatalf("There was an issue with setting settingsCache: %s", err)
@@ -94,18 +96,11 @@ func (fbw *fileBasedWatcher) Start() {
 			case <-exit:
 				return
 			case <-ticker.C:
-				_, expireAt, err := fbw.settingsCache.GetWithExpiration(keyTtl)
-				if err != nil {
-					stdlog.Fatalf("There was an issue with getting settingsCache: %s", err)
-					// TODO: disable APM Go
-				} else {
-					// If cached settings expired, update cache and
-					// and update oboe settings
-					remainingTime := expireAt - uint32(time.Now().Unix())
-					if remainingTime <= 0 {
-						stdlog.Print("Updating settings from file.")
-						fbw.updateSettingAndCacheFromFile()
-					}
+				// expired values are Not Found
+				_, notFound := fbw.settingsCache.Get(keyTtl)
+				if notFound != nil {
+					stdlog.Printf("Updating settings and cache from file.")
+					fbw.updateSettingAndCacheFromFile()
 				}
 			}
 		}
