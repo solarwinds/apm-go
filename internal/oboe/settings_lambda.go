@@ -70,7 +70,7 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 		[]byte(unusedToken),
 	)
 
-	settingNorm := settingLambdaNormalized{
+	settingNorm := &settingLambdaNormalized{
 		1,  // always DEFAULT_SAMPLE_RATE
 		"", // not set since type is always DEFAULT_SAMPLE_RATE
 		flags,
@@ -79,7 +79,7 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 		args,
 	}
 
-	return &settingNorm
+	return settingNorm
 }
 
 // newSettingLambdaFromFile unmarshals sampling settings from a JSON file at a
