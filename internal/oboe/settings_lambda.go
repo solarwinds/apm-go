@@ -52,7 +52,7 @@ type settingLambdaNormalized struct {
 	args  map[string][]byte
 }
 
-// newSettingLambdaNormalized uses settings in json-unmarshalled format
+// newSettingLambdaNormalized accepts settings in json-unmarshalled format
 // for mapping to a format readable by oboe UpdateSetting.
 func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaNormalized {
 	flags := []byte(fromFile.Flags)
@@ -83,7 +83,8 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 }
 
 // newSettingLambdaFromFile unmarshals sampling settings from a JSON file at a
-// specific path in a specific format, else returns error.
+// specific path in a specific format then returns values normalized for
+// oboe UpdateSetting, else returns error.
 func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 	settingFile, err := os.Open("/tmp/solarwinds-apm-settings.json")
 	if err != nil {
