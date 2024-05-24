@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cacheSize            = 5 * 1024 * 1024 // 5 MB
+	cacheSize            = 100 * 1024 // 100 kB
 	settingsCheckSeconds = 10
 )
 
