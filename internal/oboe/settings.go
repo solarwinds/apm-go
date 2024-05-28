@@ -15,9 +15,10 @@
 package oboe
 
 import (
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
-	"time"
 )
 
 type settings struct {
@@ -132,8 +133,7 @@ type settingFlag uint16
 
 // setting types
 const (
-	TypeDefault settingType = iota // default setting which serves as a fallback if no other settings found
-	TypeLayer                      // layer specific settings
+	TypeDefault settingType = iota // default setting and the only accepted setting
 )
 
 // setting flags offset
@@ -174,8 +174,6 @@ func (st settingType) toSampleSource() SampleSource {
 	switch st {
 	case TypeDefault:
 		source = SampleSourceDefault
-	case TypeLayer:
-		source = SampleSourceLayer
 	default:
 		source = SampleSourceNone
 	}
