@@ -15,8 +15,9 @@
 package oboe
 
 import (
-	stdlog "log"
 	"time"
+
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 const (
@@ -46,10 +47,10 @@ type fileBasedWatcher struct {
 func (fbw *fileBasedWatcher) readSettingFromFile() {
 	settingLambda, err := newSettingLambdaFromFile()
 	if err != nil {
-		stdlog.Fatalf("Could not read setting from file: %s", err)
+		log.Errorf("Could not read setting from file: %s", err)
 		return
 	}
-	stdlog.Printf(
+	log.Debugf(
 		"Got lambda settings from file:\n%v",
 		settingLambda,
 	)
@@ -73,6 +74,6 @@ func (fbw *fileBasedWatcher) Start() {
 }
 
 func (fbw *fileBasedWatcher) Stop() {
-	stdlog.Print("Stopping settings file watcher.")
+	log.Info("Stopping settings file watcher.")
 	exit <- true
 }
