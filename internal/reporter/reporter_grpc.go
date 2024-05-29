@@ -364,8 +364,8 @@ func (r *grpcReporter) start() {
 	// and reports incoming events to the collector using GRPC
 	go r.statusSender()
 
-	// start up long-running goroutine periodicTasks() which kicks off periodic tasks like
-	// collectMetrics() and getSettings()
+	// start up long-running goroutine periodicTasks() which to periodically
+	// collectMetrics() etc
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
@@ -552,7 +552,7 @@ func (c *grpcConnection) reconnect() error {
 	return c.connect()
 }
 
-// long-running goroutine that kicks off periodic tasks like collectMetrics() and getSettings()
+// long-running goroutine that kicks off periodic tasks like collectMetrics()
 func (r *grpcReporter) periodicTasks() {
 	defer log.Info("periodicTasks goroutine exiting.")
 
@@ -821,6 +821,27 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 }
 
 // ================================ Settings Handling ====================================
+
+// retrieves settings from the collector
+func (r *grpcReporter) getSettingsResponse() *collector.SettingsResult {
+	// TODO
+	method := newGetSettingsMethod(r.serviceKey.Load())
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
+		logger := log.Info
+		if method.Resp.Warning != "" {
+			logger = log.Warning
+		}
+		logger(method.CallSummary())
+		// TODO
+		// reformat with r.GetSettings
+		return method.Resp
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
+	} else {
+		log.Infof("getSettings: %s", err)
+	}
+	return nil
+}
 
 // retrieves the settings from the collector
 // ready	a 'ready' channel to indicate if this routine has terminated

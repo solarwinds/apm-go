@@ -31,6 +31,10 @@ type settingsManager struct {
 	getSettingsInterval          int       // settings retrieval interval in seconds
 	settingsTimeoutCheckInterval int       // check interval for timed out settings in seconds
 	o                            oboe.Oboe // instance of Oboe to directly UpdateSetting
+
+	// TODO source of getSetting (grpc or file)
+	// optional grpcReporter
+	// optional fileBasedWatcher
 }
 
 func NewSettingsManager(oboe *oboe.Oboe) *settingsManager {
@@ -90,10 +94,25 @@ func (sm *settingsManager) periodicTasks() {
 	}
 }
 
-// retrieves the settings from the collector
+// retrieves settings from source
 // ready	a 'ready' channel to indicate if this routine has terminated
 func (sm *settingsManager) getSettings(ready chan bool) {
+	// notify caller that this routine has terminated (defered to end of routine)
+	defer func() { ready <- true }()
+
 	// TODO
+	// getSettings from gRPC or file
+
+	// TODO
+	// updateSettings with response
+	sm.updateSettings("foo")
+}
+
+// updates the existing settings with the newly received
+// settings	new settings
+func (sm *settingsManager) updateSettings(foo string) {
+	// TODO
+	log.Info("updateSettings with %s", foo)
 }
 
 // delete settings that have timed out according to their TTL
