@@ -822,27 +822,6 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 
 // ================================ Settings Handling ====================================
 
-// retrieves settings from the collector
-func (r *grpcReporter) getSettingsResponse() *collector.SettingsResult {
-	// TODO
-	method := newGetSettingsMethod(r.serviceKey.Load())
-	if err := r.conn.InvokeRPC(r.done, method); err == nil {
-		logger := log.Info
-		if method.Resp.Warning != "" {
-			logger = log.Warning
-		}
-		logger(method.CallSummary())
-		// TODO
-		// reformat with r.GetSettings
-		return method.Resp
-	} else if errors.Is(err, errInvalidServiceKey) {
-		r.ShutdownNow()
-	} else {
-		log.Infof("getSettings: %s", err)
-	}
-	return nil
-}
-
 // retrieves the settings from the collector
 // ready	a 'ready' channel to indicate if this routine has terminated
 func (r *grpcReporter) getSettings(ready chan bool) {
@@ -868,6 +847,8 @@ func (r *grpcReporter) getSettings(ready chan bool) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
+		// TODO
+		// (A) Excise grpcReporter's call
 		r.oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
