@@ -16,6 +16,12 @@ package reporter
 
 import (
 	"context"
+	"io"
+	stdlog "log"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/host"
@@ -29,11 +35,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
-	"io"
-	stdlog "log"
-	"os"
-	"testing"
-	"time"
 
 	"strings"
 
@@ -124,14 +125,11 @@ func TestGRPCReporter(t *testing.T) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
-	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
 	o.RemoveSetting()
-	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
@@ -532,14 +530,11 @@ func testProxy(t *testing.T, proxyUrl string) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
-	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
 	o.RemoveSetting()
-	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
