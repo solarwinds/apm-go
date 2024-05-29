@@ -19,6 +19,7 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/reporter"
 )
 
 const (
@@ -31,18 +32,22 @@ type settingsManager struct {
 	getSettingsInterval          int       // settings retrieval interval in seconds
 	settingsTimeoutCheckInterval int       // check interval for timed out settings in seconds
 	o                            oboe.Oboe // instance of Oboe to directly UpdateSetting
-
-	// TODO source of getSetting (grpc or file)
-	// optional grpcReporter
-	// optional fileBasedWatcher
+	// TODO make optional
+	r reporter.Reporter // instance of gRPCReporter for remote settings
+	// TODO optional fileBasedWatcher
 }
 
-func NewSettingsManager(oboe *oboe.Oboe) *settingsManager {
+func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter) (*settingsManager, error) {
+	// TODO make reporter optional
+	if o == nil || r == nil {
+		return nil, fmt.Errorf("oboe nor reporter must not be nil")
+	}
 	return &settingsManager{
 		getSettingsInterval:          grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
-		o:                            *oboe,
-	}
+		o:                            *o,
+		r:                            *r,
+	}, nil
 }
 
 // Start launches long-running goroutine periodicTasks() which
