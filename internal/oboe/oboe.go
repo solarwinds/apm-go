@@ -43,7 +43,6 @@ const (
 	SampleSourceNone
 	SampleSourceFile
 	SampleSourceDefault
-	SampleSourceLayer
 )
 
 type Oboe interface {
@@ -272,7 +271,7 @@ func (o *oboe) GetSetting() (*settings, bool) {
 	o.RLock()
 	defer o.RUnlock()
 
-	// for now only look up the default settings
+	// always use the default setting
 	key := settingKey{
 		sType: TypeDefault,
 		layer: "",
@@ -288,6 +287,7 @@ func (o *oboe) RemoveSetting() {
 	o.Lock()
 	defer o.Unlock()
 
+	// always use the default setting
 	key := settingKey{
 		sType: TypeDefault,
 		layer: "",
