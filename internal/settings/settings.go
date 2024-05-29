@@ -15,6 +15,7 @@
 package settings
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/log"
@@ -83,7 +84,7 @@ func (sm *settingsManager) periodicTasks() {
 			select {
 			case <-getSettingsReady:
 				// only kick off a new goroutine if the previous one has terminated
-				go sm.getSettings(getSettingsReady)
+				go sm.getAndUpdateSettings(getSettingsReady)
 			default:
 			}
 		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
@@ -101,23 +102,32 @@ func (sm *settingsManager) periodicTasks() {
 
 // retrieves settings from source
 // ready	a 'ready' channel to indicate if this routine has terminated
-func (sm *settingsManager) getSettings(ready chan bool) {
+func (sm *settingsManager) getAndUpdateSettings(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
 	// TODO
-	// getSettings from gRPC or file
+	// (A) Excise grpcReporter's call to oboe.UpdateSetting but keep LegacyRegistry updates.
+	//     Also get grpcReporter to return collector settings to this Manager.
+	// or
+	// (B) Add new GetSettings interface to let grpcReporter keep all original behaviour
 
 	// TODO
-	// updateSettings with response
-	sm.updateSettings("foo")
+	// Or get settings from file instead of remote
+
+	// TODO
+	// updateOboeSettings with remote/file settings
+	// instead of foo string
+	sm.updateOboeSettings("foo")
 }
 
 // updates the existing settings with the newly received
 // settings	new settings
-func (sm *settingsManager) updateSettings(foo string) {
+func (sm *settingsManager) updateOboeSettings(foo string) {
 	// TODO
-	log.Info("updateSettings with %s", foo)
+	// sm.o.UpdateSetting with remote/file settings
+	// instead of single foo string
+	log.Info("updateOboeSettings with ", foo)
 }
 
 // delete settings that have timed out according to their TTL
