@@ -22,6 +22,18 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"math"
+	"net"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
@@ -34,17 +46,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"io"
-	"math"
-	"net"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/encoding/gzip"
@@ -619,7 +620,7 @@ func (r *grpcReporter) periodicTasks() {
 			select {
 			case <-getSettingsReady:
 				// only kick off a new goroutine if the previous one has terminated
-				go r.getSettings(getSettingsReady)
+				go r.getAndUpdateSettings(getSettingsReady)
 			default:
 			}
 		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
@@ -853,25 +854,38 @@ func (r *grpcReporter) sendMetrics(msgs [][]byte) {
 
 // ================================ Settings Handling ====================================
 
-// retrieves the settings from the collector
+// retrieves the settings from the collector and updates APM with them
 // ready	a 'ready' channel to indicate if this routine has terminated
-func (r *grpcReporter) getSettings(ready chan bool) {
+func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
+	remoteSettings, err := r.getSettings()
+	if err == nil {
+		r.updateSettings(remoteSettings)
+	} else {
+		log.Error("Could not getAndUpdateSettings: %s", err)
+	}
+}
+
+// retrieves settings from collector and returns them
+func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
 	method := newGetSettingsMethod(r.serviceKey.Load())
-	if err := r.conn.InvokeRPC(r.done, method); err == nil {
+	err := r.conn.InvokeRPC(r.done, method)
+
+	if err == nil {
 		logger := log.Info
 		if method.Resp.Warning != "" {
 			logger = log.Warning
 		}
 		logger(method.CallSummary())
-		r.updateSettings(method.Resp)
+		return method.Resp, nil
 	} else if errors.Is(err, errInvalidServiceKey) {
 		r.ShutdownNow()
 	} else {
 		log.Infof("getSettings: %s", err)
 	}
+	return nil, err
 }
 
 // updates the existing settings with the newly received
