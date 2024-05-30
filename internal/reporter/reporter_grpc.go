@@ -219,7 +219,7 @@ func (c *grpcConnection) Close() {
 type grpcReporter struct {
 	conn                         *grpcConnection // used for all RPC calls
 	collectMetricInterval        int32           // metrics flush interval in seconds
-	getSettingsInterval          int             // settings retrieval interval in seconds
+	getAndUpdateSettingsInterval int             // settings retrieval interval in seconds
 	settingsTimeoutCheckInterval int             // check interval for timed out settings in seconds
 
 	serviceKey      *uatomic.String // service key
@@ -303,7 +303,7 @@ func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry, o 
 		conn: grpcConn,
 
 		collectMetricInterval:        metrics.ReportingIntervalDefault,
-		getSettingsInterval:          grpcGetSettingsIntervalDefault,
+		getAndUpdateSettingsInterval: grpcGetSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
 		serviceKey:      uatomic.NewString(config.GetServiceKey()),
@@ -371,7 +371,7 @@ func (r *grpcReporter) start() {
 	go r.statusSender()
 
 	// start up long-running goroutine periodicTasks() which kicks off periodic tasks like
-	// collectMetrics() and getSettings()
+	// collectMetrics() and getAndUpdateSettings()
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
@@ -558,28 +558,28 @@ func (c *grpcConnection) reconnect() error {
 	return c.connect()
 }
 
-// long-running goroutine that kicks off periodic tasks like collectMetrics() and getSettings()
+// long-running goroutine that kicks off periodic tasks like collectMetrics() and getAndUpdateSettings()
 func (r *grpcReporter) periodicTasks() {
 	defer log.Info("periodicTasks goroutine exiting.")
 
 	// set up tickers
 	collectMetricsTicker := time.NewTimer(r.collectMetricsNextInterval())
-	getSettingsTicker := time.NewTimer(0)
+	getAndUpdateSettingsTicker := time.NewTimer(0)
 	settingsTimeoutCheckTicker := time.NewTimer(time.Duration(r.settingsTimeoutCheckInterval) * time.Second)
 
 	defer func() {
 		collectMetricsTicker.Stop()
-		getSettingsTicker.Stop()
+		getAndUpdateSettingsTicker.Stop()
 		settingsTimeoutCheckTicker.Stop()
 		r.conn.pingTicker.Stop()
 	}()
 
 	// set up 'ready' channels to indicate if a goroutine has terminated
 	collectMetricsReady := make(chan bool, 1)
-	getSettingsReady := make(chan bool, 1)
+	getAndUpdateSettingsReady := make(chan bool, 1)
 	settingsTimeoutCheckReady := make(chan bool, 1)
 	collectMetricsReady <- true
-	getSettingsReady <- true
+	getAndUpdateSettingsReady <- true
 	settingsTimeoutCheckReady <- true
 
 	for {
@@ -614,13 +614,13 @@ func (r *grpcReporter) periodicTasks() {
 				go r.collectMetrics(collectMetricsReady)
 			default:
 			}
-		case <-getSettingsTicker.C: // get settings from collector
+		case <-getAndUpdateSettingsTicker.C: // get settings from collector
 			// set up ticker for next round
-			getSettingsTicker.Reset(time.Duration(r.getSettingsInterval) * time.Second)
+			getAndUpdateSettingsTicker.Reset(time.Duration(r.getAndUpdateSettingsInterval) * time.Second)
 			select {
-			case <-getSettingsReady:
+			case <-getAndUpdateSettingsReady:
 				// only kick off a new goroutine if the previous one has terminated
-				go r.getAndUpdateSettings(getSettingsReady)
+				go r.getAndUpdateSettings(getAndUpdateSettingsReady)
 			default:
 			}
 		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
