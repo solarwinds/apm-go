@@ -22,7 +22,7 @@ replace github.com/solarwinds/apm-go => ../..
 require (
 	github.com/solarwinds/apm-go v0.1.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
-	go.opentelemetry.io/otel v1.25.0
+	go.opentelemetry.io/otel v1.26.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
@@ -38,9 +38,9 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/solarwinds/apm-proto v0.0.0-20231107001908-432e697887b6 // indirect
-	go.opentelemetry.io/otel/metric v1.25.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.25.0 // indirect
-	go.opentelemetry.io/otel/trace v1.25.0 // indirect
+	go.opentelemetry.io/otel/metric v1.26.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.26.0 // indirect
+	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
