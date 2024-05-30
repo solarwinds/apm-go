@@ -864,16 +864,16 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 	if err == nil {
 		r.updateSettings(remoteSettings)
 	} else {
-		log.Error("Could not getAndUpdateSettings: %s", err)
+		log.Errorf("Could not getAndUpdateSettings: %s", err)
 	}
 }
 
 // retrieves settings from collector and returns them
 func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
 	method := newGetSettingsMethod(r.serviceKey.Load())
-	err := r.conn.InvokeRPC(r.done, method)
 
-	if err == nil {
+	var err error
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info
 		if method.Resp.Warning != "" {
 			logger = log.Warning
