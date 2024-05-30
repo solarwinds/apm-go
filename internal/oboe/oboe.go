@@ -18,16 +18,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
-	"math"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (

@@ -16,6 +16,10 @@ package swo
 
 import (
 	"context"
+	"io"
+	stdlog "log"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
@@ -32,9 +36,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	stdlog "log"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -94,7 +95,6 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if err != nil {
 		return func() {}, err
 	}
-
 	exprtr := exporter.NewExporter(_reporter)
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
