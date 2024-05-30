@@ -831,29 +831,27 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 	remoteSettings, err := r.getSettings()
 	if err == nil {
 		r.updateSettings(remoteSettings)
+	} else if errors.Is(err, errInvalidServiceKey) {
+		r.ShutdownNow()
 	} else {
-		log.Error("Could not getAndUpdateSettings: %s", err)
+		log.Errorf("Could not getAndUpdateSettings: %s", err)
 	}
 }
 
 // retrieves settings from collector and returns them
 func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
 	method := newGetSettingsMethod(r.serviceKey.Load())
-	err := r.conn.InvokeRPC(r.done, method)
-
-	if err == nil {
+	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info
 		if method.Resp.Warning != "" {
 			logger = log.Warning
 		}
 		logger(method.CallSummary())
 		return method.Resp, nil
-	} else if errors.Is(err, errInvalidServiceKey) {
-		r.ShutdownNow()
 	} else {
 		log.Infof("getSettings: %s", err)
+		return nil, err
 	}
-	return nil, err
 }
 
 // updates the existing settings with the newly received
