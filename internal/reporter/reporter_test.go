@@ -125,7 +125,7 @@ func TestGRPCReporter(t *testing.T) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
+	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
@@ -533,7 +533,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
+	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)

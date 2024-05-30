@@ -90,7 +90,7 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	// These are hard-coded parameters for the gRPC reporter. Any of them become
 	// configurable in future versions will be moved to package config.
 	// TODO: use time.Time
-	grpcGetSettingsIntervalDefault          = 30               // default settings retrieval interval in seconds
+	grpcGetAndUpdateSettingsIntervalDefault = 30               // default settings retrieval interval in seconds
 	grpcSettingsTimeoutCheckIntervalDefault = 10               // default check interval for timed out settings in seconds
 	grpcPingIntervalDefault                 = 20               // default interval for keep alive pings in seconds
 	grpcRetryDelayInitial                   = 500              // initial connection/send retry delay in milliseconds
@@ -303,7 +303,7 @@ func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry, o 
 		conn: grpcConn,
 
 		collectMetricInterval:        metrics.ReportingIntervalDefault,
-		getAndUpdateSettingsInterval: grpcGetSettingsIntervalDefault,
+		getAndUpdateSettingsInterval: grpcGetAndUpdateSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
 		serviceKey:      uatomic.NewString(config.GetServiceKey()),
