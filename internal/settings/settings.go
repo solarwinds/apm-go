@@ -25,12 +25,12 @@ import (
 
 const (
 	// TODO: use time.Time
-	grpcGetSettingsIntervalDefault          = 30 // default settings retrieval interval in seconds
+	grpcGetAndUpdateSettingsIntervalDefault = 30 // default settings retrieval interval in seconds
 	grpcSettingsTimeoutCheckIntervalDefault = 10 // default check interval for timed out settings in seconds
 )
 
 type settingsManager struct {
-	getSettingsInterval          int       // settings retrieval interval in seconds
+	getAndUpdateSettingsInterval int       // settings retrieval interval in seconds
 	settingsTimeoutCheckInterval int       // check interval for timed out settings in seconds
 	o                            oboe.Oboe // instance of Oboe to directly UpdateSetting
 	// TODO make optional
@@ -44,7 +44,7 @@ func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter) (*settingsManager, e
 		return nil, fmt.Errorf("oboe nor reporter must not be nil")
 	}
 	return &settingsManager{
-		getSettingsInterval:          grpcGetSettingsIntervalDefault,
+		getAndUpdateSettingsInterval: grpcGetAndUpdateSettingsIntervalDefault,
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 		o:                            *o,
 		r:                            *r,
@@ -62,29 +62,29 @@ func (sm *settingsManager) periodicTasks() {
 	defer log.Info("periodicTasks goroutine exiting.")
 
 	// set up tickers
-	getSettingsTicker := time.NewTimer(0)
+	getAndUpdateSettingsTicker := time.NewTimer(0)
 	settingsTimeoutCheckTicker := time.NewTimer(time.Duration(sm.settingsTimeoutCheckInterval) * time.Second)
 
 	defer func() {
-		getSettingsTicker.Stop()
+		getAndUpdateSettingsTicker.Stop()
 		settingsTimeoutCheckTicker.Stop()
 	}()
 
 	// set up 'ready' channels to indicate if a goroutine has terminated
-	getSettingsReady := make(chan bool, 1)
+	getAndUpdateSettingsReady := make(chan bool, 1)
 	settingsTimeoutCheckReady := make(chan bool, 1)
-	getSettingsReady <- true
+	getAndUpdateSettingsReady <- true
 	settingsTimeoutCheckReady <- true
 
 	for {
 		select {
-		case <-getSettingsTicker.C: // get settings from collector
+		case <-getAndUpdateSettingsTicker.C: // get settings from collector
 			// set up ticker for next round
-			getSettingsTicker.Reset(time.Duration(sm.getSettingsInterval) * time.Second)
+			getAndUpdateSettingsTicker.Reset(time.Duration(sm.getAndUpdateSettingsInterval) * time.Second)
 			select {
-			case <-getSettingsReady:
+			case <-getAndUpdateSettingsReady:
 				// only kick off a new goroutine if the previous one has terminated
-				go sm.getAndUpdateSettings(getSettingsReady)
+				go sm.getAndUpdateSettings(getAndUpdateSettingsReady)
 			default:
 			}
 		case <-settingsTimeoutCheckTicker.C: // check for timed out settings

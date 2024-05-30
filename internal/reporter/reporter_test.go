@@ -101,7 +101,7 @@ func TestGRPCReporter(t *testing.T) {
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
-	r.getSettings(ready)
+	r.getAndUpdateSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
 	require.True(t, r.WaitForReady(ctxTm2))
@@ -503,7 +503,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
-	r.getSettings(ready)
+	r.getAndUpdateSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
 	require.True(t, r.WaitForReady(ctxTm2))
