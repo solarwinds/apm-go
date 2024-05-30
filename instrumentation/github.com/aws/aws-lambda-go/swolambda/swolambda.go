@@ -47,7 +47,7 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 func WrapHandler(f interface{}) lambda.Handler {
 	once.Do(func() {
 		var err error
-		if flusher, err = swo.StartLambda(); err != nil {
+		if flusher, err = swo.StartLambda(lambdacontext.LogStreamName); err != nil {
 			log.Error("could not initialize SWO lambda instrumentation", err)
 		}
 		tracer = otel.GetTracerProvider().Tracer("swolambda")

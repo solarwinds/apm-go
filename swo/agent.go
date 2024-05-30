@@ -30,6 +30,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -160,7 +161,7 @@ func (l lambdaFlusher) Flush(ctx context.Context) error {
 
 var _ Flusher = &lambdaFlusher{}
 
-func StartLambda() (Flusher, error) {
+func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	ctx := context.Background()
 	var err error
 	var tpOpts []sdktrace.TracerProviderOption
@@ -200,7 +201,22 @@ func StartLambda() (Flusher, error) {
 		return nil, err
 	}
 	otel.SetTextMapPropagator(prop)
+	// Default resource detection plus our required attributes
+	var resrc *resource.Resource
+	resrc, err = resource.Merge(
+		resource.Default(),
+		resource.NewSchemaless(
+			attribute.String("sw.data.module", "apm"),
+			attribute.String("sw.apm.version", utils.Version()),
+			attribute.String("faas.instance", lambdaLogStreamName),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	tpOpts = append(tpOpts,
+		sdktrace.WithResource(resrc),
 		sdktrace.WithSampler(smplr),
 		sdktrace.WithSpanProcessor(proc),
 	)
