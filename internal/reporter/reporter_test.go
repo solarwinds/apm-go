@@ -16,6 +16,12 @@ package reporter
 
 import (
 	"context"
+	"io"
+	stdlog "log"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/host"
@@ -29,11 +35,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
-	"io"
-	stdlog "log"
-	"os"
-	"testing"
-	"time"
 
 	"strings"
 
@@ -100,7 +101,7 @@ func TestGRPCReporter(t *testing.T) {
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
-	r.getSettings(ready)
+	r.getAndUpdateSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
 	require.True(t, r.WaitForReady(ctxTm2))
@@ -124,7 +125,7 @@ func TestGRPCReporter(t *testing.T) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
+	require.Equal(t, grpcGetSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
@@ -505,7 +506,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	// The reporter becomes ready after it has got the default setting.
 	ready := make(chan bool, 1)
-	r.getSettings(ready)
+	r.getAndUpdateSettings(ready)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
 	require.True(t, r.WaitForReady(ctxTm2))
@@ -532,7 +533,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetSettingsIntervalDefault, r.getSettingsInterval)
+	require.Equal(t, grpcGetSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
