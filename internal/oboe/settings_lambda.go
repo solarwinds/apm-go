@@ -103,8 +103,7 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 		return nil, errors.New("settings file is incorrectly formatted")
 	}
 
-	var settingLambda settingLambdaFromFile = settingLambdas[0]
+	settingLambda := settingLambdas[0]
 
-	var settingLambdaNormalized = newSettingLambdaNormalized(&settingLambda)
-	return settingLambdaNormalized, nil
+	return newSettingLambdaNormalized(&settingLambda), nil
 }
