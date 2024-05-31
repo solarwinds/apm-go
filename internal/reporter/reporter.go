@@ -29,6 +29,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -53,6 +54,8 @@ type Reporter interface {
 	// GetServiceName retrieves the current service name, preferring an otel `service.name` from resource attributes,
 	// falling back to the service name in the service key
 	GetServiceName() string
+
+	GetSettings() (*collector.SettingsResult, error)
 }
 
 var (
@@ -62,15 +65,16 @@ var (
 // a noop reporter
 type nullReporter struct{}
 
-func newNullReporter() *nullReporter                      { return &nullReporter{} }
-func (r *nullReporter) ReportEvent(Event) error           { return nil }
-func (r *nullReporter) ReportStatus(Event) error          { return nil }
-func (r *nullReporter) Shutdown(context.Context) error    { return nil }
-func (r *nullReporter) ShutdownNow()                      {}
-func (r *nullReporter) Closed() bool                      { return true }
-func (r *nullReporter) WaitForReady(context.Context) bool { return true }
-func (r *nullReporter) SetServiceKey(string) error        { return nil }
-func (r *nullReporter) GetServiceName() string            { return "" }
+func newNullReporter() *nullReporter                                    { return &nullReporter{} }
+func (r *nullReporter) ReportEvent(Event) error                         { return nil }
+func (r *nullReporter) ReportStatus(Event) error                        { return nil }
+func (r *nullReporter) Shutdown(context.Context) error                  { return nil }
+func (r *nullReporter) ShutdownNow()                                    {}
+func (r *nullReporter) Closed() bool                                    { return true }
+func (r *nullReporter) WaitForReady(context.Context) bool               { return true }
+func (r *nullReporter) SetServiceKey(string) error                      { return nil }
+func (r *nullReporter) GetServiceName() string                          { return "" }
+func (r *nullReporter) GetSettings() (*collector.SettingsResult, error) { return nil, nil }
 
 func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter, error) {
 	log.SetLevelFromStr(config.DebugLevel())

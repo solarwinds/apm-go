@@ -125,14 +125,11 @@ func TestGRPCReporter(t *testing.T) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
-	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
 	o.RemoveSetting()
-	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
@@ -533,14 +530,11 @@ func testProxy(t *testing.T, proxyUrl string) {
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
 	require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
-	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
-	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
 	time.Sleep(time.Second)
 
 	// The reporter becomes not ready after the default setting has been deleted
 	o.RemoveSetting()
-	r.checkSettingsTimeout(make(chan bool, 1))
 
 	require.False(t, r.isReady())
 	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)

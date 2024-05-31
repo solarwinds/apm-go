@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/solarwinds/apm-go/internal/utils"
+	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 )
 
 type settingLambdaFromFile struct {
@@ -50,6 +51,12 @@ type settingLambdaNormalized struct {
 	value int64
 	ttl   int64
 	args  map[string][]byte
+	// Type      int32
+	// Layer     string
+	// Flags     []byte
+	// Value     int64
+	// Ttl       int64
+	// Arguments map[string][]byte
 }
 
 // newSettingLambdaNormalized accepts settings in json-unmarshalled format
@@ -106,4 +113,100 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 	settingLambda := settingLambdas[0]
 
 	return newSettingLambdaNormalized(&settingLambda), nil
+}
+
+// ================
+// TODO Move/Repurpose everything below
+
+// Similar to collector type OboeSetting
+type OboeSettingLambda struct {
+	state         string
+	sizeCache     string
+	unknownFields string
+
+	Type      int64
+	Flags     []byte
+	Timestamp int64
+	Value     int64
+	Layer     []byte
+	Arguments map[string][]byte
+	Ttl       int64
+}
+
+// newOboeSetting returns an OboeSetting struct
+// without protoimpl fields set
+func newOboeSetting(fromFile *settingLambdaFromFile) *OboeSettingLambda {
+	flags := []byte(fromFile.Flags)
+
+	var unusedToken = "TOKEN"
+	args := utils.ArgsToMap(
+		fromFile.Arguments.BucketCapacity,
+		fromFile.Arguments.BucketRate,
+		fromFile.Arguments.TriggerRelaxedBucketCapacity,
+		fromFile.Arguments.TriggerRelaxedBucketRate,
+		fromFile.Arguments.TriggerStrictBucketCapacity,
+		fromFile.Arguments.TriggerStrictBucketRate,
+		fromFile.Arguments.MetricsFlushInterval,
+		-1,
+		[]byte(unusedToken),
+	)
+
+	oset := &OboeSettingLambda{
+		"foo",
+		"foo",
+		"foo",
+		1, // always DEFAULT_SAMPLE_RATE
+		flags,
+		int64(fromFile.Timestamp),
+		int64(fromFile.Value),
+		[]byte(""), // not set since type is always DEFAULT_SAMPLE_RATE
+		args,
+		int64(fromFile.Ttl),
+	}
+
+	return oset
+}
+
+// newOboeSettingLambdaFromFile unmarshals sampling settings from a JSON file at a
+// specific path in a specific format then returns OboeSetting for calling
+// oboe UpdateSetting like grpcReporter does, else returns error.
+func NewOboeSettingLambdaFromFile() (*OboeSettingLambda, error) {
+	settingFile, err := os.Open("/tmp/solarwinds-apm-settings.json")
+	if err != nil {
+		return nil, err
+	}
+	settingBytes, err := io.ReadAll(settingFile)
+	if err != nil {
+		return nil, err
+	}
+	// Settings file should be an array with a single settings object
+	var settingLambdas []settingLambdaFromFile
+	if err := json.Unmarshal(settingBytes, &settingLambdas); err != nil {
+		return nil, err
+	}
+	if len(settingLambdas) != 1 {
+		return nil, errors.New("settings file is incorrectly formatted")
+	}
+
+	settingLambda := settingLambdas[0]
+
+	return newOboeSetting(&settingLambda), nil
+}
+
+// TODO comment
+func NewOboeSettingFromReporter(settings *collector.SettingsResult) *OboeSettingLambda {
+	// TODO have a check
+	s := settings.GetSettings()[0]
+	return &OboeSettingLambda{
+		"foo",
+		"foo",
+		"foo",
+		int64(s.Type),
+		s.Flags,
+		s.Timestamp,
+		s.Value,
+		s.Layer,
+		s.Arguments,
+		s.Ttl,
+	}
 }

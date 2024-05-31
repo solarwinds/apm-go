@@ -1,0 +1,150 @@
+// © 2024 SolarWinds Worldwide, LLC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package settings
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/reporter"
+)
+
+const (
+	// TODO: use time.Time
+	grpcGetAndUpdateSettingsIntervalDefault = 30 // default settings retrieval interval in seconds
+	grpcSettingsTimeoutCheckIntervalDefault = 10 // default check interval for timed out settings in seconds
+)
+
+type settingsManager struct {
+	getAndUpdateSettingsInterval int       // settings retrieval interval in seconds
+	settingsTimeoutCheckInterval int       // check interval for timed out settings in seconds
+	o                            oboe.Oboe // instance of Oboe to directly UpdateSetting
+	// TODO make optional
+	r        reporter.Reporter // instance of gRPCReporter for remote settings
+	isLambda bool              // is this running in lambda
+}
+
+func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter, isLambda bool) (*settingsManager, error) {
+	// TODO make reporter optional
+	if o == nil || r == nil {
+		return nil, fmt.Errorf("oboe nor reporter must not be nil")
+	}
+	return &settingsManager{
+		getAndUpdateSettingsInterval: grpcGetAndUpdateSettingsIntervalDefault,
+		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
+		o:                            *o,
+		r:                            *r,
+		isLambda:                     isLambda,
+	}, nil
+}
+
+// Start launches long-running goroutine periodicTasks() which
+// kicks off periodic tasks to manage sample setting.
+func (sm *settingsManager) Start() {
+	go sm.periodicTasks()
+}
+
+// periodicTasks is a long-running goroutine to manage sample setting.
+func (sm *settingsManager) periodicTasks() {
+	defer log.Info("periodicTasks goroutine exiting.")
+
+	// set up tickers
+	getAndUpdateSettingsTicker := time.NewTimer(0)
+	settingsTimeoutCheckTicker := time.NewTimer(time.Duration(sm.settingsTimeoutCheckInterval) * time.Second)
+
+	defer func() {
+		getAndUpdateSettingsTicker.Stop()
+		settingsTimeoutCheckTicker.Stop()
+	}()
+
+	// set up 'ready' channels to indicate if a goroutine has terminated
+	getAndUpdateSettingsReady := make(chan bool, 1)
+	settingsTimeoutCheckReady := make(chan bool, 1)
+	getAndUpdateSettingsReady <- true
+	settingsTimeoutCheckReady <- true
+
+	for {
+		select {
+		case <-getAndUpdateSettingsTicker.C: // get settings from collector
+			// set up ticker for next round
+			getAndUpdateSettingsTicker.Reset(time.Duration(sm.getAndUpdateSettingsInterval) * time.Second)
+			select {
+			case <-getAndUpdateSettingsReady:
+				// only kick off a new goroutine if the previous one has terminated
+				go sm.getAndUpdateSettings(getAndUpdateSettingsReady)
+			default:
+			}
+		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
+			// set up ticker for next round
+			settingsTimeoutCheckTicker.Reset(time.Duration(sm.settingsTimeoutCheckInterval) * time.Second)
+			select {
+			case <-settingsTimeoutCheckReady:
+				// only kick off a new goroutine if the previous one has terminated
+				go sm.checkSettingsTimeout(settingsTimeoutCheckReady)
+			default:
+			}
+		}
+	}
+}
+
+// retrieves settings from source
+// ready	a 'ready' channel to indicate if this routine has terminated
+func (sm *settingsManager) getAndUpdateSettings(ready chan bool) {
+	// notify caller that this routine has terminated (defered to end of routine)
+	defer func() { ready <- true }()
+
+	settings, err := sm.getOboeSettings()
+	if err == nil {
+		sm.updateOboeSettings(settings)
+	} else {
+		log.Errorf("SettingsManager could not getAndUpdateSettings: %s", err)
+	}
+}
+
+// retrieves settings, normalizes, and returns them
+func (sm *settingsManager) getOboeSettings() (*oboe.OboeSettingLambda, error) {
+	if sm.isLambda {
+		// Get oboe-style settings from file
+		ns, err := oboe.NewOboeSettingLambdaFromFile()
+		return ns, err
+	} else {
+		// Note: getting remote settings makes another InvokeRPC call, in addition
+		// to grpcReporter's invoke to update legacy registry for metrics
+		s, err := sm.r.GetSettings()
+		// Map apm-proto settings to oboe-style settings
+		ns := oboe.NewOboeSettingFromReporter(s)
+		return ns, err
+	}
+}
+
+// updates the existing settings with the newly received
+// settings, oboe-style settings
+func (sm *settingsManager) updateOboeSettings(s *oboe.OboeSettingLambda) {
+	sm.o.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
+}
+
+// delete settings that have timed out according to their TTL
+// ready	a 'ready' channel to indicate if this routine has terminated
+func (sm *settingsManager) checkSettingsTimeout(ready chan bool) {
+	// notify caller that this routine has terminated (defered to end of routine)
+	defer func() { ready <- true }()
+
+	sm.o.CheckSettingsTimeout()
+	if !sm.o.HasDefaultSetting() {
+		log.Warningf("Sampling setting expired. SolarWinds Observability APM library is not working.")
+	}
+}

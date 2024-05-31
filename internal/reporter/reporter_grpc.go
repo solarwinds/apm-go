@@ -90,16 +90,14 @@ ftgwcxyEq5SkiR+6BCwdzAMqADV37TzXDHLjwSrMIrgLV5xZM20Kk6chxI5QAr/f
 	// These are hard-coded parameters for the gRPC reporter. Any of them become
 	// configurable in future versions will be moved to package config.
 	// TODO: use time.Time
-	grpcGetAndUpdateSettingsIntervalDefault = 30               // default settings retrieval interval in seconds
-	grpcSettingsTimeoutCheckIntervalDefault = 10               // default check interval for timed out settings in seconds
-	grpcPingIntervalDefault                 = 20               // default interval for keep alive pings in seconds
-	grpcRetryDelayInitial                   = 500              // initial connection/send retry delay in milliseconds
-	grpcRetryDelayMultiplier                = 1.5              // backoff multiplier for unsuccessful retries
-	grpcRetryDelayMax                       = 60               // max connection/send retry delay in seconds
-	grpcCtxTimeout                          = 10 * time.Second // gRPC method invocation timeout in seconds
-	grpcRedirectMax                         = 20               // max allowed collector redirects
-	grpcRetryLogThreshold                   = 10               // log prints after this number of retries (about 56.7s)
-	grpcMaxRetries                          = 20               // The message will be dropped after this number of retries
+	grpcPingIntervalDefault  = 20               // default interval for keep alive pings in seconds
+	grpcRetryDelayInitial    = 500              // initial connection/send retry delay in milliseconds
+	grpcRetryDelayMultiplier = 1.5              // backoff multiplier for unsuccessful retries
+	grpcRetryDelayMax        = 60               // max connection/send retry delay in seconds
+	grpcCtxTimeout           = 10 * time.Second // gRPC method invocation timeout in seconds
+	grpcRedirectMax          = 20               // max allowed collector redirects
+	grpcRetryLogThreshold    = 10               // log prints after this number of retries (about 56.7s)
+	grpcMaxRetries           = 20               // The message will be dropped after this number of retries
 )
 
 // everything needed for a GRPC connection
@@ -217,10 +215,8 @@ func (c *grpcConnection) Close() {
 }
 
 type grpcReporter struct {
-	conn                         *grpcConnection // used for all RPC calls
-	collectMetricInterval        int32           // metrics flush interval in seconds
-	getAndUpdateSettingsInterval int             // settings retrieval interval in seconds
-	settingsTimeoutCheckInterval int             // check interval for timed out settings in seconds
+	conn                  *grpcConnection // used for all RPC calls
+	collectMetricInterval int32           // metrics flush interval in seconds
 
 	serviceKey      *uatomic.String // service key
 	otelServiceName string
@@ -302,9 +298,7 @@ func newGRPCReporter(otelServiceName string, registry metrics.LegacyRegistry, o 
 	r := &grpcReporter{
 		conn: grpcConn,
 
-		collectMetricInterval:        metrics.ReportingIntervalDefault,
-		getAndUpdateSettingsInterval: grpcGetAndUpdateSettingsIntervalDefault,
-		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
+		collectMetricInterval: metrics.ReportingIntervalDefault,
 
 		serviceKey:      uatomic.NewString(config.GetServiceKey()),
 		otelServiceName: otelServiceName,
@@ -370,8 +364,8 @@ func (r *grpcReporter) start() {
 	// and reports incoming events to the collector using GRPC
 	go r.statusSender()
 
-	// start up long-running goroutine periodicTasks() which kicks off periodic tasks like
-	// collectMetrics() and getAndUpdateSettings()
+	// start up long-running goroutine periodicTasks() which to periodically
+	// collectMetrics() etc
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
@@ -558,29 +552,21 @@ func (c *grpcConnection) reconnect() error {
 	return c.connect()
 }
 
-// long-running goroutine that kicks off periodic tasks like collectMetrics() and getAndUpdateSettings()
+// long-running goroutine that kicks off periodic tasks like collectMetrics()
 func (r *grpcReporter) periodicTasks() {
 	defer log.Info("periodicTasks goroutine exiting.")
 
 	// set up tickers
 	collectMetricsTicker := time.NewTimer(r.collectMetricsNextInterval())
-	getAndUpdateSettingsTicker := time.NewTimer(0)
-	settingsTimeoutCheckTicker := time.NewTimer(time.Duration(r.settingsTimeoutCheckInterval) * time.Second)
 
 	defer func() {
 		collectMetricsTicker.Stop()
-		getAndUpdateSettingsTicker.Stop()
-		settingsTimeoutCheckTicker.Stop()
 		r.conn.pingTicker.Stop()
 	}()
 
 	// set up 'ready' channels to indicate if a goroutine has terminated
 	collectMetricsReady := make(chan bool, 1)
-	getAndUpdateSettingsReady := make(chan bool, 1)
-	settingsTimeoutCheckReady := make(chan bool, 1)
 	collectMetricsReady <- true
-	getAndUpdateSettingsReady <- true
-	settingsTimeoutCheckReady <- true
 
 	for {
 		// Exit if the reporter's done channel is closed.
@@ -612,24 +598,6 @@ func (r *grpcReporter) periodicTasks() {
 			case <-collectMetricsReady:
 				// only kick off a new goroutine if the previous one has terminated
 				go r.collectMetrics(collectMetricsReady)
-			default:
-			}
-		case <-getAndUpdateSettingsTicker.C: // get settings from collector
-			// set up ticker for next round
-			getAndUpdateSettingsTicker.Reset(time.Duration(r.getAndUpdateSettingsInterval) * time.Second)
-			select {
-			case <-getAndUpdateSettingsReady:
-				// only kick off a new goroutine if the previous one has terminated
-				go r.getAndUpdateSettings(getAndUpdateSettingsReady)
-			default:
-			}
-		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
-			// set up ticker for next round
-			settingsTimeoutCheckTicker.Reset(time.Duration(r.settingsTimeoutCheckInterval) * time.Second)
-			select {
-			case <-settingsTimeoutCheckReady:
-				// only kick off a new goroutine if the previous one has terminated
-				go r.checkSettingsTimeout(settingsTimeoutCheckReady)
 			default:
 			}
 		case <-r.conn.pingTicker.C: // ping on event connection (keep alive)
@@ -860,7 +828,7 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	remoteSettings, err := r.getSettings()
+	remoteSettings, err := r.GetSettings()
 	if err == nil {
 		r.updateSettings(remoteSettings)
 	} else if errors.Is(err, errInvalidServiceKey) {
@@ -871,7 +839,7 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 }
 
 // retrieves settings from collector and returns them
-func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
+func (r *grpcReporter) GetSettings() (*collector.SettingsResult, error) {
 	method := newGetSettingsMethod(r.serviceKey.Load())
 	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info
@@ -890,6 +858,8 @@ func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
+		// TODO
+		// (A) Excise grpcReporter's call
 		r.oboe.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
@@ -915,19 +885,6 @@ func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
 		r.cond.Broadcast()
 		r.cond.L.Unlock()
-	}
-}
-
-// delete settings that have timed out according to their TTL
-// ready	a 'ready' channel to indicate if this routine has terminated
-func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
-	// notify caller that this routine has terminated (defered to end of routine)
-	defer func() { ready <- true }()
-
-	r.oboe.CheckSettingsTimeout()
-	if r.isReady() && !r.oboe.HasDefaultSetting() {
-		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
-		r.setReady(false)
 	}
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/settings"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -95,6 +96,16 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if err != nil {
 		return func() {}, err
 	}
+	// TODO settings if lambda vs not
+	sMan, err := settings.NewSettingsManager(
+		&o,
+		&_reporter,
+		true,
+	)
+	if err != nil {
+		return func() {}, err
+	}
+	sMan.Start()
 	exprtr := exporter.NewExporter(_reporter)
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
