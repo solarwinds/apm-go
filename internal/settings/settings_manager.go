@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oboe
+package settings
 
 import (
 	"fmt"
@@ -34,11 +34,11 @@ type settingsManager struct {
 	settingsTimeoutCheckInterval int       // check interval for timed out settings in seconds
 	o                            oboe.Oboe // instance of Oboe to directly UpdateSetting
 	// TODO make optional
-	r reporter.Reporter // instance of gRPCReporter for remote settings
-	// TODO optional fileBasedWatcher
+	r        reporter.Reporter // instance of gRPCReporter for remote settings
+	isLambda bool              // is this running in lambda
 }
 
-func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter) (*settingsManager, error) {
+func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter, isLambda bool) (*settingsManager, error) {
 	// TODO make reporter optional
 	if o == nil || r == nil {
 		return nil, fmt.Errorf("oboe nor reporter must not be nil")
@@ -48,6 +48,7 @@ func NewSettingsManager(o *oboe.Oboe, r *reporter.Reporter) (*settingsManager, e
 		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 		o:                            *o,
 		r:                            *r,
+		isLambda:                     isLambda,
 	}, nil
 }
 
@@ -106,28 +107,34 @@ func (sm *settingsManager) getAndUpdateSettings(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	// TODO
-	// (A) Excise grpcReporter's call to oboe.UpdateSetting but keep LegacyRegistry updates.
-	//     Also get grpcReporter to return collector settings to this Manager.
-	// or
-	// (B) Add new GetSettings interface to let grpcReporter keep all original behaviour
+	settings, err := sm.getOboeSettings()
+	if err == nil {
+		sm.updateOboeSettings(settings)
+	} else {
+		log.Errorf("SettingsManager could not getAndUpdateSettings: %s", err)
+	}
+}
 
-	// TODO
-	// Or get settings from file instead of remote
-
-	// TODO
-	// updateOboeSettings with remote/file settings
-	// instead of foo string
-	sm.updateOboeSettings("foo")
+// retrieves settings, normalizes, and returns them
+func (sm *settingsManager) getOboeSettings() (*oboe.OboeSettingLambda, error) {
+	if sm.isLambda {
+		// Get oboe-style settings from file
+		ns, err := oboe.NewOboeSettingLambdaFromFile()
+		return ns, err
+	} else {
+		// Note: getting remote settings makes another InvokeRPC call, in addition
+		// to grpcReporter's invoke to update legacy registry for metrics
+		s, err := sm.r.GetSettings()
+		// Map apm-proto settings to oboe-style settings
+		ns := oboe.NewOboeSettingFromReporter(s)
+		return ns, err
+	}
 }
 
 // updates the existing settings with the newly received
-// settings	new settings
-func (sm *settingsManager) updateOboeSettings(foo string) {
-	// TODO
-	// sm.o.UpdateSetting with remote/file settings
-	// instead of single foo string
-	log.Info("updateOboeSettings with ", foo)
+// settings, oboe-style settings
+func (sm *settingsManager) updateOboeSettings(s *oboe.OboeSettingLambda) {
+	sm.o.UpdateSetting(int32(s.Type), string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
 }
 
 // delete settings that have timed out according to their TTL

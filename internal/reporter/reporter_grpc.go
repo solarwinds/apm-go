@@ -828,7 +828,7 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 	// notify caller that this routine has terminated (defered to end of routine)
 	defer func() { ready <- true }()
 
-	remoteSettings, err := r.getSettings()
+	remoteSettings, err := r.GetSettings()
 	if err == nil {
 		r.updateSettings(remoteSettings)
 	} else if errors.Is(err, errInvalidServiceKey) {
@@ -839,7 +839,7 @@ func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
 }
 
 // retrieves settings from collector and returns them
-func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
+func (r *grpcReporter) GetSettings() (*collector.SettingsResult, error) {
 	method := newGetSettingsMethod(r.serviceKey.Load())
 	if err := r.conn.InvokeRPC(r.done, method); err == nil {
 		logger := log.Info

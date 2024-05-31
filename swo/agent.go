@@ -96,7 +96,12 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if err != nil {
 		return func() {}, err
 	}
-	sMan, err := settings.NewSettingsManager(&o, &_reporter)
+	// TODO settings if lambda vs not
+	sMan, err := settings.NewSettingsManager(
+		&o,
+		&_reporter,
+		true,
+	)
 	if err != nil {
 		return func() {}, err
 	}
