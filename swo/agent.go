@@ -16,9 +16,6 @@ package swo
 
 import (
 	"context"
-	"io"
-	stdlog "log"
-	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
@@ -163,6 +160,10 @@ var _ Flusher = &lambdaFlusher{}
 
 func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	ctx := context.Background()
+	o := oboe.NewOboe()
+	settingsWatcher := oboe.NewFileBasedWatcher(o)
+	settingsWatcher.Start()
+	// TODO where do we shut this down?
 	var err error
 	var tpOpts []sdktrace.TracerProviderOption
 	registry := metrics.NewOtelRegistry()
@@ -194,7 +195,6 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 		&propagation.Baggage{},
 		&propagator.SolarwindsPropagator{},
 	)
-	o := oboe.NewOboe()
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
 		return nil, err

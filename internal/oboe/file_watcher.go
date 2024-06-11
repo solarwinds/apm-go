@@ -15,13 +15,14 @@
 package oboe
 
 import (
+	"os"
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/log"
 )
 
 const (
-	settingsCheckSeconds = 10
+	settingsCheckDuration time.Duration = 10 * time.Second
 )
 
 var exit = make(chan bool, 1)
@@ -33,9 +34,9 @@ type FileBasedWatcher interface {
 
 // NewFileBasedWatcher returns a FileBasedWatcher that periodically
 // reads lambda settings from file
-func NewFileBasedWatcher(oboe *Oboe) FileBasedWatcher {
+func NewFileBasedWatcher(oboe Oboe) FileBasedWatcher {
 	return &fileBasedWatcher{
-		*oboe,
+		oboe,
 	}
 }
 
@@ -44,22 +45,33 @@ type fileBasedWatcher struct {
 }
 
 // readSettingFromFile parses, normalizes, and print settings from file
-func (fbw *fileBasedWatcher) readSettingFromFile() {
-	settingLambda, err := newSettingLambdaFromFile()
-	if err != nil {
+func (w *fileBasedWatcher) readSettingFromFile() {
+	s, err := newSettingLambdaFromFile()
+	if os.IsNotExist(err) {
+		log.Debug("Settings file does not yet exist")
+		return
+	} else if err != nil {
 		log.Errorf("Could not read setting from file: %s", err)
 		return
 	}
 	log.Debugf(
-		"Got lambda settings from file:\n%v",
-		settingLambda,
+		"Got lambda settings from file:\n%+v",
+		s,
+	)
+	w.o.UpdateSetting(
+		s.sType,
+		s.layer,
+		s.flags,
+		s.value,
+		s.ttl,
+		s.args,
 	)
 }
 
 // Start runs a ticker that checks settings expiry from cache
 // and, if expired, updates cache and oboe settings.
-func (fbw *fileBasedWatcher) Start() {
-	ticker := time.NewTicker(settingsCheckSeconds * time.Second)
+func (w *fileBasedWatcher) Start() {
+	ticker := time.NewTicker(settingsCheckDuration)
 	go func() {
 		defer ticker.Stop()
 		for {
@@ -67,13 +79,14 @@ func (fbw *fileBasedWatcher) Start() {
 			case <-exit:
 				return
 			case <-ticker.C:
-				fbw.readSettingFromFile()
+				w.readSettingFromFile()
 			}
 		}
 	}()
+	w.readSettingFromFile()
 }
 
-func (fbw *fileBasedWatcher) Stop() {
+func (w *fileBasedWatcher) Stop() {
 	log.Info("Stopping settings file watcher.")
 	exit <- true
 }

@@ -44,7 +44,7 @@ type settingArguments struct {
 }
 
 type settingLambdaNormalized struct {
-	sType int32
+	sType settingType
 	layer string
 	flags []byte
 	value int64
@@ -71,11 +71,11 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 	)
 
 	settingNorm := &settingLambdaNormalized{
-		1,  // always DEFAULT_SAMPLE_RATE
-		"", // not set since type is always DEFAULT_SAMPLE_RATE
+		TypeDefault, // always DEFAULT_SAMPLE_RATE
+		"",          // not set since type is always DEFAULT_SAMPLE_RATE
 		flags,
-		int64(fromFile.Value),
-		int64(fromFile.Ttl),
+		fromFile.Value,
+		fromFile.Ttl,
 		args,
 	}
 
@@ -86,7 +86,8 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 // specific path in a specific format then returns values normalized for
 // oboe UpdateSetting, else returns error.
 func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
-	settingFile, err := os.Open("/tmp/solarwinds-apm-settings.json")
+	fn := "/tmp/solarwinds-apm-settings.json"
+	settingFile, err := os.Open(fn)
 	if err != nil {
 		return nil, err
 	}
