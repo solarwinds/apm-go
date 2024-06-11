@@ -17,34 +17,62 @@ package entryspans
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/solarwinds/apm-go/internal/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"sync"
 )
 
 var (
-	state = &entrySpans{
-		spans: make(map[trace.TraceID][]*entrySpan),
-	}
+	state = makeManagerFromEnv()
 
-	NotEntrySpan = errors.New("span is not an entry span")
+	NotEntrySpan         = errors.New("span is not an entry span")
+	CannotSetTransaction = errors.New("cannot set transaction, likely due to lambda enviroment")
 
 	nullSpanID    = trace.SpanID{}
 	nullEntrySpan = &entrySpan{spanId: nullSpanID}
 )
+
+type manager interface {
+	push(tid trace.TraceID, sid trace.SpanID)
+	delete(tid trace.TraceID, sid trace.SpanID) error
+	current(tid trace.TraceID) (*entrySpan, bool)
+	setTransactionName(tid trace.TraceID, name string) error
+}
 
 type entrySpan struct {
 	spanId  trace.SpanID
 	txnName string
 }
 
-type entrySpans struct {
+type stdManager struct {
 	mut sync.RWMutex
 
 	spans map[trace.TraceID][]*entrySpan
 }
 
-func (e *entrySpans) push(tid trace.TraceID, sid trace.SpanID) {
+type noopManager struct{}
+
+func (n noopManager) push(trace.TraceID, trace.SpanID) {}
+
+func (n noopManager) delete(trace.TraceID, trace.SpanID) error {
+	return nil
+}
+
+func (n noopManager) current(trace.TraceID) (*entrySpan, bool) {
+	return nil, false
+}
+
+func (n noopManager) setTransactionName(trace.TraceID, string) error {
+	return CannotSetTransaction
+}
+
+var (
+	_ manager = &stdManager{}
+	_ manager = &noopManager{}
+)
+
+func (e *stdManager) push(tid trace.TraceID, sid trace.SpanID) {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 	var list []*entrySpan
@@ -56,14 +84,14 @@ func (e *entrySpans) push(tid trace.TraceID, sid trace.SpanID) {
 	e.spans[tid] = list
 }
 
-func (e *entrySpans) current(tid trace.TraceID) (*entrySpan, bool) {
+func (e *stdManager) current(tid trace.TraceID) (*entrySpan, bool) {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 	a, ok := e.currentUnsafe(tid)
 	return a, ok
 }
 
-func (e *entrySpans) currentUnsafe(tid trace.TraceID) (*entrySpan, bool) {
+func (e *stdManager) currentUnsafe(tid trace.TraceID) (*entrySpan, bool) {
 	if list, ok := e.spans[tid]; ok {
 		l := len(list)
 		if len(list) == 0 {
@@ -85,7 +113,7 @@ func Push(span sdktrace.ReadOnlySpan) error {
 	return nil
 }
 
-func (e *entrySpans) delete(tid trace.TraceID, sid trace.SpanID) error {
+func (e *stdManager) delete(tid trace.TraceID, sid trace.SpanID) error {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 
@@ -125,7 +153,7 @@ func Current(tid trace.TraceID) (trace.SpanID, bool) {
 	return curr.spanId, ok
 }
 
-func (e *entrySpans) setTransactionName(tid trace.TraceID, name string) error {
+func (e *stdManager) setTransactionName(tid trace.TraceID, name string) error {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 
@@ -151,4 +179,14 @@ func GetTransactionName(tid trace.TraceID) string {
 func IsEntrySpan(span sdktrace.ReadOnlySpan) bool {
 	parent := span.Parent()
 	return !parent.IsValid() || parent.IsRemote()
+}
+
+func makeManagerFromEnv() manager {
+	if config.HasLambdaEnv() {
+		return &noopManager{}
+	} else {
+		return &stdManager{
+			spans: make(map[trace.TraceID][]*entrySpan),
+		}
+	}
 }

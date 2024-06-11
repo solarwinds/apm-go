@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package txn
 
 import (
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
@@ -34,8 +35,13 @@ func GetTransactionName(span sdktrace.ReadOnlySpan) string {
 }
 
 // deriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
-func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
-	var httpRoute, httpUrl, txnName = "", "", ""
+func deriveTransactionName(name string, attrs []attribute.KeyValue) (txnName string) {
+	// TODO: add test
+	if txnName = config.GetTransactionName(); txnName != "" {
+		return
+	}
+
+	var httpRoute, httpUrl = "", ""
 	for _, attr := range attrs {
 		if attr.Key == semconv.HTTPRouteKey {
 			httpRoute = attr.Value.AsString()
@@ -69,5 +75,5 @@ func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
 	if len(txnName) > 255 {
 		txnName = txnName[:255]
 	}
-	return txnName
+	return
 }

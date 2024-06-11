@@ -17,7 +17,8 @@ package metrics
 import (
 	"context"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/txn"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
@@ -28,14 +29,13 @@ import (
 )
 
 type otelRegistry struct {
-	meterProvider metric.MeterProvider
 }
 
 func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
 	// TODO DRY with legacy registry?
 	var attrs = []attribute.KeyValue{
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
-		attribute.String("sw.transaction", utils.GetTransactionName(span)),
+		attribute.String("sw.transaction", txn.GetTransactionName(span)),
 	}
 	for _, attr := range span.Attributes() {
 		// TODO use semconv?
@@ -48,7 +48,8 @@ func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) 
 		}
 	}
 	// TODO service.name?
-	meter := o.meterProvider.Meter("sw.apm.request.metrics")
+
+	meter := otel.GetMeterProvider().Meter("sw.apm.request.metrics")
 	histo, err := meter.Int64Histogram(
 		"trace.service.response_time",
 		metric.WithExplicitBucketBoundaries(),

@@ -19,7 +19,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/txn"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	trace2 "go.opentelemetry.io/otel/trace"
@@ -192,7 +192,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils.GetTransactionName(span)
+	txnName := txn.GetTransactionName(span)
 	swoTags["sw.transaction"] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())

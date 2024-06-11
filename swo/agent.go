@@ -188,7 +188,6 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	} else {
 		tpOpts = append(tpOpts, sdktrace.WithSyncer(exprtr))
 	}
-
 	proc := processor.NewInboundMetricsSpanProcessor(registry, false)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},

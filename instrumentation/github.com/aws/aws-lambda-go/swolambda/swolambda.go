@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/swo"
 	"go.opentelemetry.io/otel"
@@ -25,6 +26,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -33,7 +35,9 @@ var tracer trace.Tracer
 var once sync.Once
 
 type wrappedHandler struct {
-	base lambda.Handler
+	base    lambda.Handler
+	fnName  string
+	txnName string
 }
 
 var _ lambda.Handler = &wrappedHandler{}
@@ -45,8 +49,8 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	} else if lc != nil {
 		attrs = append(attrs, semconv.FaaSInvocationID(lc.AwsRequestID))
 	}
-	name := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
-	ctx, span := tracer.Start(ctx, name, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
+	attrs = append(attrs, attribute.String("sw.transaction", w.txnName))
+	ctx, span := tracer.Start(ctx, w.fnName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
 	defer func() {
 		span.End()
 		if flusher != nil {
@@ -66,7 +70,14 @@ func WrapHandler(f interface{}) lambda.Handler {
 		}
 		tracer = otel.GetTracerProvider().Tracer("swolambda")
 	})
+	fnName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
+	txnName := strings.TrimSpace(config.GetTransactionName())
+	if txnName == "" {
+		txnName = fnName
+	}
 	return &wrappedHandler{
-		base: lambda.NewHandler(f),
+		base:    lambda.NewHandler(f),
+		fnName:  fnName,
+		txnName: txnName,
 	}
 }

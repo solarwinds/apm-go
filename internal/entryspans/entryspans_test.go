@@ -33,7 +33,7 @@ var (
 	span4 = trace.SpanID{0x4}
 )
 
-func (e *entrySpans) pop(tid trace.TraceID) (trace.SpanID, bool) {
+func (e *stdManager) pop(tid trace.TraceID) (trace.SpanID, bool) {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 
@@ -57,6 +57,7 @@ func (e *entrySpans) pop(tid trace.TraceID) (trace.SpanID, bool) {
 }
 
 func TestCurrent(t *testing.T) {
+	state := state.(*stdManager)
 	sid, ok := Current(traceA)
 	require.False(t, ok)
 	require.False(t, sid.IsValid())
@@ -109,6 +110,7 @@ func TestCurrent(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
+	state := state.(*stdManager)
 	var err error
 	tr, teardown := testutils.TracerSetup()
 	defer teardown()
@@ -133,7 +135,8 @@ func TestPush(t *testing.T) {
 
 func TestSetTransactionName(t *testing.T) {
 	// reset state
-	state = &entrySpans{spans: make(map[trace.TraceID][]*entrySpan)}
+	state = &stdManager{spans: make(map[trace.TraceID][]*entrySpan)}
+	state := state.(*stdManager)
 
 	err := SetTransactionName(traceA, "foo bar")
 	require.Error(t, err)
@@ -174,7 +177,8 @@ func TestSetTransactionName(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	// reset state
-	state = &entrySpans{spans: make(map[trace.TraceID][]*entrySpan)}
+	state = &stdManager{spans: make(map[trace.TraceID][]*entrySpan)}
+	state := state.(*stdManager)
 
 	err := state.delete(traceA, span1)
 	require.Error(t, err)
