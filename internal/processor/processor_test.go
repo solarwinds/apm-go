@@ -26,9 +26,8 @@ import (
 )
 
 type recordMock struct {
-	span        sdktrace.ReadOnlySpan
-	isAppoptics bool
-	called      bool
+	span   sdktrace.ReadOnlySpan
+	called bool
 }
 
 func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan) {
@@ -85,7 +84,6 @@ func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, s.SpanContext().SpanID(), es)
 	assert.True(t, mock.called)
-	assert.False(t, mock.isAppoptics)
 }
 
 type recordOnlySampler struct{}
@@ -124,7 +122,6 @@ func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
 	require.False(t, ok)
 	require.False(t, es.IsValid())
 	assert.True(t, mock.called)
-	assert.False(t, mock.isAppoptics)
 }
 
 func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
