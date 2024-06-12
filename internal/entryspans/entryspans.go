@@ -27,7 +27,7 @@ var (
 	state = makeManagerFromEnv()
 
 	NotEntrySpan         = errors.New("span is not an entry span")
-	CannotSetTransaction = errors.New("cannot set transaction, likely due to lambda enviroment")
+	CannotSetTransaction = errors.New("cannot set transaction, likely due to lambda environment")
 
 	nullSpanID    = trace.SpanID{}
 	nullEntrySpan = &entrySpan{spanId: nullSpanID}
@@ -183,6 +183,8 @@ func IsEntrySpan(span sdktrace.ReadOnlySpan) bool {
 
 func makeManagerFromEnv() manager {
 	if config.HasLambdaEnv() {
+		// In Lambda, we cannot modify the outgoing spans for transaction naming,
+		// thus we do not want to track entry spans.
 		return &noopManager{}
 	} else {
 		return &stdManager{
