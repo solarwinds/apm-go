@@ -36,7 +36,6 @@ func GetTransactionName(span sdktrace.ReadOnlySpan) string {
 
 // deriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
 func deriveTransactionName(name string, attrs []attribute.KeyValue) (txnName string) {
-	// TODO: add test
 	if txnName = config.GetTransactionName(); txnName != "" {
 		return
 	}
