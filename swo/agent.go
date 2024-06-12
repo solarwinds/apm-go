@@ -94,7 +94,8 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	registry := metrics.NewLegacyRegistry()
+	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
+	registry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
@@ -107,8 +108,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		return func() {}, err
 	}
 	config.Load()
-	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
+	proc := processor.NewInboundMetricsSpanProcessor(registry)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
@@ -192,7 +192,7 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	if err != nil {
 		return nil, err
 	}
-	proc := processor.NewInboundMetricsSpanProcessor(registry, false)
+	proc := processor.NewInboundMetricsSpanProcessor(registry)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},

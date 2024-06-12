@@ -36,7 +36,7 @@ var searchSet = map[attribute.Key]bool{
 	semconv.HTTPRouteKey:      true,
 }
 
-func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan, _ bool) {
+func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
 	var attrs = []attribute.KeyValue{
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
 		attribute.String("sw.transaction", txn.GetTransactionName(span)),

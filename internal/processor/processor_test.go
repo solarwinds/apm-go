@@ -31,9 +31,8 @@ type recordMock struct {
 	called      bool
 }
 
-func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
+func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan) {
 	r.span = span
-	r.isAppoptics = isAppoptics
 	r.called = true
 }
 
@@ -65,7 +64,7 @@ var _ metrics.LegacyRegistry = &recordMock{}
 
 func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	mock := &recordMock{}
-	sp := NewInboundMetricsSpanProcessor(mock, false)
+	sp := NewInboundMetricsSpanProcessor(mock)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -104,7 +103,7 @@ func (ro recordOnlySampler) Description() string {
 
 func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
 	mock := &recordMock{}
-	sp := NewInboundMetricsSpanProcessor(mock, false)
+	sp := NewInboundMetricsSpanProcessor(mock)
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 		sdktrace.WithSampler(recordOnlySampler{}),
@@ -130,7 +129,7 @@ func TestInboundMetricsSpanProcessorOnEndRecordOnly(t *testing.T) {
 
 func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 	mock := &recordMock{}
-	sp := NewInboundMetricsSpanProcessor(mock, false)
+	sp := NewInboundMetricsSpanProcessor(mock)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx, s1 := tracer.Start(context.Background(), "span name")
@@ -153,7 +152,7 @@ func TestInboundMetricsSpanProcessorOnEndWithLocalParent(t *testing.T) {
 
 func TestInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
 	mock := &recordMock{}
-	sp := NewInboundMetricsSpanProcessor(mock, false)
+	sp := NewInboundMetricsSpanProcessor(mock)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sp))
 	tracer := tp.Tracer("foo")
 	ctx := context.Background()
