@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	settingsCheckDuration time.Duration = 10 * time.Second
+	settingsCheckDuration = 10 * time.Second
+	settingsFileName      = "/tmp/solarwinds-apm-settings.json"
 )
 
 var exit = make(chan bool, 1)

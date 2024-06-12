@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const SettingsFile = "/tmp/solarwinds-apm-settings.json"
-
 func TestNewSettingLambdaNormalized(t *testing.T) {
 	settingArgs := settingArguments{
 		1,
@@ -103,41 +101,41 @@ func TestNewSettingLambdaNormalized(t *testing.T) {
 }
 
 func TestNewSettingLambdaFromFileErrorOpen(t *testing.T) {
-	require.NoFileExists(t, SettingsFile)
+	require.NoFileExists(t, settingsFileName)
 	res, err := newSettingLambdaFromFile()
 	assert.Nil(t, res)
 	assert.Error(t, err)
 }
 
 func TestNewSettingLambdaFromFileErrorUnmarshal(t *testing.T) {
-	require.NoFileExists(t, SettingsFile)
+	require.NoFileExists(t, settingsFileName)
 
 	content := []byte("hello\ngo\n")
-	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
+	require.NoError(t, os.WriteFile(settingsFileName, content, 0644))
 	res, err := newSettingLambdaFromFile()
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	os.Remove(SettingsFile)
+	os.Remove(settingsFileName)
 }
 
 func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
-	require.NoFileExists(t, SettingsFile)
+	require.NoFileExists(t, settingsFileName)
 
 	content := []byte("[]")
-	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
+	require.NoError(t, os.WriteFile(settingsFileName, content, 0644))
 	res, err := newSettingLambdaFromFile()
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	os.Remove(SettingsFile)
+	os.Remove(settingsFileName)
 }
 
 func TestNewSettingLambdaFromFile(t *testing.T) {
-	require.NoFileExists(t, SettingsFile)
+	require.NoFileExists(t, settingsFileName)
 
 	content := []byte("[{\"arguments\":{\"BucketCapacity\":1,\"BucketRate\":1,\"MetricsFlushInterval\":1,\"TriggerRelaxedBucketCapacity\":1,\"TriggerRelaxedBucketRate\":1,\"TriggerStrictBucketCapacity\":1,\"TriggerStrictBucketRate\":1},\"flags\":\"SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE\",\"layer\":\"\",\"timestamp\":1715900164,\"ttl\":120,\"type\":0,\"value\":1000000}]")
-	require.NoError(t, os.WriteFile(SettingsFile, content, 0644))
+	require.NoError(t, os.WriteFile(settingsFileName, content, 0644))
 	result, err := newSettingLambdaFromFile()
 	assert.Nil(t, err)
 	assert.Equal(t, TypeDefault, result.sType)
@@ -195,5 +193,5 @@ func TestNewSettingLambdaFromFile(t *testing.T) {
 		result.args[constants.KvSignatureKey],
 	)
 
-	os.Remove(SettingsFile)
+	os.Remove(settingsFileName)
 }

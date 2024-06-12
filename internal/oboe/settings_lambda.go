@@ -86,8 +86,7 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 // specific path in a specific format then returns values normalized for
 // oboe UpdateSetting, else returns error.
 func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
-	fn := "/tmp/solarwinds-apm-settings.json"
-	settingFile, err := os.Open(fn)
+	settingFile, err := os.Open(settingsFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +95,8 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 		return nil, err
 	}
 	// Settings file should be an array with a single settings object
-	var settingLambdas []settingLambdaFromFile
-	if err := json.Unmarshal(settingBytes, &settingLambdas); err != nil {
+	var settingLambdas []*settingLambdaFromFile
+	if err = json.Unmarshal(settingBytes, &settingLambdas); err != nil {
 		return nil, err
 	}
 	if len(settingLambdas) != 1 {
@@ -106,5 +105,5 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 
 	settingLambda := settingLambdas[0]
 
-	return newSettingLambdaNormalized(&settingLambda), nil
+	return newSettingLambdaNormalized(settingLambda), nil
 }
