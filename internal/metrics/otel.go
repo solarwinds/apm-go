@@ -16,9 +16,7 @@ package metrics
 
 import (
 	"context"
-	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/txn"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
@@ -29,48 +27,46 @@ import (
 )
 
 type otelRegistry struct {
+	histo metric.Int64Histogram
 }
 
-func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan, isAppoptics bool) {
-	// TODO DRY with legacy registry?
+var searchSet = map[attribute.Key]bool{
+	semconv.HTTPMethodKey:     true,
+	semconv.HTTPStatusCodeKey: true,
+	semconv.HTTPRouteKey:      true,
+}
+
+func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan, _ bool) {
 	var attrs = []attribute.KeyValue{
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
 		attribute.String("sw.transaction", txn.GetTransactionName(span)),
 	}
 	for _, attr := range span.Attributes() {
-		// TODO use semconv?
-		if attr.Key == semconv.HTTPMethodKey {
-			attrs = append(attrs, attribute.String("http.method", attr.Value.AsString()))
-		} else if attr.Key == semconv.HTTPStatusCodeKey {
-			attrs = append(attrs, attribute.Int64("http.status_code", attr.Value.AsInt64()))
-		} else if attr.Key == semconv.HTTPRouteKey {
-			attrs = append(attrs, attribute.String("http.route", attr.Value.AsString()))
+		if searchSet[attr.Key] {
+			attrs = append(attrs, attr)
 		}
 	}
-	// TODO service.name?
-
-	meter := otel.GetMeterProvider().Meter("sw.apm.request.metrics")
-	histo, err := meter.Int64Histogram(
-		"trace.service.response_time",
-		metric.WithExplicitBucketBoundaries(),
-		metric.WithUnit("ms"),
+	duration := span.EndTime().Sub(span.StartTime())
+	o.histo.Record(
+		context.Background(),
+		duration.Milliseconds(),
+		metric.WithAttributes(attrs...),
 	)
-	if err != nil {
-		log.Error(err)
-	} else {
-		duration := span.EndTime().Sub(span.StartTime())
-		histo.Record(
-			context.Background(),
-			duration.Milliseconds(),
-			metric.WithAttributes(attrs...),
-		)
-	}
 }
 
 var _ MetricRegistry = &otelRegistry{}
 
-func NewOtelRegistry() MetricRegistry {
-	return &otelRegistry{}
+func NewOtelRegistry(p metric.MeterProvider) (MetricRegistry, error) {
+	meter := p.Meter("sw.apm.request.metrics")
+	if histo, err := meter.Int64Histogram(
+		"trace.service.response_time",
+		metric.WithExplicitBucketBoundaries(),
+		metric.WithUnit("ms"),
+	); err != nil {
+		return nil, err
+	} else {
+		return &otelRegistry{histo: histo}, nil
+	}
 }
 
 func TemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {

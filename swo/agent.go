@@ -166,7 +166,6 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	// TODO where do we shut this down?
 	var err error
 	var tpOpts []sdktrace.TracerProviderOption
-	registry := metrics.NewOtelRegistry()
 	var metExp metric.Exporter
 	if metExp, err = otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithTemporalitySelector(metrics.TemporalitySelector),
@@ -188,6 +187,10 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 		return nil, err
 	} else {
 		tpOpts = append(tpOpts, sdktrace.WithSyncer(exprtr))
+	}
+	registry, err := metrics.NewOtelRegistry(mp)
+	if err != nil {
+		return nil, err
 	}
 	proc := processor.NewInboundMetricsSpanProcessor(registry, false)
 	prop := propagation.NewCompositeTextMapPropagator(
