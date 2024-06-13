@@ -16,6 +16,7 @@ package swo
 
 import (
 	"context"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
@@ -157,6 +158,14 @@ func (l lambdaFlusher) Flush(ctx context.Context) error {
 var _ Flusher = &lambdaFlusher{}
 
 func StartLambda(lambdaLogStreamName string) (Flusher, error) {
+	// By default, the Go OTEL SDK sets this to `https://localhost:4317`, however
+	// we do not use https for the local collector in Lambda. We override if not
+	// already set.
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"); err != nil {
+			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_ENDPOINT %s", err)
+		}
+	}
 	ctx := context.Background()
 	o := oboe.NewOboe()
 	settingsWatcher := oboe.NewFileBasedWatcher(o)
