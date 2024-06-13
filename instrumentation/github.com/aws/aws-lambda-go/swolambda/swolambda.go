@@ -28,16 +28,21 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
-var flusher swo.Flusher
-var tracer trace.Tracer
-var once sync.Once
+var (
+	flusher         swo.Flusher
+	tracer          trace.Tracer
+	initHandlerOnce sync.Once
+	warmStart       atomic.Bool
+)
 
 type wrappedHandler struct {
 	base    lambda.Handler
 	fnName  string
 	txnName string
+	region  string
 }
 
 var _ lambda.Handler = &wrappedHandler{}
@@ -49,7 +54,16 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	} else if lc != nil {
 		attrs = append(attrs, semconv.FaaSInvocationID(lc.AwsRequestID))
 	}
-	attrs = append(attrs, attribute.String("sw.transaction", w.txnName))
+	// Note: We need to figure out how to determine `faas.trigger` attribute
+	// which is required by semconv
+	attrs = append(
+		attrs,
+		attribute.String("sw.transaction", w.txnName),
+		semconv.FaaSColdstart(!warmStart.Swap(true)),
+		semconv.FaaSInvokedName(w.fnName),
+		semconv.FaaSInvokedProviderAWS,
+		semconv.FaaSInvokedRegion(w.region),
+	)
 	ctx, span := tracer.Start(ctx, w.fnName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
 	defer func() {
 		span.End()
@@ -63,7 +77,7 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 }
 
 func WrapHandler(f interface{}) lambda.Handler {
-	once.Do(func() {
+	initHandlerOnce.Do(func() {
 		var err error
 		if flusher, err = swo.StartLambda(lambdacontext.LogStreamName); err != nil {
 			log.Error("could not initialize SWO lambda instrumentation", err)
@@ -79,5 +93,6 @@ func WrapHandler(f interface{}) lambda.Handler {
 		base:    lambda.NewHandler(f),
 		fnName:  fnName,
 		txnName: txnName,
+		region:  os.Getenv("AWS_REGION"),
 	}
 }
