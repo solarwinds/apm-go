@@ -48,22 +48,20 @@ type wrappedHandler struct {
 var _ lambda.Handler = &wrappedHandler{}
 
 func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
-	var attrs []attribute.KeyValue
-	if lc, ok := lambdacontext.FromContext(ctx); !ok {
-		log.Error("could not obtain lambda context")
-	} else if lc != nil {
-		attrs = append(attrs, semconv.FaaSInvocationID(lc.AwsRequestID))
-	}
 	// Note: We need to figure out how to determine `faas.trigger` attribute
 	// which is required by semconv
-	attrs = append(
-		attrs,
+	attrs := []attribute.KeyValue{
 		attribute.String("sw.transaction", w.txnName),
 		semconv.FaaSColdstart(!warmStart.Swap(true)),
 		semconv.FaaSInvokedName(w.fnName),
 		semconv.FaaSInvokedProviderAWS,
 		semconv.FaaSInvokedRegion(w.region),
-	)
+	}
+	if lc, ok := lambdacontext.FromContext(ctx); !ok {
+		log.Error("could not obtain lambda context")
+	} else if lc != nil {
+		attrs = append(attrs, semconv.FaaSInvocationID(lc.AwsRequestID))
+	}
 	ctx, span := tracer.Start(ctx, w.fnName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
 	defer func() {
 		span.End()
