@@ -567,7 +567,6 @@ func TestRecordSpan(t *testing.T) {
 	assert.Equal(t, responseTime, v.Name)
 
 	h := reg.apmHistograms.histograms
-	reg = NewLegacyRegistry(false).(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]
@@ -658,7 +657,6 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 	assert.Equal(t, responseTime, v.Name)
 
 	h := reg.apmHistograms.histograms
-	reg = NewLegacyRegistry(false).(*registry)
 	assert.NotEmpty(t, h)
 	globalHisto := h[""]
 	granularHisto := h["my cool route"]

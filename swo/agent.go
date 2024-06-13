@@ -17,6 +17,7 @@ package swo
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
@@ -40,9 +41,6 @@ import (
 	"io"
 	stdlog "log"
 	"strings"
-	"time"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -162,8 +160,8 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	ctx := context.Background()
 	o := oboe.NewOboe()
 	settingsWatcher := oboe.NewFileBasedWatcher(o)
+	// settingsWatcher is started but never stopped in Lambda
 	settingsWatcher.Start()
-	// TODO where do we shut this down?
 	var err error
 	var tpOpts []sdktrace.TracerProviderOption
 	var metExp metric.Exporter
@@ -172,10 +170,10 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	); err != nil {
 		return nil, err
 	}
-	reader := metric.NewPeriodicReader(
-		metExp,
-		metric.WithInterval(1*time.Second),
-	)
+	// The reader is flushed manually
+	reader := metric.NewPeriodicReader(metExp)
+	// The flusher is called after every invocation. We only need to flush
+	// metrics here because traces are sent synchronously.
 	flusher := &lambdaFlusher{
 		Reader: reader,
 	}
@@ -186,6 +184,7 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	if exprtr, err := otlptracegrpc.New(ctx); err != nil {
 		return nil, err
 	} else {
+		// Use WithSyncer to flush all spans each invocation
 		tpOpts = append(tpOpts, sdktrace.WithSyncer(exprtr))
 	}
 	registry, err := metrics.NewOtelRegistry(mp)
