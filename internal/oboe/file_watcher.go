@@ -15,6 +15,7 @@
 package oboe
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 const (
 	settingsCheckDuration = 10 * time.Second
 	settingsFileName      = "/tmp/solarwinds-apm-settings.json"
+
+	timeoutEnv = "SW_APM_INITIAL_SETTINGS_FILE_TIMEOUT"
 )
 
 var exit = make(chan bool, 1)
@@ -73,6 +76,7 @@ func (w *fileBasedWatcher) readSettingFromFile() {
 // and, if expired, updates cache and oboe settings.
 func (w *fileBasedWatcher) Start() {
 	ticker := time.NewTicker(settingsCheckDuration)
+	waitForSettingsFile()
 	go func() {
 		defer ticker.Stop()
 		for {
@@ -90,4 +94,46 @@ func (w *fileBasedWatcher) Start() {
 func (w *fileBasedWatcher) Stop() {
 	log.Info("Stopping settings file watcher.")
 	exit <- true
+}
+
+func waitForSettingsFile() {
+	var timeout = 1 * time.Second
+	if timeoutStr := os.Getenv(timeoutEnv); timeoutStr != "" {
+		if override, err := time.ParseDuration(timeoutStr); err != nil {
+			log.Errorf("could not parse duration from %s '%s': %s", timeoutEnv, timeoutStr, err)
+		} else if int64(override) < 1 {
+			log.Infof("%s was 0 or negative, skipping wait for settings file", timeoutEnv)
+			return
+		} else {
+			timeout = override
+		}
+	}
+	log.Debugf("Waiting for settings file for up to %s (override with %s; set to 0 to skip)", timeout, timeoutEnv)
+	// We could use something like fsnotify, but that's overkill for something this simple
+	waitTicker := time.NewTicker(10 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	defer waitTicker.Stop()
+	for {
+		select {
+		case <-waitTicker.C:
+			{
+				_, err := os.Stat(settingsFileName)
+				if err == nil {
+					log.Info("Settings file found")
+					return
+				} else if os.IsNotExist(err) {
+					log.Debug("Settings file does not yet exist")
+				} else {
+					log.Errorf("Could not read settings from file: %s", err)
+					return
+				}
+			}
+		case <-ctx.Done():
+			{
+				log.Info("timed out waiting for settings file")
+				return
+			}
+		}
+	}
 }
