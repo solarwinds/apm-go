@@ -111,3 +111,20 @@ func TestDeriveTxnFromEnv(t *testing.T) {
 	require.Equal(t, envTxn, config.GetTransactionName())
 	require.Equal(t, envTxn, deriveTransactionName(name, attrs))
 }
+func TestDeriveTxnFromEnvTruncated(t *testing.T) {
+	envTxn := strings.Repeat("a", 1024)
+	expected := strings.Repeat("a", 255)
+	name := "span name"
+	var attrs []attribute.KeyValue
+	require.NoError(t, os.Setenv("SW_APM_TRANSACTION_NAME", envTxn))
+	require.NoError(t, os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "foo"))
+	require.NoError(t, os.Setenv("LAMBDA_TASK_ROOT", "bar"))
+	defer func() {
+		_ = os.Unsetenv("SW_APM_TRANSACTION_NAME")
+		_ = os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
+		_ = os.Unsetenv("LAMBDA_TASK_ROOT")
+	}()
+	config.Load()
+	require.Equal(t, envTxn, config.GetTransactionName())
+	require.Equal(t, expected, deriveTransactionName(name, attrs))
+}
