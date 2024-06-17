@@ -26,7 +26,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -83,7 +82,7 @@ func WrapHandler(f interface{}) lambda.Handler {
 		tracer = otel.GetTracerProvider().Tracer("swolambda")
 	})
 	fnName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
-	txnName := strings.TrimSpace(config.GetTransactionName())
+	txnName := config.GetTransactionName()
 	if txnName == "" {
 		txnName = fnName
 	}

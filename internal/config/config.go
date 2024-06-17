@@ -900,7 +900,7 @@ func (c *Config) GetTransactionFiltering() []TransactionFilter {
 func (c *Config) GetTransactionName() string {
 	c.RLock()
 	defer c.RUnlock()
-	return c.TransactionName
+	return strings.TrimSpace(c.TransactionName)
 }
 
 // GetSQLSanitize returns the SQL sanitization level.
