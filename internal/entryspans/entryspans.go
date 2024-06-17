@@ -26,8 +26,8 @@ import (
 var (
 	state = makeManagerFromEnv()
 
-	NotEntrySpan         = errors.New("span is not an entry span")
-	CannotSetTransaction = errors.New("cannot set transaction, likely due to lambda environment")
+	NotEntrySpan             = errors.New("span is not an entry span")
+	CannotSetTransactionName = errors.New("cannot set transaction, likely due to lambda environment")
 
 	nullSpanID    = trace.SpanID{}
 	nullEntrySpan = &entrySpan{spanId: nullSpanID}
@@ -64,7 +64,7 @@ func (n noopManager) current(trace.TraceID) (*entrySpan, bool) {
 }
 
 func (n noopManager) setTransactionName(trace.TraceID, string) error {
-	return CannotSetTransaction
+	return CannotSetTransactionName
 }
 
 var (
