@@ -23,6 +23,7 @@ import (
 	"github.com/solarwinds/apm-go/swo"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 	"os"
@@ -70,7 +71,12 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 			}
 		}
 	}()
-	return w.base.Invoke(ctx, payload)
+	res, err := w.base.Invoke(ctx, payload)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+	}
+	return res, err
 }
 
 func WrapHandler(f interface{}) lambda.Handler {
