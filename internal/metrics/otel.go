@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type otelRegistry struct {
@@ -41,9 +42,11 @@ func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
 		attribute.String("sw.transaction", txn.GetTransactionName(span)),
 	}
-	for _, attr := range span.Attributes() {
-		if searchSet[attr.Key] {
-			attrs = append(attrs, attr)
+	if span.SpanKind() == trace.SpanKindServer {
+		for _, attr := range span.Attributes() {
+			if searchSet[attr.Key] {
+				attrs = append(attrs, attr)
+			}
 		}
 	}
 	duration := span.EndTime().Sub(span.StartTime())
