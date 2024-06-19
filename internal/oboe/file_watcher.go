@@ -15,13 +15,18 @@
 package oboe
 
 import (
+	"context"
+	"os"
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/log"
 )
 
 const (
-	settingsCheckSeconds = 10
+	settingsCheckDuration = 10 * time.Second
+	settingsFileName      = "/tmp/solarwinds-apm-settings.json"
+
+	timeoutEnv = "SW_APM_INITIAL_SETTINGS_FILE_TIMEOUT"
 )
 
 var exit = make(chan bool, 1)
@@ -33,9 +38,9 @@ type FileBasedWatcher interface {
 
 // NewFileBasedWatcher returns a FileBasedWatcher that periodically
 // reads lambda settings from file
-func NewFileBasedWatcher(oboe *Oboe) FileBasedWatcher {
+func NewFileBasedWatcher(oboe Oboe) FileBasedWatcher {
 	return &fileBasedWatcher{
-		*oboe,
+		oboe,
 	}
 }
 
@@ -44,22 +49,34 @@ type fileBasedWatcher struct {
 }
 
 // readSettingFromFile parses, normalizes, and print settings from file
-func (fbw *fileBasedWatcher) readSettingFromFile() {
-	settingLambda, err := newSettingLambdaFromFile()
-	if err != nil {
+func (w *fileBasedWatcher) readSettingFromFile() {
+	s, err := newSettingLambdaFromFile()
+	if os.IsNotExist(err) {
+		log.Debug("Settings file does not yet exist")
+		return
+	} else if err != nil {
 		log.Errorf("Could not read setting from file: %s", err)
 		return
 	}
 	log.Debugf(
-		"Got lambda settings from file:\n%v",
-		settingLambda,
+		"Got lambda settings from file:\n%+v",
+		s,
+	)
+	w.o.UpdateSetting(
+		int32(s.sType),
+		s.layer,
+		s.flags,
+		s.value,
+		s.ttl,
+		s.args,
 	)
 }
 
 // Start runs a ticker that checks settings expiry from cache
 // and, if expired, updates cache and oboe settings.
-func (fbw *fileBasedWatcher) Start() {
-	ticker := time.NewTicker(settingsCheckSeconds * time.Second)
+func (w *fileBasedWatcher) Start() {
+	ticker := time.NewTicker(settingsCheckDuration)
+	waitForSettingsFile()
 	go func() {
 		defer ticker.Stop()
 		for {
@@ -67,13 +84,56 @@ func (fbw *fileBasedWatcher) Start() {
 			case <-exit:
 				return
 			case <-ticker.C:
-				fbw.readSettingFromFile()
+				w.readSettingFromFile()
 			}
 		}
 	}()
+	w.readSettingFromFile()
 }
 
-func (fbw *fileBasedWatcher) Stop() {
+func (w *fileBasedWatcher) Stop() {
 	log.Info("Stopping settings file watcher.")
 	exit <- true
+}
+
+func waitForSettingsFile() {
+	var timeout = 1 * time.Second
+	if timeoutStr := os.Getenv(timeoutEnv); timeoutStr != "" {
+		if override, err := time.ParseDuration(timeoutStr); err != nil {
+			log.Errorf("could not parse duration from %s '%s': %s", timeoutEnv, timeoutStr, err)
+		} else if int64(override) < 1 {
+			log.Infof("%s was 0 or negative, skipping wait for settings file", timeoutEnv)
+			return
+		} else {
+			timeout = override
+		}
+	}
+	log.Debugf("Waiting for settings file for up to %s (override with %s; set to 0 to skip)", timeout, timeoutEnv)
+	// We could use something like fsnotify, but that's overkill for something this simple
+	waitTicker := time.NewTicker(10 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	defer waitTicker.Stop()
+	for {
+		select {
+		case <-waitTicker.C:
+			{
+				_, err := os.Stat(settingsFileName)
+				if err == nil {
+					log.Info("Settings file found")
+					return
+				} else if os.IsNotExist(err) {
+					log.Debug("Settings file does not yet exist")
+				} else {
+					log.Errorf("Could not read settings from file: %s", err)
+					return
+				}
+			}
+		case <-ctx.Done():
+			{
+				log.Info("timed out waiting for settings file")
+				return
+			}
+		}
+	}
 }

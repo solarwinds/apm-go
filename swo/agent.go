@@ -16,10 +16,9 @@ package swo
 
 import (
 	"context"
-	"io"
-	stdlog "log"
-	"strings"
+	"os"
 
+	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
@@ -30,14 +29,19 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/pkg/errors"
+	"io"
+	stdlog "log"
+	"strings"
 )
 
 var (
@@ -89,20 +93,21 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	registry := metrics.NewLegacyRegistry()
+	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
+	registry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 	_reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
 		return func() {}, err
 	}
+
 	exprtr := exporter.NewExporter(_reporter)
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
 		return func() {}, err
 	}
 	config.Load()
-	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	proc := processor.NewInboundMetricsSpanProcessor(registry, isAppoptics)
+	proc := processor.NewInboundMetricsSpanProcessor(registry)
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
@@ -136,4 +141,95 @@ func SetTransactionName(ctx context.Context, name string) error {
 		return errors.New("could not obtain OpenTelemetry SpanContext from given context")
 	}
 	return entryspans.SetTransactionName(sc.TraceID(), name)
+}
+
+type Flusher interface {
+	Flush(ctx context.Context) error
+}
+
+type lambdaFlusher struct {
+	Reader *metric.PeriodicReader
+}
+
+func (l lambdaFlusher) Flush(ctx context.Context) error {
+	return l.Reader.ForceFlush(ctx)
+}
+
+var _ Flusher = &lambdaFlusher{}
+
+func StartLambda(lambdaLogStreamName string) (Flusher, error) {
+	// By default, the Go OTEL SDK sets this to `https://localhost:4317`, however
+	// we do not use https for the local collector in Lambda. We override if not
+	// already set.
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"); err != nil {
+			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_ENDPOINT %s", err)
+		}
+	}
+	ctx := context.Background()
+	o := oboe.NewOboe()
+	settingsWatcher := oboe.NewFileBasedWatcher(o)
+	// settingsWatcher is started but never stopped in Lambda
+	settingsWatcher.Start()
+	var err error
+	var tpOpts []sdktrace.TracerProviderOption
+	var metExp metric.Exporter
+	if metExp, err = otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithTemporalitySelector(metrics.TemporalitySelector),
+	); err != nil {
+		return nil, err
+	}
+	// The reader is flushed manually
+	reader := metric.NewPeriodicReader(metExp)
+	// The flusher is called after every invocation. We only need to flush
+	// metrics here because traces are sent synchronously.
+	flusher := &lambdaFlusher{
+		Reader: reader,
+	}
+	mp := metric.NewMeterProvider(
+		metric.WithReader(reader),
+	)
+	otel.SetMeterProvider(mp)
+	if exprtr, err := otlptracegrpc.New(ctx); err != nil {
+		return nil, err
+	} else {
+		// Use WithSyncer to flush all spans each invocation
+		tpOpts = append(tpOpts, sdktrace.WithSyncer(exprtr))
+	}
+	registry, err := metrics.NewOtelRegistry(mp)
+	if err != nil {
+		return nil, err
+	}
+	proc := processor.NewInboundMetricsSpanProcessor(registry)
+	prop := propagation.NewCompositeTextMapPropagator(
+		&propagation.TraceContext{},
+		&propagation.Baggage{},
+		&propagator.SolarwindsPropagator{},
+	)
+	smplr, err := sampler.NewSampler(o)
+	if err != nil {
+		return nil, err
+	}
+	otel.SetTextMapPropagator(prop)
+	// Default resource detection plus our required attributes
+	var resrc *resource.Resource
+	resrc, err = resource.Merge(
+		resource.Default(),
+		resource.NewSchemaless(
+			attribute.String("sw.data.module", "apm"),
+			attribute.String("sw.apm.version", utils.Version()),
+			attribute.String("faas.instance", lambdaLogStreamName),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tpOpts = append(tpOpts,
+		sdktrace.WithResource(resrc),
+		sdktrace.WithSampler(smplr),
+		sdktrace.WithSpanProcessor(proc),
+	)
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(tpOpts...))
+	return flusher, nil
 }

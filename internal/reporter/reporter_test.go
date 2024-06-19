@@ -89,7 +89,7 @@ func TestGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	registry := metrics.NewLegacyRegistry()
+	registry := metrics.NewLegacyRegistry(false)
 	o := oboe.NewOboe()
 	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 
@@ -176,7 +176,7 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
-	registry := metrics.NewLegacyRegistry()
+	registry := metrics.NewLegacyRegistry(false)
 	o := oboe.NewOboe()
 	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
 	r.ShutdownNow()
@@ -236,7 +236,7 @@ func TestInvalidKey(t *testing.T) {
 	config.Load()
 
 	log.SetLevel(log.INFO)
-	registry := metrics.NewLegacyRegistry()
+	registry := metrics.NewLegacyRegistry(false)
 
 	o := oboe.NewOboe()
 	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)
@@ -447,7 +447,7 @@ func TestInitReporter(t *testing.T) {
 	// Test disable agent
 	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
-	registry := metrics.NewLegacyRegistry()
+	registry := metrics.NewLegacyRegistry(false)
 	o := oboe.NewOboe()
 	r := initReporter(resource.Empty(), registry, o)
 	require.IsType(t, &nullReporter{}, r)
@@ -493,7 +493,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
-	registry := metrics.NewLegacyRegistry()
+	registry := metrics.NewLegacyRegistry(false)
 
 	o := oboe.NewOboe()
 	r := newGRPCReporter("myservice", registry, o).(*grpcReporter)

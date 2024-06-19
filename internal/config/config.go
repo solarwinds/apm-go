@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 // Package config is responsible for loading the configuration from various
 // sources, e.g., environment variables, configuration files and user input.
 // It also accepts dynamic settings from the collector server.
@@ -340,8 +341,8 @@ const (
 	may be different from your setting.`
 )
 
-// hasLambdaEnv checks if the AWS Lambda env var is set.
-func hasLambdaEnv() bool {
+// HasLambdaEnv checks if the AWS Lambda env var is set.
+func HasLambdaEnv() bool {
 	return os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" && os.Getenv("LAMBDA_TASK_ROOT") != ""
 }
 
@@ -362,12 +363,12 @@ func (c *Config) validate() error {
 		c.Ec2MetadataTimeout = t
 	}
 
-	if c.TransactionName != "" && !hasLambdaEnv() {
+	if c.TransactionName != "" && !HasLambdaEnv() {
 		log.Info(InvalidEnv("TransactionName", c.TransactionName))
 		c.TransactionName = getFieldDefaultValue(c, "TransactionName")
 	}
 
-	if !hasLambdaEnv() {
+	if !HasLambdaEnv() {
 		if c.ServiceKey != "" {
 			c.ServiceKey = ToServiceKey(c.ServiceKey)
 			if ok := IsValidServiceKey(c.ServiceKey); !ok {
@@ -899,7 +900,7 @@ func (c *Config) GetTransactionFiltering() []TransactionFilter {
 func (c *Config) GetTransactionName() string {
 	c.RLock()
 	defer c.RUnlock()
-	return c.TransactionName
+	return strings.TrimSpace(c.TransactionName)
 }
 
 // GetSQLSanitize returns the SQL sanitization level.

@@ -1280,7 +1280,7 @@ func (d *DefaultDialer) Dial(p DialParams) (*grpc.ClientConn, error) {
 		opts = append(opts, grpc.WithContextDialer(newGRPCProxyDialer(p)))
 	}
 
-	return grpc.Dial(p.Address, opts...)
+	return grpc.NewClient(p.Address, opts...)
 }
 
 func newGRPCProxyDialer(p DialParams) func(context.Context, string) (net.Conn, error) {
