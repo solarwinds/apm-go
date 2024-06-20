@@ -11,10 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package config
 
 import (
 	"fmt"
+	"github.com/solarwinds/apm-go/internal/log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -86,7 +89,14 @@ func ToServiceKey(s string) string {
 
 // IsValidHost verifies if the host is in a valid format
 func IsValidHost(host string) bool {
-	// TODO
+	if _, _, err := net.SplitHostPort(host); err != nil {
+		if strings.Contains(err.Error(), "missing port in address") {
+			// OK!
+		} else {
+			log.Warningf("Invalid host format: %s", host)
+			return false
+		}
+	}
 	return host != ""
 }
 

@@ -64,7 +64,7 @@ func TestLoadConfig(t *testing.T) {
 	c = NewConfig(
 		WithCollector("hello.world"),
 		WithServiceKey(key2))
-	assert.Equal(t, "hello.world", c.GetCollector())
+	assert.Equal(t, "hello.world:443", c.GetCollector())
 	assert.Equal(t, ToServiceKey(key2), c.GetServiceKey())
 
 	os.Setenv(envSolarWindsAPMServiceKey, key1)
@@ -111,12 +111,12 @@ func TestConfig_HasLocalSamplingConfig(t *testing.T) {
 
 func TestPrintDelta(t *testing.T) {
 	changed := newConfig().reset()
-	changed.Collector = "test.com:443"
+	changed.Collector = "test.com"
 	changed.PrependDomain = true
 	changed.ReporterProperties.EventFlushInterval = 100
 
 	assert.Equal(t,
-		` - Collector (SW_APM_COLLECTOR) = test.com:443 (default: apm.collector.na-01.cloud.solarwinds.com:443)
+		` - Collector (SW_APM_COLLECTOR) = test.com (default: apm.collector.na-01.cloud.solarwinds.com:443)
  - PrependDomain (SW_APM_PREPEND_DOMAIN) = true (default: false)
  - ReporterProperties.EventFlushInterval (SW_APM_EVENTS_FLUSH_INTERVAL) = 100 (default: 2)`,
 		getDelta(newConfig().reset(), changed, "").sanitize().String())

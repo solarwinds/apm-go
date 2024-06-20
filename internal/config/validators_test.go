@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -110,4 +111,15 @@ func TestToServiceKey(t *testing.T) {
 	for idx, tc := range cases {
 		assert.Equal(t, tc.after, ToServiceKey(tc.before), fmt.Sprintf("Case #%d", idx))
 	}
+}
+
+func TestIsValidHost(t *testing.T) {
+	require.True(t, IsValidHost("localhost"))
+	require.True(t, IsValidHost("localhost:321"))
+	require.True(t, IsValidHost("[2001:db8::ff00:42:8329]"))
+	require.True(t, IsValidHost("[2001:db8::ff00:42:8329]:1234"))
+	require.False(t, IsValidHost(""))
+	require.False(t, IsValidHost("localhost:321:321"))
+	require.False(t, IsValidHost("2001:db8::ff00:42:8329"))
+	require.False(t, IsValidHost("2001:db8::ff00:42:8329:1234"))
 }
