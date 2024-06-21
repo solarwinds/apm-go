@@ -73,10 +73,43 @@ OpenTelemetry provides a
 for these libraries, just note that each is at a different maturity
 level, as the OpenTelemetry landscape is developing at a rapid pace.
 
+
+### Manual instrumentation
+
 You may also [manually 
 instrument](https://opentelemetry.io/docs/instrumentation/go/manual/) your code
 using the OpenTelemetry SDK and it will be properly propagated to SolarWinds
 Observability.
+
+To create a new Span, first acquire a `Tracer`. Often, this will be a
+package-level variable.
+
+```go
+tracer := otel.GetTracerProvider().Tracer("example.com/foo")
+```
+
+Next, create a Span and defer its `End()`
+
+```go
+func myFunc(ctx context.Context) {
+    ctx, span := tracer.Start(ctx, "span name here")
+    defer span.End()
+    // ...do some work
+}
+```
+
+In this example, the span will be created at the beginning of the function and
+ended at the end of the function (via [defer](https://go.dev/tour/flowcontrol/12)).
+
+Span context is propagated via [`context.Context`](https://pkg.go.dev/context), 
+making it easy to nest spans:
+
+```go
+    ctx, spanA := tracer.Start(ctx, "outer span")
+    defer spanA.End()
+    ctx, spanB := tracer.Start(ctx, "inner span")
+    defer spanB.End()
+```
 
 ### Configuration
 
