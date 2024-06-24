@@ -384,10 +384,14 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	reg := NewLegacyRegistry(false).(*registry)
 	flushInterval := int32(60)
 	bbuf := bson.WithBuf(reg.BuildBuiltinMetricsMessage(flushInterval, &EventQueueStats{},
-		map[string]*RateCounts{ // requested, sampled, limited, traced, through
-			RCRegular:             {10, 2, 5, 5, 1},
-			RCRelaxedTriggerTrace: {3, 0, 1, 2, 0},
-			RCStrictTriggerTrace:  {4, 0, 3, 1, 0}}, true))
+		&RateCountSummary{
+			Requested: 10,
+			Sampled:   2,
+			Limited:   5,
+			Traced:    5,
+			Through:   1,
+			TtTraced:  3,
+		}, true))
 	m, err := bsonToMap(bbuf)
 	require.NoError(t, err)
 
@@ -406,8 +410,6 @@ func TestGenerateMetricsMessage(t *testing.T) {
 		name  string
 		value interface{}
 	}
-
-	t.Logf("Got metrics: %+v", mts)
 
 	testCases := []testCase{
 		{"RequestCount", int64(10)},
@@ -463,6 +465,10 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	for i, tc := range testCases {
 		assert.Equal(t, tc.name, mts[i].(map[string]interface{})["name"])
 		assert.IsType(t, mts[i].(map[string]interface{})["value"], tc.value, tc.name)
+		// test the values of the sample rate metrics
+		if i < 6 {
+			assert.Equal(t, tc.value, mts[i].(map[string]interface{})["value"], tc.name)
+		}
 	}
 
 	assert.Nil(t, m["TransactionNameOverflow"])
@@ -475,7 +481,7 @@ func TestGenerateMetricsMessage(t *testing.T) {
 	}
 
 	m, err = bsonToMap(bson.WithBuf(reg.BuildBuiltinMetricsMessage(flushInterval, &EventQueueStats{},
-		map[string]*RateCounts{RCRegular: {}, RCRelaxedTriggerTrace: {}, RCStrictTriggerTrace: {}}, true)))
+		&RateCountSummary{}, true)))
 	require.NoError(t, err)
 
 	assert.NotNil(t, m["TransactionNameOverflow"])

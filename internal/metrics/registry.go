@@ -55,7 +55,7 @@ type MetricRegistry interface {
 type LegacyRegistry interface {
 	MetricRegistry
 	BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-		rcs map[string]*RateCounts, runtimeMetrics bool) []byte
+		rcs *RateCountSummary, runtimeMetrics bool) []byte
 	BuildCustomMetricsMessage(flushInterval int32) []byte
 	ApmMetricsCap() int32
 	SetApmMetricsCap(int32)
@@ -97,7 +97,7 @@ func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
 //
 // return				metrics message in BSON format
 func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
+	rcs *RateCountSummary, runtimeMetrics bool) []byte {
 	var m = r.apmMetrics.CopyAndReset(flushInterval)
 	if m == nil {
 		return nil

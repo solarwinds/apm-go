@@ -53,7 +53,7 @@ type Oboe interface {
 	RemoveSetting()
 	HasDefaultSetting() bool
 	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
-	FlushRateCounts() map[string]*metrics.RateCounts
+	FlushRateCounts() *metrics.RateCountSummary
 	GetTriggerTraceToken() ([]byte, error)
 }
 
@@ -70,18 +70,34 @@ type oboe struct {
 
 var _ Oboe = &oboe{}
 
+func summaryFromSettings(s *settings) *metrics.RateCountSummary {
+	regular := s.bucket.FlushRateCounts()
+	relaxedTT := s.triggerTraceRelaxedBucket.FlushRateCounts()
+	strictTT := s.triggerTraceStrictBucket.FlushRateCounts()
+	rcs := []*metrics.RateCounts{regular, relaxedTT, strictTT}
+
+	summary := &metrics.RateCountSummary{
+		Sampled:  regular.Sampled(),
+		Through:  regular.Through(),
+		TtTraced: relaxedTT.Traced() + strictTT.Traced(),
+	}
+
+	for _, rc := range rcs {
+		summary.Requested += rc.Requested()
+		summary.Traced += rc.Traced()
+		summary.Limited += rc.Limited()
+	}
+
+	return summary
+}
+
 // FlushRateCounts collects the request counters values by categories.
-func (o *oboe) FlushRateCounts() map[string]*metrics.RateCounts {
+func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
 	setting, ok := o.GetSetting()
 	if !ok {
 		return nil
 	}
-	rcs := make(map[string]*metrics.RateCounts)
-	rcs[metrics.RCRegular] = setting.bucket.FlushRateCounts()
-	rcs[metrics.RCRelaxedTriggerTrace] = setting.triggerTraceRelaxedBucket.FlushRateCounts()
-	rcs[metrics.RCStrictTriggerTrace] = setting.triggerTraceStrictBucket.FlushRateCounts()
-
-	return rcs
+	return summaryFromSettings(setting)
 }
 
 // SampleRequest returns a SampleDecision based on inputs and state of various token buckets
