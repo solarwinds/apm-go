@@ -15,12 +15,11 @@
 package oboe
 
 import (
-	"os"
-	"testing"
-
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"testing"
 )
 
 func TestNewSettingLambdaNormalized(t *testing.T) {
@@ -39,7 +38,6 @@ func TestNewSettingLambdaNormalized(t *testing.T) {
 		"",
 		1715900164,
 		120,
-		0,
 		1000000,
 	}
 	result := newSettingLambdaNormalized(&fromFile)

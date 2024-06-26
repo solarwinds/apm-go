@@ -32,7 +32,7 @@ type settings struct {
 	value int
 	// The sample source after negotiating with local config
 	source                    SampleSource
-	ttl                       int64
+	ttl                       time.Duration
 	TriggerToken              []byte
 	bucket                    *tokenBucket
 	triggerTraceRelaxedBucket *tokenBucket

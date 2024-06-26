@@ -47,7 +47,7 @@ const (
 )
 
 type Oboe interface {
-	UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte)
+	UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte)
 	CheckSettingsTimeout()
 	GetSetting() *settings
 	RemoveSetting()
@@ -220,7 +220,7 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func (o *oboe) UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte) {
+func (o *oboe) UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()

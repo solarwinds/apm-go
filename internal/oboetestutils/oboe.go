@@ -14,12 +14,15 @@
 
 package oboetestutils
 
-import "github.com/solarwinds/apm-go/internal/utils"
+import (
+	"github.com/solarwinds/apm-go/internal/utils"
+	"time"
+)
 
 const TestToken = "TOKEN"
 
 type SettingUpdater interface {
-	UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte)
+	UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte)
 }
 
 func AddDefaultSetting(o SettingUpdater) {

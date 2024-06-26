@@ -29,7 +29,6 @@ type settingLambdaFromFile struct {
 	Layer     string            `json:"layer"`
 	Timestamp int64             `json:"timestamp"`
 	Ttl       int64             `json:"ttl"`
-	Stype     int               `json:"type"`
 	Value     int64             `json:"value"`
 }
 
