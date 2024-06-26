@@ -255,11 +255,10 @@ func (o *oboe) CheckSettingsTimeout() {
 }
 
 func (o *oboe) checkSettingsTimeout() {
-	if o.settings.Load() == nil {
+	s := o.settings.Load()
+	if s == nil {
 		return
 	}
-
-	s := o.settings.Load()
 	e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
 	if e.Before(time.Now()) {
 		o.settings.Store(nil)
