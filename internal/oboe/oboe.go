@@ -47,7 +47,7 @@ const (
 )
 
 type Oboe interface {
-	UpdateSetting(layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
+	UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte)
 	CheckSettingsTimeout()
 	GetSetting() *settings
 	RemoveSetting()
@@ -221,7 +221,7 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func (o *oboe) UpdateSetting(layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
+func (o *oboe) UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
@@ -230,7 +230,6 @@ func (o *oboe) UpdateSetting(layer string, flags []byte, value int64, ttl int64,
 	ns.originalFlags = ns.flags
 	ns.value = adjustSampleRate(value)
 	ns.ttl = ttl
-	ns.layer = layer
 
 	ns.TriggerToken = args[constants.KvSignatureKey]
 

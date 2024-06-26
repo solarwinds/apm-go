@@ -890,7 +890,7 @@ func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
 // settings	new settings
 func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
 	for _, s := range settings.GetSettings() {
-		r.oboe.UpdateSetting(string(s.Layer), s.Flags, s.Value, s.Ttl, s.Arguments)
+		r.oboe.UpdateSetting(s.Flags, s.Value, s.Ttl, s.Arguments)
 
 		// update MetricsFlushInterval
 		mi := ParseInt32(s.Arguments, constants.KvMetricsFlushInterval, r.collectMetricInterval)

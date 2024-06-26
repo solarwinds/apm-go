@@ -33,7 +33,6 @@ type settings struct {
 	// The sample source after negotiating with local config
 	source                    SampleSource
 	ttl                       int64
-	layer                     string
 	TriggerToken              []byte
 	bucket                    *tokenBucket
 	triggerTraceRelaxedBucket *tokenBucket
