@@ -63,7 +63,6 @@ func (w *fileBasedWatcher) readSettingFromFile() {
 		s,
 	)
 	w.o.UpdateSetting(
-		0,
 		s.layer,
 		s.flags,
 		s.value,
