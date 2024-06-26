@@ -58,29 +58,26 @@ func newOboeSettings() *settings {
 	}
 }
 
-// mergeLocalSetting follow the predefined precedence to decide which one to
+// MergeLocalSetting follow the predefined precedence to decide which one to
 // pick from: either the local configs or the remote ones, or the combination.
-//
-// Note: This function modifies the argument in place.
-func mergeLocalSetting(remote *settings) *settings {
-	if remote.hasOverrideFlag() && config.SamplingConfigured() {
+func (s *settings) MergeLocalSetting() {
+	if s.hasOverrideFlag() && config.SamplingConfigured() {
 		// Choose the lower sample rate and merge the flags
-		if remote.value > config.GetSampleRate() {
-			remote.value = config.GetSampleRate()
-			remote.source = SampleSourceFile
+		if s.value > config.GetSampleRate() {
+			s.value = config.GetSampleRate()
+			s.source = SampleSourceFile
 		}
-		remote.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
+		s.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
 	} else if config.SamplingConfigured() {
 		// Use local sample rate and tracing mode config
-		remote.value = config.GetSampleRate()
-		remote.flags = NewTracingMode(config.GetTracingMode()).toFlags()
-		remote.source = SampleSourceFile
+		s.value = config.GetSampleRate()
+		s.flags = NewTracingMode(config.GetTracingMode()).toFlags()
+		s.source = SampleSourceFile
 	}
 
 	if !config.GetTriggerTrace() {
-		remote.flags = remote.flags &^ (1 << FlagTriggerTraceOffset)
+		s.flags = s.flags &^ (1 << FlagTriggerTraceOffset)
 	}
-	return remote
 }
 
 // mergeURLSetting merges the service level setting (merged from remote and local

@@ -17,7 +17,6 @@ package oboetestutils
 import "github.com/solarwinds/apm-go/internal/utils"
 
 const TestToken = "TOKEN"
-const TypeDefault = 0
 
 type SettingUpdater interface {
 	UpdateSetting(flags []byte, value int64, ttl int64, args map[string][]byte)

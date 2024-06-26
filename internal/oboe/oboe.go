@@ -245,10 +245,10 @@ func (o *oboe) UpdateSetting(flags []byte, value int64, ttl int64, args map[stri
 	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
-	merged := mergeLocalSetting(ns)
+	ns.MergeLocalSetting()
 
 	o.Lock()
-	o.settings = merged
+	o.settings = ns
 	o.Unlock()
 }
 
