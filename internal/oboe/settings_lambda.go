@@ -44,7 +44,6 @@ type settingArguments struct {
 }
 
 type settingLambdaNormalized struct {
-	layer string
 	flags []byte
 	value int64
 	ttl   int64
@@ -70,7 +69,6 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 	)
 
 	settingNorm := &settingLambdaNormalized{
-		"", // not set since type is always DEFAULT_SAMPLE_RATE
 		flags,
 		fromFile.Value,
 		fromFile.Ttl,
