@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
@@ -62,8 +62,7 @@ func NewOboe() Oboe {
 }
 
 type oboe struct {
-	sync.RWMutex
-	settings *settings
+	settings atomic.Pointer[settings]
 }
 
 var _ Oboe = &oboe{}
@@ -247,9 +246,7 @@ func (o *oboe) UpdateSetting(flags []byte, value int64, ttl int64, args map[stri
 
 	ns.MergeLocalSetting()
 
-	o.Lock()
-	o.settings = ns
-	o.Unlock()
+	o.settings.Store(ns)
 }
 
 // CheckSettingsTimeout checks and deletes expired settings
@@ -258,35 +255,27 @@ func (o *oboe) CheckSettingsTimeout() {
 }
 
 func (o *oboe) checkSettingsTimeout() {
-	o.Lock()
-	defer o.Unlock()
-	if o.settings == nil {
+	if o.settings.Load() == nil {
 		return
 	}
 
-	s := o.settings
+	s := o.settings.Load()
 	e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
 	if e.Before(time.Now()) {
-		o.settings = nil
+		o.settings.Store(nil)
 	}
 }
 
 func (o *oboe) GetSetting() *settings {
-	o.RLock()
-	defer o.RUnlock()
-
-	return o.settings
+	return o.settings.Load()
 }
 
 func (o *oboe) RemoveSetting() {
-	o.Lock()
-	defer o.Unlock()
-
-	o.settings = nil
+	o.settings.Store(nil)
 }
 
 func (o *oboe) HasDefaultSetting() bool {
-	return o.settings != nil
+	return o.settings.Load() != nil
 }
 
 func (o *oboe) GetTriggerTraceToken() ([]byte, error) {
