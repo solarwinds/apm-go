@@ -26,7 +26,6 @@ import (
 type settingLambdaFromFile struct {
 	Arguments *settingArguments `json:"arguments"`
 	Flags     string            `json:"flags"`
-	Layer     string            `json:"layer"`
 	Timestamp int64             `json:"timestamp"`
 	Ttl       int64             `json:"ttl"`
 	Value     int64             `json:"value"`

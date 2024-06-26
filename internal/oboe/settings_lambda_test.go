@@ -35,7 +35,6 @@ func TestNewSettingLambdaNormalized(t *testing.T) {
 	fromFile := settingLambdaFromFile{
 		&settingArgs,
 		"SAMPLE_START,SAMPLE_THROUGH_ALWAYS,SAMPLE_BUCKET_ENABLED,TRIGGER_TRACE",
-		"",
 		1715900164,
 		120,
 		1000000,
