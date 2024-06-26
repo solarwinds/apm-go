@@ -74,21 +74,15 @@ func summaryFromSettings(s *settings) *metrics.RateCountSummary {
 	regular := s.bucket.FlushRateCounts()
 	relaxedTT := s.triggerTraceRelaxedBucket.FlushRateCounts()
 	strictTT := s.triggerTraceStrictBucket.FlushRateCounts()
-	rcs := []*metrics.RateCounts{regular, relaxedTT, strictTT}
 
-	summary := &metrics.RateCountSummary{
-		Sampled:  regular.Sampled(),
-		Through:  regular.Through(),
-		TtTraced: relaxedTT.Traced() + strictTT.Traced(),
+	return &metrics.RateCountSummary{
+		Sampled:   regular.Sampled(),
+		Through:   regular.Through(),
+		Requested: regular.Requested() + relaxedTT.Requested() + strictTT.Requested(),
+		Traced:    regular.Traced() + relaxedTT.Traced() + strictTT.Traced(),
+		Limited:   regular.Limited() + relaxedTT.Limited() + strictTT.Limited(),
+		TtTraced:  relaxedTT.Traced() + strictTT.Traced(),
 	}
-
-	for _, rc := range rcs {
-		summary.Requested += rc.Requested()
-		summary.Traced += rc.Traced()
-		summary.Limited += rc.Limited()
-	}
-
-	return summary
 }
 
 // FlushRateCounts collects the request counters values by categories.
