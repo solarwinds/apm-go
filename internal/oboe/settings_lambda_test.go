@@ -44,7 +44,6 @@ func TestNewSettingLambdaNormalized(t *testing.T) {
 	}
 	result := newSettingLambdaNormalized(&fromFile)
 
-	assert.Equal(t, TypeDefault, result.sType)
 	assert.Equal(t, "", result.layer)
 	assert.Equal(
 		t,
@@ -138,7 +137,6 @@ func TestNewSettingLambdaFromFile(t *testing.T) {
 	require.NoError(t, os.WriteFile(settingsFileName, content, 0644))
 	result, err := newSettingLambdaFromFile()
 	assert.Nil(t, err)
-	assert.Equal(t, TypeDefault, result.sType)
 	assert.Equal(t, "", result.layer)
 	assert.Equal(
 		t,

@@ -49,7 +49,7 @@ const (
 type Oboe interface {
 	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
 	CheckSettingsTimeout()
-	GetSetting() (*settings, bool)
+	GetSetting() *settings
 	RemoveSetting()
 	HasDefaultSetting() bool
 	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
@@ -58,14 +58,12 @@ type Oboe interface {
 }
 
 func NewOboe() Oboe {
-	return &oboe{
-		settings: make(map[settingKey]*settings),
-	}
+	return &oboe{}
 }
 
 type oboe struct {
 	sync.RWMutex
-	settings map[settingKey]*settings
+	settings *settings
 }
 
 var _ Oboe = &oboe{}
@@ -87,8 +85,8 @@ func summaryFromSettings(s *settings) *metrics.RateCountSummary {
 
 // FlushRateCounts collects the request counters values by categories.
 func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
-	setting, ok := o.GetSetting()
-	if !ok {
+	setting := o.GetSetting()
+	if setting == nil {
 		return nil
 	}
 	return summaryFromSettings(setting)
@@ -96,8 +94,8 @@ func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
 
 // SampleRequest returns a SampleDecision based on inputs and state of various token buckets
 func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	setting, ok := o.GetSetting()
-	if !ok {
+	setting := o.GetSetting()
+	if setting == nil {
 		return SampleDecision{false, 0, SampleSourceNone, false, TtSettingsNotAvailable, 0, 0, false}
 	}
 
@@ -227,7 +225,7 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
-	ns.source = settingType(sType).toSampleSource()
+	ns.source = SampleSourceDefault
 	ns.flags = flagStringToBin(string(flags))
 	ns.originalFlags = ns.flags
 	ns.value = adjustSampleRate(value)
@@ -250,13 +248,8 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 
 	merged := mergeLocalSetting(ns)
 
-	key := settingKey{
-		sType: settingType(sType),
-		layer: layer,
-	}
-
 	o.Lock()
-	o.settings[key] = merged
+	o.settings = merged
 	o.Unlock()
 }
 
@@ -268,55 +261,38 @@ func (o *oboe) CheckSettingsTimeout() {
 func (o *oboe) checkSettingsTimeout() {
 	o.Lock()
 	defer o.Unlock()
+	if o.settings == nil {
+		return
+	}
 
-	ss := o.settings
-	for k, s := range ss {
-		e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
-		if e.Before(time.Now()) {
-			delete(ss, k)
-		}
+	s := o.settings
+	e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
+	if e.Before(time.Now()) {
+		o.settings = nil
 	}
 }
 
-func (o *oboe) GetSetting() (*settings, bool) {
+func (o *oboe) GetSetting() *settings {
 	o.RLock()
 	defer o.RUnlock()
 
-	// always use the default setting
-	key := settingKey{
-		sType: TypeDefault,
-		layer: "",
-	}
-	if setting, ok := o.settings[key]; ok {
-		return setting, true
-	}
-
-	return nil, false
+	return o.settings
 }
 
 func (o *oboe) RemoveSetting() {
 	o.Lock()
 	defer o.Unlock()
 
-	// always use the default setting
-	key := settingKey{
-		sType: TypeDefault,
-		layer: "",
-	}
-
-	delete(o.settings, key)
+	o.settings = nil
 }
 
 func (o *oboe) HasDefaultSetting() bool {
-	if _, ok := o.GetSetting(); ok {
-		return true
-	}
-	return false
+	return o.settings != nil
 }
 
 func (o *oboe) GetTriggerTraceToken() ([]byte, error) {
-	setting, ok := o.GetSetting()
-	if !ok {
+	setting := o.GetSetting()
+	if setting == nil {
 		return nil, errors.New("failed to get settings")
 	}
 	if len(setting.TriggerToken) == 0 {

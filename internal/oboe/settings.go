@@ -43,6 +43,7 @@ type settings struct {
 func (s *settings) hasOverrideFlag() bool {
 	return s.originalFlags&FlagOverride != 0
 }
+
 func newOboeSettings() *settings {
 	return &settings{
 		// The global token bucket. Trace decisions of all the requests are controlled
@@ -123,18 +124,7 @@ func (s *settings) getTokenBucketSetting(ttMode TriggerTraceMode) (capacity floa
 	return bucket.capacity, bucket.ratePerSec
 }
 
-// The identifying keys for a setting
-type settingKey struct {
-	sType settingType
-	layer string
-}
-type settingType int
 type settingFlag uint16
-
-// setting types
-const (
-	TypeDefault settingType = iota // default setting and the only accepted setting
-)
 
 // setting flags offset
 const (
@@ -167,15 +157,4 @@ func (f settingFlag) Enabled() bool {
 // TriggerTraceEnabled returns if the trigger trace is enabled
 func (f settingFlag) TriggerTraceEnabled() bool {
 	return f&FlagTriggerTrace != 0
-}
-
-func (st settingType) toSampleSource() SampleSource {
-	var source SampleSource
-	switch st {
-	case TypeDefault:
-		source = SampleSourceDefault
-	default:
-		source = SampleSourceNone
-	}
-	return source
 }
