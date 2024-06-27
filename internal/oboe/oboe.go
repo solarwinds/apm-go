@@ -67,7 +67,12 @@ type oboe struct {
 
 var _ Oboe = &oboe{}
 
-func summaryFromSettings(s *settings) *metrics.RateCountSummary {
+// FlushRateCounts collects the request counters values by categories.
+func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
+	s := o.GetSetting()
+	if s == nil {
+		return nil
+	}
 	regular := s.bucket.FlushRateCounts()
 	relaxedTT := s.triggerTraceRelaxedBucket.FlushRateCounts()
 	strictTT := s.triggerTraceStrictBucket.FlushRateCounts()
@@ -80,15 +85,6 @@ func summaryFromSettings(s *settings) *metrics.RateCountSummary {
 		Limited:   regular.Limited() + relaxedTT.Limited() + strictTT.Limited(),
 		TtTraced:  relaxedTT.Traced() + strictTT.Traced(),
 	}
-}
-
-// FlushRateCounts collects the request counters values by categories.
-func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
-	setting := o.GetSetting()
-	if setting == nil {
-		return nil
-	}
-	return summaryFromSettings(setting)
 }
 
 // SampleRequest returns a SampleDecision based on inputs and state of various token buckets
