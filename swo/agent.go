@@ -190,6 +190,9 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 		metric.WithReader(reader),
 	)
 	otel.SetMeterProvider(mp)
+	if err = o.RegisterOtelSampleRateMetrics(mp); err != nil {
+		return nil, err
+	}
 	if exprtr, err := otlptracegrpc.New(ctx); err != nil {
 		return nil, err
 	} else {

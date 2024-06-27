@@ -15,9 +15,11 @@
 package oboe
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/metric"
 	"math"
 	"strings"
 	"sync/atomic"
@@ -55,6 +57,7 @@ type Oboe interface {
 	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
 	FlushRateCounts() *metrics.RateCountSummary
 	GetTriggerTraceToken() ([]byte, error)
+	RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error
 }
 
 func NewOboe() Oboe {
@@ -66,6 +69,49 @@ type oboe struct {
 }
 
 var _ Oboe = &oboe{}
+
+func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
+	meter := mp.Meter("sw.apm.sampling.metrics")
+	traceCount, err := meter.Int64ObservableGauge("trace.service.tracecount")
+	if err != nil {
+		return err
+	}
+	sampleCount, err := meter.Int64ObservableGauge("trace.service.samplecount")
+	if err != nil {
+		return err
+	}
+	requestCount, err := meter.Int64ObservableGauge("trace.service.request_count")
+	if err != nil {
+		return err
+	}
+	throughTraceCount, err := meter.Int64ObservableGauge("trace.service.through_trace_count")
+	if err != nil {
+		return err
+	}
+	triggeredTraceCount, err := meter.Int64ObservableGauge("trace.service.triggered_trace_count")
+	if err != nil {
+		return err
+	}
+
+	_, err = meter.RegisterCallback(
+		func(_ context.Context, obs metric.Observer) error {
+			if rateCounts := o.FlushRateCounts(); rateCounts != nil {
+				obs.ObserveInt64(traceCount, rateCounts.Traced)
+				obs.ObserveInt64(sampleCount, rateCounts.Sampled)
+				obs.ObserveInt64(requestCount, rateCounts.Requested)
+				obs.ObserveInt64(throughTraceCount, rateCounts.Through)
+				obs.ObserveInt64(triggeredTraceCount, rateCounts.TtTraced)
+			}
+			return nil
+		},
+		traceCount,
+		sampleCount,
+		requestCount,
+		throughTraceCount,
+		triggeredTraceCount,
+	)
+	return err
+}
 
 // FlushRateCounts collects the request counters values by categories.
 func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
