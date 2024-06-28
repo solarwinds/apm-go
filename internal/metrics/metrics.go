@@ -178,6 +178,8 @@ func (s *EventQueueStats) TotalEventsAdd(n int64) {
 
 // RateCounts is the rate counts reported by trace sampler
 type RateCounts struct{ requested, sampled, limited, traced, through int64 }
+
+// RateCountSummary is used to merge RateCounts from multiple token buckets
 type RateCountSummary struct {
 	Requested, Traced, Limited, TtTraced, Sampled, Through int64
 }
