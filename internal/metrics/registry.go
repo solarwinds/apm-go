@@ -19,7 +19,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/txn"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	trace2 "go.opentelemetry.io/otel/trace"
@@ -31,11 +31,12 @@ type registry struct {
 	apmHistograms *histograms
 	apmMetrics    *measurements
 	customMetrics *measurements
+	isAppoptics   bool
 }
 
 var _ LegacyRegistry = &registry{}
 
-func NewLegacyRegistry() LegacyRegistry {
+func NewLegacyRegistry(isAppoptics bool) LegacyRegistry {
 	return &registry{
 		apmHistograms: &histograms{
 			histograms: make(map[string]*histogram),
@@ -43,17 +44,18 @@ func NewLegacyRegistry() LegacyRegistry {
 		},
 		apmMetrics:    newMeasurements(false, metricsTransactionsMaxDefault),
 		customMetrics: newMeasurements(true, metricsCustomMetricsMaxDefault),
+		isAppoptics:   isAppoptics,
 	}
 }
 
 type MetricRegistry interface {
-	RecordSpan(span trace.ReadOnlySpan, isAppoptics bool)
+	RecordSpan(span trace.ReadOnlySpan)
 }
 
 type LegacyRegistry interface {
 	MetricRegistry
 	BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-		rcs map[string]*RateCounts, runtimeMetrics bool) []byte
+		rcs *RateCountSummary, runtimeMetrics bool) []byte
 	BuildCustomMetricsMessage(flushInterval int32) []byte
 	ApmMetricsCap() int32
 	SetApmMetricsCap(int32)
@@ -95,7 +97,7 @@ func (r *registry) BuildCustomMetricsMessage(flushInterval int32) []byte {
 //
 // return				metrics message in BSON format
 func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueueStats,
-	rcs map[string]*RateCounts, runtimeMetrics bool) []byte {
+	rcs *RateCountSummary, runtimeMetrics bool) []byte {
 	var m = r.apmMetrics.CopyAndReset(flushInterval)
 	if m == nil {
 		return nil
@@ -163,7 +165,7 @@ func (r *registry) BuildBuiltinMetricsMessage(flushInterval int32, qs *EventQueu
 	return bbuf.GetBuf()
 }
 
-func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
+func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 	method := ""
 	status := int64(0)
 	isError := span.Status().Code == codes.Error
@@ -192,7 +194,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
 	}
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
-	txnName := utils.GetTransactionName(span)
+	txnName := txn.GetTransactionName(span)
 	swoTags["sw.transaction"] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())
@@ -207,7 +209,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
 
 	var tagsList []map[string]string
 	var metricName string
-	if !isAppoptics {
+	if !r.isAppoptics {
 		tagsList = []map[string]string{swoTags}
 		metricName = responseTime
 	} else {
@@ -217,7 +219,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan, isAppoptics bool) {
 
 	r.apmHistograms.recordHistogram("", duration)
 	if err := s.processMeasurements(metricName, tagsList, r.apmMetrics); errors.Is(err, ErrExceedsMetricsCountLimit) {
-		if isAppoptics {
+		if r.isAppoptics {
 			s.Transaction = OtherTransactionName
 			tagsList = s.appOpticsTagsList()
 		} else {

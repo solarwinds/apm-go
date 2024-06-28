@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package txn
 
 import (
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,32 +36,36 @@ func GetTransactionName(span sdktrace.ReadOnlySpan) string {
 
 // deriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
 func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
-	var httpRoute, httpUrl, txnName = "", "", ""
-	for _, attr := range attrs {
-		if attr.Key == semconv.HTTPRouteKey {
-			httpRoute = attr.Value.AsString()
-		} else if attr.Key == semconv.HTTPURLKey {
-			httpUrl = attr.Value.AsString()
+	txnName := config.GetTransactionName()
+	if txnName == "" {
+		var httpRoute, httpUrl = "", ""
+		for _, attr := range attrs {
+			if attr.Key == semconv.HTTPRouteKey {
+				httpRoute = attr.Value.AsString()
+			} else if attr.Key == semconv.HTTPURLKey {
+				httpUrl = attr.Value.AsString()
+			}
+		}
+
+		if httpRoute != "" {
+			txnName = httpRoute
+		} else if name != "" {
+			txnName = name
+		}
+		if httpUrl != "" && strings.TrimSpace(txnName) == "" {
+			parsed, err := url.Parse(httpUrl)
+			if err != nil {
+				// We can't import internal logger in the util package, so we default to "log". However, this should be
+				// infrequent.
+				log.Println("could not parse URL from span", httpUrl)
+			} else {
+				// Clear user/password
+				parsed.User = nil
+				txnName = parsed.String()
+			}
 		}
 	}
 
-	if httpRoute != "" {
-		txnName = httpRoute
-	} else if name != "" {
-		txnName = name
-	}
-	if httpUrl != "" && strings.TrimSpace(txnName) == "" {
-		parsed, err := url.Parse(httpUrl)
-		if err != nil {
-			// We can't import internal logger in the util package, so we default to "log". However, this should be
-			// infrequent.
-			log.Println("could not parse URL from span", httpUrl)
-		} else {
-			// Clear user/password
-			parsed.User = nil
-			txnName = parsed.String()
-		}
-	}
 	txnName = strings.TrimSpace(txnName)
 	if txnName == "" {
 		txnName = "unknown"

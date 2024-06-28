@@ -135,7 +135,6 @@ func (s *TestGRPCServer) GetSettings(ctx context.Context, req *pb.SettingsReques
 		Settings: []*pb.OboeSetting{{
 			Type: pb.OboeSettingType_DEFAULT_SAMPLE_RATE,
 			// Flags:     XXX,
-			// Layer:     "", // default, specifically not setting layer/service
 			// Timestamp: XXX,
 			Value:     1000000,
 			Arguments: map[string][]byte{
