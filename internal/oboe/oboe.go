@@ -84,6 +84,10 @@ func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
 	if err != nil {
 		return err
 	}
+	tokenBucketExhaustionCount, err := meter.Int64ObservableGauge("trace.service.tokenbucket_exhaustion_count")
+	if err != nil {
+		return err
+	}
 	throughTraceCount, err := meter.Int64ObservableGauge("trace.service.through_trace_count")
 	if err != nil {
 		return err
@@ -99,6 +103,7 @@ func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
 				obs.ObserveInt64(traceCount, rateCounts.Traced)
 				obs.ObserveInt64(sampleCount, rateCounts.Sampled)
 				obs.ObserveInt64(requestCount, rateCounts.Requested)
+				obs.ObserveInt64(tokenBucketExhaustionCount, rateCounts.Limited)
 				obs.ObserveInt64(throughTraceCount, rateCounts.Through)
 				obs.ObserveInt64(triggeredTraceCount, rateCounts.TtTraced)
 			}
@@ -107,6 +112,7 @@ func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
 		traceCount,
 		sampleCount,
 		requestCount,
+		tokenBucketExhaustionCount,
 		throughTraceCount,
 		triggeredTraceCount,
 	)
