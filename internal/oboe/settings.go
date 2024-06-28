@@ -32,8 +32,7 @@ type settings struct {
 	value int
 	// The sample source after negotiating with local config
 	source                    SampleSource
-	ttl                       int64
-	layer                     string
+	ttl                       time.Duration
 	TriggerToken              []byte
 	bucket                    *tokenBucket
 	triggerTraceRelaxedBucket *tokenBucket
@@ -43,6 +42,7 @@ type settings struct {
 func (s *settings) hasOverrideFlag() bool {
 	return s.originalFlags&FlagOverride != 0
 }
+
 func newOboeSettings() *settings {
 	return &settings{
 		// The global token bucket. Trace decisions of all the requests are controlled
@@ -58,29 +58,26 @@ func newOboeSettings() *settings {
 	}
 }
 
-// mergeLocalSetting follow the predefined precedence to decide which one to
+// MergeLocalSetting follow the predefined precedence to decide which one to
 // pick from: either the local configs or the remote ones, or the combination.
-//
-// Note: This function modifies the argument in place.
-func mergeLocalSetting(remote *settings) *settings {
-	if remote.hasOverrideFlag() && config.SamplingConfigured() {
+func (s *settings) MergeLocalSetting() {
+	if s.hasOverrideFlag() && config.SamplingConfigured() {
 		// Choose the lower sample rate and merge the flags
-		if remote.value > config.GetSampleRate() {
-			remote.value = config.GetSampleRate()
-			remote.source = SampleSourceFile
+		if s.value > config.GetSampleRate() {
+			s.value = config.GetSampleRate()
+			s.source = SampleSourceFile
 		}
-		remote.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
+		s.flags &= NewTracingMode(config.GetTracingMode()).toFlags()
 	} else if config.SamplingConfigured() {
 		// Use local sample rate and tracing mode config
-		remote.value = config.GetSampleRate()
-		remote.flags = NewTracingMode(config.GetTracingMode()).toFlags()
-		remote.source = SampleSourceFile
+		s.value = config.GetSampleRate()
+		s.flags = NewTracingMode(config.GetTracingMode()).toFlags()
+		s.source = SampleSourceFile
 	}
 
 	if !config.GetTriggerTrace() {
-		remote.flags = remote.flags &^ (1 << FlagTriggerTraceOffset)
+		s.flags = s.flags &^ (1 << FlagTriggerTraceOffset)
 	}
-	return remote
 }
 
 // mergeURLSetting merges the service level setting (merged from remote and local
@@ -123,18 +120,7 @@ func (s *settings) getTokenBucketSetting(ttMode TriggerTraceMode) (capacity floa
 	return bucket.capacity, bucket.ratePerSec
 }
 
-// The identifying keys for a setting
-type settingKey struct {
-	sType settingType
-	layer string
-}
-type settingType int
 type settingFlag uint16
-
-// setting types
-const (
-	TypeDefault settingType = iota // default setting and the only accepted setting
-)
 
 // setting flags offset
 const (
@@ -167,15 +153,4 @@ func (f settingFlag) Enabled() bool {
 // TriggerTraceEnabled returns if the trigger trace is enabled
 func (f settingFlag) TriggerTraceEnabled() bool {
 	return f&FlagTriggerTrace != 0
-}
-
-func (st settingType) toSampleSource() SampleSource {
-	var source SampleSource
-	switch st {
-	case TypeDefault:
-		source = SampleSourceDefault
-	default:
-		source = SampleSourceNone
-	}
-	return source
 }

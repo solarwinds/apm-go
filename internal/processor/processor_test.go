@@ -35,7 +35,7 @@ func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan) {
 	r.called = true
 }
 
-func (r *recordMock) BuildBuiltinMetricsMessage(int32, *metrics.EventQueueStats, map[string]*metrics.RateCounts, bool) []byte {
+func (r *recordMock) BuildBuiltinMetricsMessage(int32, *metrics.EventQueueStats, *metrics.RateCountSummary, bool) []byte {
 	panic("should not be called in this test")
 }
 

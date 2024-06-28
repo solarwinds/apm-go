@@ -65,13 +65,6 @@ const (
 	TriggeredTraceCount        = "TriggeredTraceCount"
 )
 
-// Request counters collection categories
-const (
-	RCRegular             = "ReqCounterRegular"
-	RCRelaxedTriggerTrace = "ReqCounterRelaxedTriggerTrace"
-	RCStrictTriggerTrace  = "ReqCounterStrictTriggerTrace"
-)
-
 // metric names
 const (
 	transactionResponseTime = "TransactionResponseTime"
@@ -186,6 +179,11 @@ func (s *EventQueueStats) TotalEventsAdd(n int64) {
 // RateCounts is the rate counts reported by trace sampler
 type RateCounts struct{ requested, sampled, limited, traced, through int64 }
 
+// RateCountSummary is used to merge RateCounts from multiple token buckets
+type RateCountSummary struct {
+	Requested, Traced, Limited, TtTraced, Sampled, Through int64
+}
+
 // FlushRateCounts reset the counters and returns the current value
 func (c *RateCounts) FlushRateCounts() *RateCounts {
 	return &RateCounts{
@@ -238,32 +236,16 @@ func (c *RateCounts) Through() int64 {
 }
 
 // addRequestCounters add various request-related counters to the metrics message buffer.
-func addRequestCounters(bbuf *bson.Buffer, index *int, rcs map[string]*RateCounts) {
-	var requested, traced, limited, ttTraced int64
-
-	for _, rc := range rcs {
-		requested += rc.Requested()
-		traced += rc.Traced()
-		limited += rc.Limited()
+func addRequestCounters(bbuf *bson.Buffer, index *int, rcs *RateCountSummary) {
+	if rcs == nil {
+		return
 	}
-
-	addMetricsValue(bbuf, index, RequestCount, requested)
-	addMetricsValue(bbuf, index, TraceCount, traced)
-	addMetricsValue(bbuf, index, TokenBucketExhaustionCount, limited)
-
-	if rcRegular, ok := rcs[RCRegular]; ok {
-		addMetricsValue(bbuf, index, SampleCount, rcRegular.Sampled())
-		addMetricsValue(bbuf, index, ThroughTraceCount, rcRegular.Through())
-	}
-
-	if relaxed, ok := rcs[RCRelaxedTriggerTrace]; ok {
-		ttTraced += relaxed.Traced()
-	}
-	if strict, ok := rcs[RCStrictTriggerTrace]; ok {
-		ttTraced += strict.Traced()
-	}
-
-	addMetricsValue(bbuf, index, TriggeredTraceCount, ttTraced)
+	addMetricsValue(bbuf, index, RequestCount, rcs.Requested)
+	addMetricsValue(bbuf, index, TraceCount, rcs.Traced)
+	addMetricsValue(bbuf, index, TokenBucketExhaustionCount, rcs.Limited)
+	addMetricsValue(bbuf, index, SampleCount, rcs.Sampled)
+	addMetricsValue(bbuf, index, ThroughTraceCount, rcs.Through)
+	addMetricsValue(bbuf, index, TriggeredTraceCount, rcs.TtTraced)
 }
 
 // SetCap sets the maximum number of distinct metrics allowed.

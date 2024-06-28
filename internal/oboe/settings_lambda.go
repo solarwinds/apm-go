@@ -26,10 +26,8 @@ import (
 type settingLambdaFromFile struct {
 	Arguments *settingArguments `json:"arguments"`
 	Flags     string            `json:"flags"`
-	Layer     string            `json:"layer"`
 	Timestamp int64             `json:"timestamp"`
 	Ttl       int64             `json:"ttl"`
-	Stype     int               `json:"type"`
 	Value     int64             `json:"value"`
 }
 
@@ -44,8 +42,6 @@ type settingArguments struct {
 }
 
 type settingLambdaNormalized struct {
-	sType settingType
-	layer string
 	flags []byte
 	value int64
 	ttl   int64
@@ -71,8 +67,6 @@ func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaN
 	)
 
 	settingNorm := &settingLambdaNormalized{
-		TypeDefault, // always DEFAULT_SAMPLE_RATE
-		"",          // not set since type is always DEFAULT_SAMPLE_RATE
 		flags,
 		fromFile.Value,
 		fromFile.Ttl,
