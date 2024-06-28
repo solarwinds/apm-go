@@ -26,6 +26,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -751,7 +752,21 @@ func (c *Config) loadConfigFile() error {
 func (c *Config) GetCollector() string {
 	c.RLock()
 	defer c.RUnlock()
-	return c.Collector
+	target := c.Collector
+	// We have to detect whether the port is in the target string, however,
+	// accounting for ipv6 means we can't simply search for `:`. This is the
+	// second time we use SplitHostPort, the first is inside the validator. Since
+	// this is only ever called once on startup, I think this is a fair tradeoff.
+	if _, _, err := net.SplitHostPort(target); err != nil {
+		if strings.Contains(err.Error(), "missing port in address") {
+			target = target + ":443"
+		} else {
+			// We should never reach this because we've detected an invalid
+			// value in the validator
+			panic(err)
+		}
+	}
+	return target
 }
 
 // GetServiceKey returns the service key

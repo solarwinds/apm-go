@@ -17,13 +17,13 @@ module github.com/solarwinds/apm-go
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.26.1
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1
+	github.com/aws/aws-sdk-go-v2 v1.28.0
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.6
 	github.com/aws/smithy-go v1.20.2
 	github.com/coocood/freecache v1.2.4
 	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/solarwinds/apm-proto v0.0.0-20231107001908-432e697887b6
+	github.com/solarwinds/apm-proto v1.0.5
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.27.0
