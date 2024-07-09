@@ -261,7 +261,9 @@ func (o *oboe) checkSettingsTimeout() {
 	ss := o.settings
 	for k, s := range ss {
 		e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
+		log.Debugf("checkSettingsTimeout: key: %s, ttl: %d, timestamp: %s, boundary: %s", k, s.ttl, s.timestamp, e)
 		if e.Before(time.Now()) {
+			log.Debug("checkSettingsTimeout: ttl exceeded, expiring settings")
 			delete(ss, k)
 		}
 	}
