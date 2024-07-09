@@ -309,7 +309,7 @@ func (o *oboe) checkSettingsTimeout() {
 		return
 	}
 	e := s.timestamp.Add(s.ttl)
-	log.Debugf("checkSettingsTimeout: ttl: %d, timestamp: %s, boundary: %s", s.ttl, s.timestamp, e)
+	log.Debugf("checkSettingsTimeout: ttl: %s, timestamp: %s, boundary: %s", s.ttl, s.timestamp, e)
 	if e.Before(time.Now()) {
 		log.Debugf("checkSettingsTimeout: ttl exceeded, expiring settings")
 		o.settings.Store(nil)
