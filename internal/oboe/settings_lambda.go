@@ -41,6 +41,10 @@ type settingArguments struct {
 	TriggerStrictBucketRate      float64 `json:"TriggerStrictBucketRate"`
 }
 
+// N.B. this struct adheres to the types required by the oboe.Oboe interface. In the future,
+// we should make the interface smarter about the incoming types so we're not converting from
+// known types to []byte and back. A task has been created to track this work, though it also
+// might make sense to do it when/if the GetSettings call is refactored.
 type settingLambdaNormalized struct {
 	flags []byte
 	value int64
