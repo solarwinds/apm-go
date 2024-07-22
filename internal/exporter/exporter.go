@@ -22,7 +22,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/utils"
+	"github.com/solarwinds/apm-go/internal/txn"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -45,7 +45,7 @@ func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 		attribute.String("otel.scope.version", s.InstrumentationScope().Version),
 	})
 	if entryspans.IsEntrySpan(s) {
-		evt.AddKV(attribute.String("TransactionName", utils.GetTransactionName(s)))
+		evt.AddKV(attribute.String("TransactionName", txn.GetTransactionName(s)))
 		// We MUST clear the entry span here. The SpanProcessor only clears entry spans when they are `RecordOnly`
 		if err := entryspans.Delete(s); err != nil {
 			log.Warningf(

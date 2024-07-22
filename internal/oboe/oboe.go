@@ -15,19 +15,22 @@
 package oboe
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/metric"
+	"math"
+	"strings"
+	"sync/atomic"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
-	"math"
-	"strings"
-	"sync"
-	"time"
 )
 
 const (
@@ -46,47 +49,100 @@ const (
 )
 
 type Oboe interface {
-	UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte)
+	UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte)
 	CheckSettingsTimeout()
-	GetSetting() (*settings, bool)
+	GetSetting() *settings
 	RemoveSetting()
 	HasDefaultSetting() bool
 	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
-	FlushRateCounts() map[string]*metrics.RateCounts
+	FlushRateCounts() *metrics.RateCountSummary
 	GetTriggerTraceToken() ([]byte, error)
+	RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error
 }
 
 func NewOboe() Oboe {
-	return &oboe{
-		settings: make(map[settingKey]*settings),
-	}
+	return &oboe{}
 }
 
 type oboe struct {
-	sync.RWMutex
-	settings map[settingKey]*settings
+	settings atomic.Pointer[settings]
 }
 
 var _ Oboe = &oboe{}
 
+func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
+	meter := mp.Meter("sw.apm.sampling.metrics")
+	traceCount, err := meter.Int64ObservableGauge("trace.service.tracecount")
+	if err != nil {
+		return err
+	}
+	sampleCount, err := meter.Int64ObservableGauge("trace.service.samplecount")
+	if err != nil {
+		return err
+	}
+	requestCount, err := meter.Int64ObservableGauge("trace.service.request_count")
+	if err != nil {
+		return err
+	}
+	tokenBucketExhaustionCount, err := meter.Int64ObservableGauge("trace.service.tokenbucket_exhaustion_count")
+	if err != nil {
+		return err
+	}
+	throughTraceCount, err := meter.Int64ObservableGauge("trace.service.through_trace_count")
+	if err != nil {
+		return err
+	}
+	triggeredTraceCount, err := meter.Int64ObservableGauge("trace.service.triggered_trace_count")
+	if err != nil {
+		return err
+	}
+
+	_, err = meter.RegisterCallback(
+		func(_ context.Context, obs metric.Observer) error {
+			if rateCounts := o.FlushRateCounts(); rateCounts != nil {
+				obs.ObserveInt64(traceCount, rateCounts.Traced)
+				obs.ObserveInt64(sampleCount, rateCounts.Sampled)
+				obs.ObserveInt64(requestCount, rateCounts.Requested)
+				obs.ObserveInt64(tokenBucketExhaustionCount, rateCounts.Limited)
+				obs.ObserveInt64(throughTraceCount, rateCounts.Through)
+				obs.ObserveInt64(triggeredTraceCount, rateCounts.TtTraced)
+			}
+			return nil
+		},
+		traceCount,
+		sampleCount,
+		requestCount,
+		tokenBucketExhaustionCount,
+		throughTraceCount,
+		triggeredTraceCount,
+	)
+	return err
+}
+
 // FlushRateCounts collects the request counters values by categories.
-func (o *oboe) FlushRateCounts() map[string]*metrics.RateCounts {
-	setting, ok := o.GetSetting()
-	if !ok {
+func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
+	s := o.GetSetting()
+	if s == nil {
 		return nil
 	}
-	rcs := make(map[string]*metrics.RateCounts)
-	rcs[metrics.RCRegular] = setting.bucket.FlushRateCounts()
-	rcs[metrics.RCRelaxedTriggerTrace] = setting.triggerTraceRelaxedBucket.FlushRateCounts()
-	rcs[metrics.RCStrictTriggerTrace] = setting.triggerTraceStrictBucket.FlushRateCounts()
+	regular := s.bucket.FlushRateCounts()
+	relaxedTT := s.triggerTraceRelaxedBucket.FlushRateCounts()
+	strictTT := s.triggerTraceStrictBucket.FlushRateCounts()
 
-	return rcs
+	return &metrics.RateCountSummary{
+		Sampled:   regular.Sampled(),
+		Through:   regular.Through(),
+		Requested: regular.Requested() + relaxedTT.Requested() + strictTT.Requested(),
+		Traced:    regular.Traced() + relaxedTT.Traced() + strictTT.Traced(),
+		Limited:   regular.Limited() + relaxedTT.Limited() + strictTT.Limited(),
+		TtTraced:  relaxedTT.Traced() + strictTT.Traced(),
+	}
 }
 
 // SampleRequest returns a SampleDecision based on inputs and state of various token buckets
 func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
-	setting, ok := o.GetSetting()
-	if !ok {
+	setting := o.GetSetting()
+	if setting == nil {
 		return SampleDecision{false, 0, SampleSourceNone, false, TtSettingsNotAvailable, 0, 0, false}
 	}
 
@@ -212,16 +268,15 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int64, ttl int64, args map[string][]byte) {
+func (o *oboe) UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
-	ns.source = settingType(sType).toSampleSource()
+	ns.source = SampleSourceDefault
 	ns.flags = flagStringToBin(string(flags))
 	ns.originalFlags = ns.flags
 	ns.value = adjustSampleRate(value)
 	ns.ttl = ttl
-	ns.layer = layer
 
 	ns.TriggerToken = args[constants.KvSignatureKey]
 
@@ -237,16 +292,9 @@ func (o *oboe) UpdateSetting(sType int32, layer string, flags []byte, value int6
 	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
-	merged := mergeLocalSetting(ns)
+	ns.MergeLocalSetting()
 
-	key := settingKey{
-		sType: settingType(sType),
-		layer: layer,
-	}
-
-	o.Lock()
-	o.settings[key] = merged
-	o.Unlock()
+	o.settings.Store(ns)
 }
 
 // CheckSettingsTimeout checks and deletes expired settings
@@ -255,57 +303,34 @@ func (o *oboe) CheckSettingsTimeout() {
 }
 
 func (o *oboe) checkSettingsTimeout() {
-	o.Lock()
-	defer o.Unlock()
-
-	ss := o.settings
-	for k, s := range ss {
-		e := s.timestamp.Add(time.Duration(s.ttl) * time.Second)
-		if e.Before(time.Now()) {
-			delete(ss, k)
-		}
+	s := o.settings.Load()
+	if s == nil {
+		log.Debug("checkSettingsTimeout: No settings")
+		return
+	}
+	e := s.timestamp.Add(s.ttl)
+	log.Debugf("checkSettingsTimeout: ttl: %s, timestamp: %s, boundary: %s", s.ttl, s.timestamp, e)
+	if e.Before(time.Now()) {
+		log.Debugf("checkSettingsTimeout: ttl exceeded, expiring settings")
+		o.settings.Store(nil)
 	}
 }
 
-func (o *oboe) GetSetting() (*settings, bool) {
-	o.RLock()
-	defer o.RUnlock()
-
-	// always use the default setting
-	key := settingKey{
-		sType: TypeDefault,
-		layer: "",
-	}
-	if setting, ok := o.settings[key]; ok {
-		return setting, true
-	}
-
-	return nil, false
+func (o *oboe) GetSetting() *settings {
+	return o.settings.Load()
 }
 
 func (o *oboe) RemoveSetting() {
-	o.Lock()
-	defer o.Unlock()
-
-	// always use the default setting
-	key := settingKey{
-		sType: TypeDefault,
-		layer: "",
-	}
-
-	delete(o.settings, key)
+	o.settings.Store(nil)
 }
 
 func (o *oboe) HasDefaultSetting() bool {
-	if _, ok := o.GetSetting(); ok {
-		return true
-	}
-	return false
+	return o.settings.Load() != nil
 }
 
 func (o *oboe) GetTriggerTraceToken() ([]byte, error) {
-	setting, ok := o.GetSetting()
-	if !ok {
+	setting := o.GetSetting()
+	if setting == nil {
 		return nil, errors.New("failed to get settings")
 	}
 	if len(setting.TriggerToken) == 0 {

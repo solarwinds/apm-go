@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package txn
 
 import (
 	"context"
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"os"
 	"strings"
 	"testing"
 )
@@ -85,5 +87,44 @@ func TestDeriveTransactionName(t *testing.T) {
 	// Truncates long transaction names
 	name = strings.Repeat("a", 1024)
 	expected := strings.Repeat("a", 255)
+	require.Equal(t, expected, deriveTransactionName(name, attrs))
+}
+
+func TestDeriveTxnFromEnv(t *testing.T) {
+	envTxn := "env-provided"
+	name := "span name"
+	var attrs []attribute.KeyValue
+	// `SW_APM_TRANSACTION_NAME` only takes effect in Lambda
+	require.NoError(t, os.Setenv("SW_APM_TRANSACTION_NAME", envTxn))
+	config.Load()
+	require.Equal(t, "", config.GetTransactionName())
+	require.Equal(t, "span name", deriveTransactionName(name, attrs))
+
+	require.NoError(t, os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "foo"))
+	require.NoError(t, os.Setenv("LAMBDA_TASK_ROOT", "bar"))
+	defer func() {
+		_ = os.Unsetenv("SW_APM_TRANSACTION_NAME")
+		_ = os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
+		_ = os.Unsetenv("LAMBDA_TASK_ROOT")
+	}()
+	config.Load()
+	require.Equal(t, envTxn, config.GetTransactionName())
+	require.Equal(t, envTxn, deriveTransactionName(name, attrs))
+}
+func TestDeriveTxnFromEnvTruncated(t *testing.T) {
+	envTxn := strings.Repeat("a", 1024)
+	expected := strings.Repeat("a", 255)
+	name := "span name"
+	var attrs []attribute.KeyValue
+	require.NoError(t, os.Setenv("SW_APM_TRANSACTION_NAME", envTxn))
+	require.NoError(t, os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "foo"))
+	require.NoError(t, os.Setenv("LAMBDA_TASK_ROOT", "bar"))
+	defer func() {
+		_ = os.Unsetenv("SW_APM_TRANSACTION_NAME")
+		_ = os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
+		_ = os.Unsetenv("LAMBDA_TASK_ROOT")
+	}()
+	config.Load()
+	require.Equal(t, envTxn, config.GetTransactionName())
 	require.Equal(t, expected, deriveTransactionName(name, attrs))
 }
