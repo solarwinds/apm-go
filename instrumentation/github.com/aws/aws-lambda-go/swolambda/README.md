@@ -35,7 +35,7 @@ import (
 type MyEvent struct {}
 
 // This is an example handler, yours may have a different signature and a 
-// different name. It will work ass long as it adheres to what the Lambda SDK
+// different name. It will work as long as it adheres to what the Lambda SDK
 // expects. (See "Valid handler signatures"[0])
 // [0] https://docs.aws.amazon.com/lambda/latest/dg/golang-handler.html
 func ExampleHandler(ctx context.Context, event *MyEvent) (string, error) {
