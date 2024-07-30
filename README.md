@@ -1,10 +1,5 @@
 # SolarWinds APM Go
 
-## Notice
-
-⚠ This is a work in progress, originally forked from the
-[appoptics-apm-go](https://github.com/appoptics/appoptics-apm-go) repository.
-
 ## Getting started
 
 ℹ️ Check out the [usage examples](examples) to see how easy it is to get 
@@ -129,3 +124,7 @@ We support the same environments as
 Copyright (C) 2023 SolarWinds, LLC
 
 Released under [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
+## Miscellaneous
+
+Originally forked from the [appoptics-apm-go](https://github.com/appoptics/appoptics-apm-go) repository.
