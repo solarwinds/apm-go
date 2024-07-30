@@ -19,9 +19,8 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 func EncodeCompressed(h *Hist) ([]byte, error) {
@@ -29,7 +28,7 @@ func EncodeCompressed(h *Hist) ([]byte, error) {
 	b64w := base64.NewEncoder(base64.StdEncoding, &buf)
 	if err := encodeCompressed(h, b64w, h.Max()); err != nil {
 		_ = b64w.Close()
-		return nil, errors.Wrap(err, "unable to encode histogram")
+		return nil, fmt.Errorf("unable to encode histogram: %w", err)
 	}
 	// DO NOT defer this close, otherwise that could prevent bytes from getting flushed
 	if err := b64w.Close(); err != nil {
@@ -58,8 +57,10 @@ func encodeCompressed(h *Hist, w io.Writer, histMax int64) error {
 	}
 	binary.BigEndian.PutUint32(buf.Bytes()[4:], uint32(buf.Len()-preCompressed))
 
-	_, err = buf.WriteTo(w)
-	return errors.Wrap(err, "unable to write compressed hist")
+	if _, err = buf.WriteTo(w); err != nil {
+		return fmt.Errorf("unable to write compressed hist: %w", err)
+	}
+	return nil
 }
 
 func encodeInto(h *Hist, w io.Writer, max int64) error {
@@ -88,8 +89,10 @@ func encodeInto(h *Hist, w io.Writer, max int64) error {
 	payloadStart := buf.Len()
 	fillBuffer(&buf, h, importantLen)
 	binary.BigEndian.PutUint32(buf.Bytes()[4:], uint32(buf.Len()-payloadStart))
-	_, err := buf.WriteTo(w)
-	return errors.Wrap(err, "unable to write uncompressed hist")
+	if _, err := buf.WriteTo(w); err != nil {
+		return fmt.Errorf("unable to write uncompressed hist: %w", err)
+	}
+	return nil
 }
 
 func fillBuffer(buf *bytes.Buffer, h *Hist, n int) {
@@ -101,7 +104,7 @@ func fillBuffer(buf *bytes.Buffer, h *Hist, n int) {
 		c := h.b.counts[srci]
 		srci++
 		if c < 0 {
-			panic(errors.Errorf(
+			panic(fmt.Errorf(
 				"can't encode hist with negative counts (count: %d, idx: %d, value range: [%d, %d])",
 				c,
 				srci,
