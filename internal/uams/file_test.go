@@ -15,9 +15,11 @@
 package uams
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"io/fs"
 	"os"
 	"testing"
 )
@@ -29,7 +31,7 @@ func TestReadFromFileNoExists(t *testing.T) {
 	uid, err := ReadFromFile(testfile)
 	require.Equal(t, uuid.Nil, uid)
 	require.Error(t, err)
-	require.Equal(t, "could not stat uams client file: stat /tmp/foobarbaz: no such file or directory", err.Error())
+	require.True(t, errors.Is(err, fs.ErrNotExist))
 }
 
 func TestReadFromFileDirectory(t *testing.T) {

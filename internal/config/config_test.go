@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -474,7 +475,13 @@ func TestInvalidConfigFile(t *testing.T) {
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
 	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/file-not-exist.yaml")
 	_ = NewConfig()
-	assert.Contains(t, buf.String(), "no such file or directory")
+	var exp string
+	if runtime.GOOS == "windows" {
+		exp = "The system cannot find the path specified."
+	} else {
+		exp = "no such file or directory"
+	}
+	assert.Contains(t, buf.String(), exp)
 }
 
 func TestInvalidConfig(t *testing.T) {
