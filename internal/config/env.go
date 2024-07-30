@@ -21,8 +21,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func toBool(s string) (bool, error) {
@@ -116,7 +114,7 @@ func stringToValue(s string, typ reflect.Type) (reflect.Value, error) {
 		}
 		val, err = toBool(s)
 		if err != nil {
-			log.Warningf("Ignore invalid bool value: %s", errors.Wrap(err, s))
+			log.Warningf("Ignore invalid bool value: %s", fmt.Errorf("%w: %s", err, s))
 		}
 	case reflect.Slice:
 		if s == "" {
