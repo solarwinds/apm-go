@@ -343,10 +343,10 @@ func TestYamlConfig(t *testing.T) {
 	}
 
 	out, err := yaml.Marshal(&yamlConfig)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	err = os.WriteFile("/tmp/solarwinds-apm-config.yaml", out, 0644)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	// Test with config file
 	ClearEnvs()
