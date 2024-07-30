@@ -15,8 +15,8 @@
 package entryspans
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
