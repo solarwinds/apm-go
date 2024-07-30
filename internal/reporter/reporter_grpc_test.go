@@ -18,6 +18,7 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
@@ -31,7 +32,6 @@ import (
 	"time"
 
 	"context"
-	"github.com/pkg/errors"
 	pb "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -164,7 +164,7 @@ type TestProxyServer struct {
 func NewTestProxyServer(rawUrl string, pem, key string) (*TestProxyServer, error) {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create test proxy server")
+		return nil, fmt.Errorf("failed to create test proxy server: %w", err)
 	}
 	return &TestProxyServer{url: u, pemFile: pem, keyFile: key}, nil
 }
