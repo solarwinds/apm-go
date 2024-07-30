@@ -25,6 +25,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -36,7 +37,6 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/log"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -200,7 +200,7 @@ func (f *TransactionFilter) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}{}
 
 	if err := unmarshal(&aux); err != nil {
-		return errors.Wrap(err, "failed to unmarshal TransactionFilter")
+		return fmt.Errorf("failed to unmarshal TransactionFilter: %w", err)
 	}
 	if aux.Type != URL {
 		return ErrTFInvalidType
@@ -235,7 +235,7 @@ func (s *SamplingConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		SampleRate:  -1,
 	}
 	if err := unmarshal(&aux); err != nil {
-		return errors.Wrap(err, "failed to unmarshal SamplingConfig")
+		return fmt.Errorf("failed to unmarshal SamplingConfig: %w", err)
 	}
 
 	if aux.TracingMode != "Invalid" {
@@ -373,7 +373,7 @@ func (c *Config) validate() error {
 		if c.ServiceKey != "" {
 			c.ServiceKey = ToServiceKey(c.ServiceKey)
 			if ok := IsValidServiceKey(c.ServiceKey); !ok {
-				return errors.Wrap(ErrInvalidServiceKey, fmt.Sprintf("service key: \"%s\"", c.ServiceKey))
+				return fmt.Errorf("service key: \"%s\": %w", c.ServiceKey, ErrInvalidServiceKey)
 			}
 		}
 	}
@@ -419,7 +419,7 @@ func (c *Config) Load(opts ...Option) *Config {
 	c.reset()
 
 	if err := c.loadConfigFile(); err != nil {
-		log.Warning(errors.Wrap(err, "config file load error").Error())
+		log.Warning(fmt.Errorf("config file load error: %w", err).Error())
 		return c.resetThenDisable()
 	}
 	c.loadEnvs()
@@ -433,7 +433,7 @@ func (c *Config) Load(opts ...Option) *Config {
 	}
 
 	if err := c.validate(); err != nil {
-		log.Warning(errors.Wrap(err, "validation error").Error())
+		log.Warning(fmt.Errorf("validation error: %w", err).Error())
 		return c.resetThenDisable()
 	}
 
@@ -692,7 +692,7 @@ func (c *Config) getConfigPath() string {
 func (c *Config) loadYaml(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return errors.Wrap(err, "loadYaml")
+		return fmt.Errorf("loadYaml: %w", err)
 	}
 
 	// A pointer field may be assigned with nil in unmarshal, so just keep the
@@ -703,7 +703,7 @@ func (c *Config) loadYaml(path string) error {
 	// The config struct is modified in place so we won't tolerate any error
 	err = yaml.Unmarshal(data, &c)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("loadYaml: %s", path))
+		return fmt.Errorf("loadYaml: %s: %w", path, err)
 	}
 
 	if c.Sampling == nil {
@@ -719,11 +719,11 @@ func (c *Config) loadYaml(path string) error {
 func (c *Config) checkFileSize(path string) error {
 	file, err := os.Stat(path)
 	if err != nil {
-		return errors.Wrap(err, "checkFileSize")
+		return fmt.Errorf("checkFileSize: %w", err)
 	}
 	size := file.Size()
 	if size > maxConfigFileSize {
-		return errors.Wrap(ErrFileTooLarge, fmt.Sprintf("File size: %d", size))
+		return fmt.Errorf("file size: %d: %w", size, ErrFileTooLarge)
 	}
 	return nil
 }
@@ -736,7 +736,7 @@ func (c *Config) loadConfigFile() error {
 	}
 
 	if err := c.checkFileSize(path); err != nil {
-		return errors.Wrap(err, "loadConfigFile")
+		return fmt.Errorf("loadConfigFile: %w", err)
 	}
 	ext := filepath.Ext(path)
 
@@ -744,7 +744,7 @@ func (c *Config) loadConfigFile() error {
 	case ".yml", ".yaml":
 		return c.loadYaml(path)
 	default:
-		return errors.Wrap(ErrUnsupportedFormat, path)
+		return fmt.Errorf("%s: %w", path, ErrUnsupportedFormat)
 	}
 }
 
