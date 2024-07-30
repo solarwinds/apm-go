@@ -20,7 +20,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"regexp"
@@ -212,7 +211,7 @@ func hmacHash(token, data []byte) string {
 func tsInScope(tsStr string) (string, error) {
 	ts, err := strconv.ParseInt(tsStr, 10, 64)
 	if err != nil {
-		return "", errors.Wrap(err, "tsInScope")
+		return "", fmt.Errorf("tsInScope: %w", err)
 	}
 
 	t := time.Unix(ts, 0)
