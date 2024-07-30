@@ -15,6 +15,7 @@
 package oboe
 
 import (
+	"fmt"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"path/filepath"
@@ -22,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/coocood/freecache"
-	"github.com/pkg/errors"
 )
 
 var urls *urlFilters
@@ -78,7 +78,7 @@ type regexFilter struct {
 func newRegexFilter(regex string, mode TracingMode) (*regexFilter, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse regexp")
+		return nil, fmt.Errorf("failed to parse regexp: %w", err)
 	}
 	return &regexFilter{regex: re, trace: mode}, nil
 }
