@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CONFIG<<EOF
-[req]
-distinguished_name=req;
+CONFIG=$(mktemp)
+echo "[req]
+distinguished_name=req
 [san]
 subjectAltName=DNS:localhost
-EOF
+" > $CONFIG
 openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -nodes \
   -keyout for_test.key -out for_test.crt -extensions san -config "$CONFIG" \
   -subj "/CN=localhost"
+rm $CONFIG
