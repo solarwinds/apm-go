@@ -16,9 +16,9 @@ package swo
 
 import (
 	"context"
+	"errors"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
