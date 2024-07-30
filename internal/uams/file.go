@@ -17,7 +17,6 @@ package uams
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"os"
 	"runtime"
 )
@@ -35,16 +34,16 @@ func determineFileForOS() string {
 
 func ReadFromFile(f string) (uuid.UUID, error) {
 	if st, err := os.Stat(f); err != nil {
-		return uuid.Nil, errors.Wrap(err, "could not stat uams client file")
+		return uuid.Nil, fmt.Errorf("could not stat uams client file: %w", err)
 	} else if st.IsDir() {
 		return uuid.Nil, fmt.Errorf("could not open path (%s); Expected a file, got a directory instead", f)
 	}
 
 	if data, err := os.ReadFile(f); err != nil {
-		return uuid.Nil, errors.Wrap(err, fmt.Sprintf("could not read uams client file (%s)", f))
+		return uuid.Nil, fmt.Errorf("could not read uams client file (%s): %w", f, err)
 	} else {
 		if uid, err := uuid.ParseBytes(data); err != nil {
-			return uuid.Nil, errors.Wrap(err, fmt.Sprintf("uams client file (%s) did not contain parseable UUID", f))
+			return uuid.Nil, fmt.Errorf("uams client file (%s) did not contain parseable UUID: %w", f, err)
 		} else {
 			return uid, nil
 		}
