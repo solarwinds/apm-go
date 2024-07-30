@@ -169,6 +169,7 @@ func getPodUidFromFile(fn string) (string, error) {
 
 func getPodUidFromProc(fn string) (string, error) {
 	f, err := os.Open(fn)
+	defer f.Close()
 	if err != nil {
 		return "", err
 	}
