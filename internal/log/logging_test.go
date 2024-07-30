@@ -15,6 +15,7 @@ package log
 
 import (
 	"bytes"
+	"errors"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
 	"math/rand"
@@ -25,7 +26,6 @@ import (
 
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/log"
 	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"io"
@@ -114,7 +113,7 @@ func queryAzureIMDS(url_ string) (*MetadataCompute, error) {
 
 	m := &MetadataCompute{}
 	if err = json.Unmarshal(b, m); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal json")
+		return nil, fmt.Errorf("failed to unmarshal json: %w", err)
 	}
 	return m, err
 }

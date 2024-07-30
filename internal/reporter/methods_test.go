@@ -16,11 +16,11 @@ package reporter
 
 import (
 	"context"
+	"errors"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/reporter/mocks"
 	"testing"
 
-	"github.com/pkg/errors"
 	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

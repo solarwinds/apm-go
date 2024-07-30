@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"io"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type LogWriter struct {
@@ -38,19 +36,19 @@ func (l *LogWriter) WriteStartTime(start time.Time) error {
 
 	_, err := fmt.Fprintf(l.w, "#[StartTime: %.3f (seconds since epoch), %s]\n",
 		float64(sec)+millis, start.Format(JavaDate))
-	return errors.Wrap(err, "unable to write start time")
+	return fmt.Errorf("unable to write start time: %w", err)
 }
 
 func (l *LogWriter) WriteBaseTime(base time.Time) error {
 	sec := base.Unix()
 	millis := float64(base.Nanosecond()) / 1e6 // Java version only stores ms
 	_, err := fmt.Fprintf(l.w, "#[BaseTime: %.3f (seconds since epoch)]\n", float64(sec)+millis)
-	return errors.Wrap(err, "unable to write base time")
+	return fmt.Errorf("unable to write base time: %w", err)
 }
 
 func (l *LogWriter) WriteComment(text string) error {
 	_, err := l.w.Write([]byte("#" + text + "\n"))
-	return errors.Wrapf(err, "unable to write comment")
+	return fmt.Errorf("unable to write comment: %w", err)
 }
 
 var logWriterLegend = []byte("\"StartTimestamp\",\"Interval_Length\",\"Interval_Max\",\"Interval_Compressed_Histogram\"\n")
@@ -100,5 +98,5 @@ func (l *LogWriter) writeHist(h *Hist, start time.Time, end time.Time) error {
 	}
 	l.buf.WriteString("\n")
 	_, err := l.buf.WriteTo(l.w)
-	return errors.Wrap(err, "unable to write hist")
+	return fmt.Errorf("unable to write hist: %w", err)
 }

@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
@@ -114,7 +113,7 @@ func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {
 
 func sendInitMessage(r Reporter, rsrc *resource.Resource) {
 	if r.Closed() {
-		log.Info(errors.Wrap(ErrReporterIsClosed, "send init message"))
+		log.Info(fmt.Errorf("send init message: %w", ErrReporterIsClosed))
 		return
 	}
 	tid := trace.TraceID{0}
