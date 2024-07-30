@@ -16,13 +16,12 @@ package reporter
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/log"
 	"io"
 	"os"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // FlushWriter offers an interface to write a byte slice to a specific destination.
@@ -119,7 +118,7 @@ func (lr *logWriter) flush() error {
 
 	data, err := json.Marshal(lr.msg)
 	if err != nil {
-		return errors.Wrap(err, "error marshaling message")
+		return fmt.Errorf("error marshaling message: %w", err)
 	}
 	lr.msg.Data.Events = []string{}
 	lr.msg.Data.Metrics = []string{}
@@ -128,7 +127,7 @@ func (lr *logWriter) flush() error {
 	data = append(data, "\n"...)
 
 	if _, err := lr.dest.Write(data); err != nil {
-		return errors.Wrap(err, "write to log reporter failed")
+		return fmt.Errorf("write to log reporter failed: %w", err)
 	}
 
 	if file, ok := lr.dest.(*os.File); ok {
