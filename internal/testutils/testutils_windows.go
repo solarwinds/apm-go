@@ -16,6 +16,6 @@
 
 package testutils
 
-import "syscall"
+import "golang.org/x/sys/windows"
 
-const ConnectionRefusedError = syscall.Errno(10061)
+const ConnectionRefusedError = windows.WSAECONNREFUSED
