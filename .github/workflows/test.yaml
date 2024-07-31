@@ -35,6 +35,8 @@ jobs:
       SW_APM_DEBUG_LEVEL: 1
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: ${{ matrix.path }}
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
