@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -38,7 +39,15 @@ func TestUpdateClientId(t *testing.T) {
 	uid, err := uuid.NewRandom()
 	require.NoError(t, err)
 	a := time.Now()
+	// windows doesn't seem to notice that a few nanoseconds have passed, so we
+	// introduce a touch of delay
+	if runtime.GOOS == "windows" {
+		time.Sleep(time.Millisecond)
+	}
 	updateClientId(uid, "file")
+	if runtime.GOOS == "windows" {
+		time.Sleep(time.Millisecond)
+	}
 	b := time.Now()
 	require.Equal(t, uid, currState.clientId)
 	require.Equal(t, "file", currState.via)
