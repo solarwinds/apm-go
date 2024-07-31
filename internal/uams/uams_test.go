@@ -43,7 +43,7 @@ func TestUpdateClientId(t *testing.T) {
 	require.Equal(t, uid, currState.clientId)
 	require.Equal(t, "file", currState.via)
 	require.True(t, currState.updated.After(a))
-	require.True(t, currState.updated.Before(b))
+	require.True(t, currState.updated.Before(b), "currState.updated: %s, is not before %s", currState.updated.String(), b.String())
 
 	require.Equal(t, uid, GetCurrentClientId())
 }

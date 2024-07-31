@@ -29,7 +29,7 @@ func TestReadFromHttpConnRefused(t *testing.T) {
 	uid, err := ReadFromHttp("http://127.0.0.1:12345")
 	require.Error(t, err)
 	require.Equal(t, uuid.Nil, uid)
-	require.True(t, errors.Is(err, syscall.ECONNREFUSED))
+	require.True(t, errors.Is(err, syscall.ECONNREFUSED), "%+v", err)
 }
 
 func TestReadFromHttp(t *testing.T) {

@@ -44,7 +44,7 @@ func TestQueryAzureNoHttpResponse(t *testing.T) {
 	m, err := queryAzureIMDS("http://127.0.0.1:12345/asdf")
 	require.Error(t, err)
 	require.Nil(t, m)
-	require.True(t, errors.Is(err, syscall.ECONNREFUSED))
+	require.True(t, errors.Is(err, syscall.ECONNREFUSED), "%+v", err)
 	require.Nil(t, m.ToPB())
 }
 
