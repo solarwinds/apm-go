@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
+	"syscall"
 	"testing"
 )
 
@@ -43,7 +44,7 @@ func TestQueryAzureNoHttpResponse(t *testing.T) {
 	m, err := queryAzureIMDS("http://127.0.0.1:12345/asdf")
 	require.Error(t, err)
 	require.Nil(t, m)
-	require.True(t, errors.Is(err, testutils.ConnectionRefusedError), "%+v", err)
+	require.True(t, errors.Is(err, syscall.ECONNREFUSED), "%+v", err)
 	require.Nil(t, m.ToPB())
 }
 

@@ -16,6 +16,4 @@
 
 package testutils
 
-import "syscall"
-
-const ConnectionRefusedError = syscall.WSAECONNREFUSED
+const ConnectionRefusedError = syscall.Errno(10061)
