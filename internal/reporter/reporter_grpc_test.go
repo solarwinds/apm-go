@@ -12,6 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// There's an issue in GitHub Actions running Windows that causes `net.Listen`
+// to fail with:
+//
+// 		listen tcp: lookup localhost: getaddrinfow: A non-recoverable error
+//		occurred during a database lookup.
+//
+// For now, we're going to rely on non-windows to verify that this code works.
+// Over time, the (non-OTLP) grpc implementation will be phased out, so I think
+// this is a reasonable compromise.
+// -- @swi-jared
+
+//go:build !windows
+
 package reporter
 
 import (
