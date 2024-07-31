@@ -24,19 +24,12 @@ jobs:
       matrix:
         goversion: ['1.21', '1.22']
         os: ['ubuntu-latest', 'windows-latest']
-        include:
-          - os: windows-latest
-            path: 'C:/repo'
-          - os: ubuntu-latest
-            path: '/repo'
     name: Go ${{ matrix.goversion }} (${{ matrix.os}}) tests
     runs-on: ${{ matrix.os }}
     env:
       SW_APM_DEBUG_LEVEL: 1
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: ${{ matrix.path }}
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.goversion }}
