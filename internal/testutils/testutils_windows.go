@@ -16,4 +16,6 @@
 
 package testutils
 
+import "syscall"
+
 const ConnectionRefusedError = syscall.Errno(10061)
