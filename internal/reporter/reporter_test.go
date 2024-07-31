@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// See note in `reporter_grpc_test.go`
+//go:build !windows
+
 package reporter
 
 import (
