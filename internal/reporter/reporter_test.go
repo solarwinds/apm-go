@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//See note in `reporter_grpc_test.go`
-///go:build !windows
+// See note in `reporter_grpc_test.go`
+//go:build !windows
 
 package reporter
 
@@ -84,7 +84,7 @@ func TestGRPCReporter(t *testing.T) {
 	// start test gRPC server
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
 	config.Load()
-	addr := "localhost:10023"
+	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
@@ -171,7 +171,7 @@ func TestGRPCReporter(t *testing.T) {
 func TestShutdownGRPCReporter(t *testing.T) {
 	// start test gRPC server
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
-	addr := "localhost:10023"
+	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
 	time.Sleep(100 * time.Millisecond)
 
@@ -227,7 +227,7 @@ func TestInvalidKey(t *testing.T) {
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
 	oldKey := os.Getenv("SW_APM_SERVICE_KEY")
 	setEnv("SW_APM_SERVICE_KEY", invalidKey)
-	addr := "localhost:10023"
+	addr := "localhost:4567"
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 
@@ -475,7 +475,7 @@ func TestCollectMetricsNextInterval(t *testing.T) {
 
 // testProxy performs tests of http/https proxy.
 func testProxy(t *testing.T, proxyUrl string) {
-	addr := "localhost:10023"
+	addr := "localhost:4567"
 
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
 	setEnv("SW_APM_COLLECTOR", addr)
