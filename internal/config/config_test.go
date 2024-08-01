@@ -346,11 +346,11 @@ func TestYamlConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	f, err := os.CreateTemp("", "*-test-config.yaml")
+	require.NoError(t, err)
 	defer func() {
 		_ = f.Close()
 		os.Remove(f.Name())
 	}()
-	require.NoError(t, err)
 	err = os.WriteFile(f.Name(), out, 0644)
 	require.NoError(t, err)
 
