@@ -23,7 +23,7 @@
 // this is a reasonable compromise.
 // -- @swi-jared
 
-//go:build !windows
+///go:build !windows
 
 package reporter
 
