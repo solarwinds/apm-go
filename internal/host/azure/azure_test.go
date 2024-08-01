@@ -15,6 +15,7 @@
 package azure
 
 import (
+	"errors"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,10 +41,10 @@ func TestQueryAzureInvalidJson(t *testing.T) {
 
 func TestQueryAzureNoHttpResponse(t *testing.T) {
 	m, err := queryAzureIMDS("http://127.0.0.1:12345/asdf")
-	assert.Error(t, err)
-	assert.Nil(t, m)
-	assert.Equal(t, `Get "http://127.0.0.1:12345/asdf?api-version=2021-12-13&format=json": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
-	assert.Nil(t, m.ToPB())
+	require.Error(t, err)
+	require.Nil(t, m)
+	require.True(t, errors.Is(err, testutils.ConnectionRefusedError), "%+v", err)
+	require.Nil(t, m.ToPB())
 }
 
 func TestQueryAzureIMDS(t *testing.T) {

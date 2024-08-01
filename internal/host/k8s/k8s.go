@@ -172,6 +172,11 @@ func getPodUidFromProc(fn string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Warningf("Could not close file: %s", err)
+		}
+	}()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()

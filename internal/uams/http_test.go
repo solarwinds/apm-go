@@ -15,6 +15,7 @@
 package uams
 
 import (
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/testutils"
@@ -27,7 +28,7 @@ func TestReadFromHttpConnRefused(t *testing.T) {
 	uid, err := ReadFromHttp("http://127.0.0.1:12345")
 	require.Error(t, err)
 	require.Equal(t, uuid.Nil, uid)
-	require.Equal(t, `Get "http://127.0.0.1:12345": dial tcp 127.0.0.1:12345: connect: connection refused`, err.Error())
+	require.True(t, errors.Is(err, testutils.ConnectionRefusedError), "%+v", err)
 }
 
 func TestReadFromHttp(t *testing.T) {

@@ -96,7 +96,7 @@ func TestRequestMetadataFromEnv(t *testing.T) {
 	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
-	require.Equal(t, "open /run/secrets/kubernetes.io/serviceaccount/namespace: no such file or directory", err.Error())
+	require.True(t, os.IsNotExist(err))
 
 	defer testutils.Setenv(t, "SW_K8S_POD_NAMESPACE", "my env namespace")()
 	md, err = requestMetadata()
@@ -124,7 +124,7 @@ func TestRequestMetadataNoNamespace(t *testing.T) {
 	md, err := requestMetadata()
 	require.Error(t, err)
 	require.Nil(t, md)
-	require.Equal(t, fmt.Sprintf("open %s: no such file or directory", determineNamspaceFileForOS()), err.Error())
+	require.True(t, os.IsNotExist(err))
 }
 
 func TestMetadata_ToPB(t *testing.T) {
@@ -159,9 +159,8 @@ func TestGetNamespaceNoneFound(t *testing.T) {
 	require.NoError(t, os.Unsetenv("SW_K8S_POD_NAMESPACE"))
 	ns, err := getNamespaceFromFile("this file does not exist and should not be opened")
 	require.Error(t, err)
-	require.Equal(t, "open this file does not exist and should not be opened: no such file or directory", err.Error())
+	require.True(t, os.IsNotExist(err))
 	require.Equal(t, "", ns)
-
 }
 
 // Test getPodName

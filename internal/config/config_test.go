@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -342,14 +343,20 @@ func TestYamlConfig(t *testing.T) {
 	}
 
 	out, err := yaml.Marshal(&yamlConfig)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
-	err = os.WriteFile("/tmp/solarwinds-apm-config.yaml", out, 0644)
-	assert.Nil(t, err)
+	f, err := os.CreateTemp("", "*-test-config.yaml")
+	require.NoError(t, err)
+	defer func() {
+		_ = f.Close()
+		os.Remove(f.Name())
+	}()
+	err = os.WriteFile(f.Name(), out, 0644)
+	require.NoError(t, err)
 
 	// Test with config file
 	ClearEnvs()
-	os.Setenv(envSolarWindsAPMConfigFile, "/tmp/solarwinds-apm-config.yaml")
+	os.Setenv(envSolarWindsAPMConfigFile, f.Name())
 
 	c := NewConfig()
 	assert.Equal(t, &yamlConfig, c)
@@ -377,7 +384,7 @@ func TestYamlConfig(t *testing.T) {
 	}
 	ClearEnvs()
 	SetEnvs(envs)
-	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.yaml")
+	os.Setenv("SW_APM_CONFIG_FILE", f.Name())
 
 	envConfig := Config{
 		Collector:   "collector.test.com",
@@ -458,11 +465,17 @@ func TestInvalidConfigFile(t *testing.T) {
 		log.SetOutput(os.Stderr)
 		log.SetLevel(oldLevel)
 	}()
+	f, err := os.CreateTemp("", "*-test-config.json")
+	require.NoError(t, err)
+	defer func() {
+		_ = f.Close()
+		os.Remove(f.Name())
+	}()
 
 	ClearEnvs()
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/solarwinds-apm-config.json")
-	require.NoError(t, os.WriteFile("/tmp/solarwinds-apm-config.json", []byte("hello"), 0644))
+	os.Setenv("SW_APM_CONFIG_FILE", f.Name())
+	require.NoError(t, os.WriteFile(f.Name(), []byte("hello"), 0644))
 
 	_ = NewConfig()
 	assert.Contains(t, buf.String(), ErrUnsupportedFormat.Error())
@@ -474,7 +487,13 @@ func TestInvalidConfigFile(t *testing.T) {
 	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
 	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/file-not-exist.yaml")
 	_ = NewConfig()
-	assert.Contains(t, buf.String(), "no such file or directory")
+	var exp string
+	if runtime.GOOS == "windows" {
+		exp = "The system cannot find the path specified."
+	} else {
+		exp = "no such file or directory"
+	}
+	assert.Contains(t, buf.String(), exp)
 }
 
 func TestInvalidConfig(t *testing.T) {
