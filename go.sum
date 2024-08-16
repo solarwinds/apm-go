@@ -34,8 +34,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
-github.com/solarwinds/apm-proto v1.0.6 h1:na9Yi5zSufbMu38vKBzOFQsjy6RSli5JUHN882MGAFk=
-github.com/solarwinds/apm-proto v1.0.6/go.mod h1:CN4fCYBnxyOJlBV0CYNXLz6lzNH8SCfNqcCBbpai76c=
+github.com/solarwinds/apm-proto v1.0.7 h1:hCuIM2KTEXRY0/Yobz0IPxWUQnSwyWsG9WgCqliEPFo=
+github.com/solarwinds/apm-proto v1.0.7/go.mod h1:CN4fCYBnxyOJlBV0CYNXLz6lzNH8SCfNqcCBbpai76c=
 github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
 github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
