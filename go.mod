@@ -17,7 +17,7 @@ module github.com/solarwinds/apm-go
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.30.3
+	github.com/aws/aws-sdk-go-v2 v1.30.4
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.11
 	github.com/aws/smithy-go v1.20.4
 	github.com/coocood/freecache v1.2.4
