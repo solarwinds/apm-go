@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/solarwinds/apm-go/internal/state"
 	"go.opentelemetry.io/otel/trace"
+	"log/slog"
 )
 
 type LoggableTraceContext struct {
@@ -58,4 +59,48 @@ func LoggableTraceFromSpanContext(ctx trace.SpanContext) LoggableTraceContext {
 		TraceFlags:  ctx.TraceFlags(),
 		ServiceName: state.GetServiceName(),
 	}
+}
+
+// LogHandler is a custom slog handler that adds a trace ID from the trace context to each log entry
+type LogHandler struct {
+	wrapped slog.Handler
+}
+
+var _ slog.Handler = &LogHandler{}
+
+// NewLogHandler creates a new LogHandler
+func NewLogHandler(wrapped slog.Handler) *LogHandler {
+	return &LogHandler{wrapped: wrapped}
+}
+
+// Enabled calls slog Enabled
+func (h *LogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.wrapped.Enabled(ctx, level)
+}
+
+// Handle adds trace context to the record, in the format that allows SWO to
+// associate log lines with traces
+func (h *LogHandler) Handle(ctx context.Context, record slog.Record) error {
+	traceContext := LoggableTrace(ctx)
+	if traceContext.IsValid() {
+		record.AddAttrs(
+			slog.String("trace_id", traceContext.TraceID.String()),
+			slog.String("span_id", traceContext.SpanID.String()),
+			slog.String("trace_flags", traceContext.TraceFlags.String()),
+		)
+	}
+	record.AddAttrs(
+		slog.String("resource.service.name", traceContext.ServiceName),
+	)
+	return h.wrapped.Handle(ctx, record)
+}
+
+// WithAttrs calls slog WithAttrs
+func (h *LogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &LogHandler{wrapped: h.wrapped.WithAttrs(attrs)}
+}
+
+// WithGroup calls slog WithGroup
+func (h *LogHandler) WithGroup(name string) slog.Handler {
+	return &LogHandler{wrapped: h.wrapped.WithGroup(name)}
 }
