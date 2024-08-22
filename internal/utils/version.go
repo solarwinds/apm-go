@@ -21,7 +21,7 @@ import (
 
 var (
 	// The SolarWinds Observability Go APM library version
-	version = "1.2.0"
+	version = "1.2.1-pre"
 
 	// The Go version
 	goVersion = strings.TrimPrefix(runtime.Version(), "go")
