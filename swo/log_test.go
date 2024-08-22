@@ -108,7 +108,7 @@ func TestHandle(t *testing.T) {
 		{"empty trace", LoggableTraceContext{}},
 	}
 
-	now := time.Now().Truncate(time.Second)
+	now := time.Now().Truncate(time.Second).UTC()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
