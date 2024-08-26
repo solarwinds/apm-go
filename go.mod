@@ -24,10 +24,10 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/solarwinds/apm-proto v1.0.7
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.28.0
-	go.opentelemetry.io/otel/metric v1.28.0
+	go.opentelemetry.io/otel/metric v1.29.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
 	go.uber.org/atomic v1.11.0
 	google.golang.org/grpc v1.65.0
@@ -55,9 +55,9 @@ require (
 
 require (
 	github.com/stretchr/objx v0.5.2 // indirect
-	go.opentelemetry.io/otel v1.28.0
+	go.opentelemetry.io/otel v1.29.0
 	go.opentelemetry.io/otel/sdk v1.28.0
-	go.opentelemetry.io/otel/trace v1.28.0
+	go.opentelemetry.io/otel/trace v1.29.0
 	golang.org/x/sys v0.24.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
