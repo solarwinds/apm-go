@@ -24,7 +24,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/solarwinds/apm-proto v1.0.7
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.28.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.28.0
 	go.opentelemetry.io/otel/metric v1.31.0
