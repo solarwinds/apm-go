@@ -22,7 +22,7 @@ require (
 	github.com/aws/smithy-go v1.22.2
 	github.com/coocood/freecache v1.2.4
 	github.com/google/uuid v1.6.0
-	github.com/solarwinds/apm-proto v1.0.7
+	github.com/solarwinds/apm-proto v1.0.8
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.31.0
