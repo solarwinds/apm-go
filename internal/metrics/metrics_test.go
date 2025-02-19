@@ -18,15 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/bson"
-	"github.com/solarwinds/apm-go/internal/hdrhist"
-	"github.com/solarwinds/apm-go/internal/host"
-	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/testutils"
-	"github.com/stretchr/testify/require"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 	"math"
 	"net"
 	"os"
@@ -34,6 +25,17 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/hdrhist"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
+	"github.com/solarwinds/apm-go/internal/testutils"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
 	mbson "gopkg.in/mgo.v2/bson"
@@ -641,6 +643,7 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 			semconv.HTTPRoute("my cool route"),
 		),
 	)
+	span.SetStatus(codes.Error, "operation failed")
 	span.End(trace.WithTimestamp(now.Add(1 * time.Second)))
 
 	reg := NewLegacyRegistry(false).(*registry)
