@@ -16,6 +16,9 @@ package metrics
 
 import (
 	"errors"
+	"strconv"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/bson"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
@@ -23,8 +26,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	trace2 "go.opentelemetry.io/otel/trace"
-	"strconv"
-	"time"
 )
 
 type registry struct {
@@ -186,9 +187,6 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 	if isHttp {
 		if status > 0 {
 			swoTags["http.status_code"] = strconv.FormatInt(status, 10)
-			if !isError && status/100 == 5 {
-				isError = true
-			}
 		}
 		swoTags["http.method"] = method
 	}
