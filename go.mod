@@ -27,8 +27,8 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.34.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0
-	go.opentelemetry.io/otel/metric v1.34.0
-	go.opentelemetry.io/otel/sdk/metric v1.34.0
+	go.opentelemetry.io/otel/metric v1.35.0
+	go.opentelemetry.io/otel/sdk/metric v1.35.0
 	go.uber.org/atomic v1.11.0
 	google.golang.org/grpc v1.70.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
@@ -56,9 +56,9 @@ require (
 
 require (
 	github.com/stretchr/objx v0.5.2 // indirect
-	go.opentelemetry.io/otel v1.34.0
-	go.opentelemetry.io/otel/sdk v1.34.0
-	go.opentelemetry.io/otel/trace v1.34.0
+	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/sdk v1.35.0
+	go.opentelemetry.io/otel/trace v1.35.0
 	golang.org/x/sys v0.30.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
