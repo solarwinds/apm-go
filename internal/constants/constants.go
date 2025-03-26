@@ -46,3 +46,7 @@ const (
 	KvMaxTransactions                   = "MaxTransactions"
 	KvMaxCustomMetrics                  = "MaxCustomMetrics"
 )
+
+const (
+	SwTransactionNameAttribute = "sw.transaction"
+)

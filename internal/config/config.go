@@ -72,6 +72,8 @@ const (
 	envSolarWindsAPMTokenBucketCap        = "SW_APM_TOKEN_BUCKET_CAPACITY"
 	envSolarWindsAPMTokenBucketRate       = "SW_APM_TOKEN_BUCKET_RATE"
 	envSolarWindsAPMTransactionName       = "SW_APM_TRANSACTION_NAME"
+
+	EnvOtelServiceNameKey = "OTEL_SERVICE_NAME"
 )
 
 // Errors
@@ -930,4 +932,33 @@ func (c *Config) GetSQLSanitize() int {
 	c.RLock()
 	defer c.RUnlock()
 	return c.SQLSanitize
+}
+
+func (c *Config) GetOtelCollector() string {
+	apmCollector := GetCollector()
+
+	return "https://" + strings.Replace(apmCollector, "apm", "otel", 1)
+
+}
+
+func (c *Config) GetServiceNameFromServiceKey() (string, bool) {
+	s := strings.Split(c.GetServiceKey(), ":")
+	if len(s) != 2 {
+		log.Warningf("could not extract service name from service key")
+		return "", false
+	}
+	return s[1], true
+}
+
+func (c *Config) GetApiToken() string {
+	serviceKey := c.GetServiceKey()
+	lastColonIndex := strings.LastIndex(serviceKey, ":")
+	apiToken := ""
+	if lastColonIndex != -1 {
+		apiToken = serviceKey[:lastColonIndex]
+	} else {
+		log.Warningf("Incorrect format of Service Key")
+	}
+
+	return apiToken
 }

@@ -83,6 +83,12 @@ var GetTransactionName = conf.GetTransactionName
 // GetSQLSanitize is a wrapper to method GetSQLSanitize of the global variable config.
 var GetSQLSanitize = conf.GetSQLSanitize
 
+var GetServiceNameFromServiceKey = conf.GetServiceNameFromServiceKey
+
+var GetOtelCollector = conf.GetOtelCollector
+
+var GetApiToken = conf.GetApiToken
+
 // Load reads the customized configurations
 var Load = conf.Load
 
