@@ -153,7 +153,6 @@ func SetTransactionName(ctx context.Context, name string) error {
 	if !sc.IsValid() {
 		return errors.New("could not obtain OpenTelemetry SpanContext from given context")
 	}
-	log.Warningf("set transaction name %v, %v", sc.TraceID(), name)
 	return entryspans.SetTransactionName(sc.TraceID(), name)
 }
 
