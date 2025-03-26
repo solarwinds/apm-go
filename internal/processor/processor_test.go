@@ -165,7 +165,11 @@ func TestSpanIsRemovedFromStateManagerAfterSpanEnds(t *testing.T) {
 	ctx := context.Background()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(NewInboundMetricsSpanProcessor(&recordMock{})))
 	tracer := tp.Tracer("foo")
-	defer tp.Shutdown(ctx)
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			require.NoError(t, err)
+		}
+	}()
 
 	_, entrySpan := tracer.Start(ctx, "entry-span")
 
