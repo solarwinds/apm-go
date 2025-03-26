@@ -35,6 +35,7 @@ jobs:
           go-version: ${{ matrix.goversion }}
       - name: Install dependencies
         run: |
+          go get golang.org/x/tools@v0.30.0
           go get golang.org/x/tools/cmd/cover
           go get github.com/mattn/goveralls@v0.0.12
           go install github.com/wadey/gocovmerge@v0.0.0-20160331181800-b5bfa59ec0ad
