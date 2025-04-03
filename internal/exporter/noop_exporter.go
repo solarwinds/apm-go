@@ -20,12 +20,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type nullExporter struct{}
+type noopExporter struct{}
 
-func (e *nullExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
+func (e *noopExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
 	return nil
 }
 
-func (e *nullExporter) Shutdown(_ context.Context) error {
+func (e *noopExporter) Shutdown(_ context.Context) error {
 	return nil
 }

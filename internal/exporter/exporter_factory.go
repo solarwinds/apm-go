@@ -27,7 +27,7 @@ import (
 func NewExporter(ctx context.Context, r reporter.Reporter) (trace.SpanExporter, error) {
 	if !config.GetEnabled() {
 		log.Warning("SolarWinds Observability exporter is disabled.")
-		return &nullExporter{}, nil
+		return &noopExporter{}, nil
 	}
 
 	if _, ok := os.LookupEnv("USE_LEGACY_APM_EXPORTER"); ok {

@@ -40,7 +40,7 @@ func setupOtelExporterEnvironment() {
 		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", otelCollectorAddress); err != nil {
 			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
 		} else {
-			log.Infof("Setting Otel exporter to: %s", otelCollectorAddress)
+			log.Infof("Setting Otel exporter traces endpoint to: %s", otelCollectorAddress)
 		}
 	}
 }

@@ -71,8 +71,8 @@ func SetLogOutput(w io.Writer) {
 }
 
 func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
-	if serviceNameFromServiceKey, ok := config.GetServiceNameFromServiceKey(); ok && os.Getenv(config.EnvOtelServiceNameKey) == "" {
-		if err := os.Setenv(config.EnvOtelServiceNameKey, serviceNameFromServiceKey); err != nil {
+	if serviceKey, ok := config.ParsedServiceKey(); ok && os.Getenv(config.EnvOtelServiceNameKey) == "" {
+		if err := os.Setenv(config.EnvOtelServiceNameKey, serviceKey.ServiceName); err != nil {
 			log.Warningf("could not override unset environment variable %s based on service key, err: %s", config.EnvOtelServiceNameKey, err)
 		}
 	}

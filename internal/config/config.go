@@ -935,30 +935,37 @@ func (c *Config) GetSQLSanitize() int {
 }
 
 func (c *Config) GetOtelCollector() string {
-	apmCollector := GetCollector()
+	apmCollector := strings.Replace(GetCollector(), "apm", "otel", 1)
 
-	return "https://" + strings.Replace(apmCollector, "apm", "otel", 1)
-
+	if strings.HasPrefix(apmCollector, "http") {
+		return apmCollector
+	}
+	return "https://" + apmCollector
 }
 
-func (c *Config) GetServiceNameFromServiceKey() (string, bool) {
+type ServiceKey struct {
+	Token       string
+	ServiceName string
+}
+
+func (c *Config) ParsedServiceKey() (ServiceKey, bool) {
 	s := strings.Split(c.GetServiceKey(), ":")
 	if len(s) != 2 {
-		log.Warningf("could not extract service name from service key")
-		return "", false
+		log.Warningf("incorrect format of service key")
+		return ServiceKey{"", ""}, false
 	}
-	return s[1], true
+	token := s[0]
+	serviceName := s[1]
+	if token == "" || serviceName == "" {
+		log.Warningf("token or service name is not set")
+		return ServiceKey{token, serviceName}, false
+	}
+	return ServiceKey{token, serviceName}, false
 }
 
 func (c *Config) GetApiToken() string {
-	serviceKey := c.GetServiceKey()
-	lastColonIndex := strings.LastIndex(serviceKey, ":")
-	apiToken := ""
-	if lastColonIndex != -1 {
-		apiToken = serviceKey[:lastColonIndex]
-	} else {
-		log.Warningf("Incorrect format of Service Key")
+	if serviceKey, ok := c.ParsedServiceKey(); ok {
+		return serviceKey.Token
 	}
-
-	return apiToken
+	return ""
 }
