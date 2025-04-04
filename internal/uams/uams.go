@@ -15,10 +15,11 @@
 package uams
 
 import (
-	"github.com/google/uuid"
-	"github.com/solarwinds/apm-go/internal/log"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 var exit = make(chan bool, 1)
@@ -83,6 +84,20 @@ func updateClientId(uid uuid.UUID, via string) {
 	currState.clientId = uid
 	currState.via = via
 	currState.updated = time.Now()
+}
+
+func readUamsClientId() (uuid.UUID, error) {
+	f := determineFileForOS()
+	i, err := ReadFromFile(f)
+
+	if err != nil {
+		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
+		i, err = ReadFromHttp(clientUrl)
+		if err != nil {
+			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
+		}
+	}
+	return i, err
 }
 
 func GetCurrentClientId() uuid.UUID {

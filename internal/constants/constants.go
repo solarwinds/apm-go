@@ -49,4 +49,5 @@ const (
 
 const (
 	SwTransactionNameAttribute = "sw.transaction"
+	UamsClientIdAttribute      = "sw.uams.client.id"
 )

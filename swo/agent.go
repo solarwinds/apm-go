@@ -33,7 +33,10 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -87,6 +90,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
 		resource.WithTelemetrySDK(),
+		resource.WithDetectors(uams.New(), ec2.NewResourceDetector(), azurevm.New()),
 		resource.WithAttributes(resourceAttrs...),
 	)
 }
