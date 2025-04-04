@@ -16,9 +16,13 @@ package processor
 
 import (
 	"context"
+
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
+	"github.com/solarwinds/apm-go/internal/txn"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -36,6 +40,9 @@ type inboundMetricsSpanProcessor struct {
 
 func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.ReadWriteSpan) {
 	if entryspans.IsEntrySpan(span) {
+		// Set default transaction name value. It can be overwritten later using SetTransactionName API.
+		span.SetAttributes(attribute.String(constants.SwTransactionNameAttribute, txn.GetTransactionName(span.(sdktrace.ReadOnlySpan))))
+
 		if err := entryspans.Push(span); err != nil {
 			// The only error here should be if it's not an entry span, and we've guarded against that,
 			// so it's safe to log the error and move on
@@ -44,14 +51,7 @@ func (s *inboundMetricsSpanProcessor) OnStart(_ context.Context, span sdktrace.R
 	}
 }
 
-func maybeClearEntrySpan(span sdktrace.ReadOnlySpan) {
-	if span.SpanContext().IsSampled() {
-		// Do not clear here. The exporter will need the added context and will
-		// clear. If we clear here, the exporter will not see the entry
-		// span state.
-		return
-	}
-	// Not sampled; the exporter will not see it, thus we must clear.
+func clearEntrySpan(span sdktrace.ReadOnlySpan) {
 	if err := entryspans.Delete(span); err != nil {
 		log.Warningf("could not delete entry span for trace-span %s-%s",
 			span.SpanContext().TraceID(), span.SpanContext().SpanID())
@@ -61,7 +61,7 @@ func maybeClearEntrySpan(span sdktrace.ReadOnlySpan) {
 func (s *inboundMetricsSpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	if entryspans.IsEntrySpan(span) {
 		s.registry.RecordSpan(span)
-		maybeClearEntrySpan(span)
+		clearEntrySpan(span)
 	}
 }
 

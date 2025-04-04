@@ -16,21 +16,17 @@ package entryspans
 
 import (
 	"context"
+	"testing"
+
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 var (
 	traceA = trace.TraceID{0xA}
 	traceB = trace.TraceID{0xB}
-
-	span1 = trace.SpanID{0x1}
-	span2 = trace.SpanID{0x2}
-	span3 = trace.SpanID{0x3}
-	span4 = trace.SpanID{0x4}
 )
 
 func (e *stdManager) pop(tid trace.TraceID) (trace.SpanID, bool) {
@@ -63,6 +59,14 @@ func (e *stdManager) reset() {
 }
 
 func TestCurrent(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
+
+	ctx := context.Background()
+	var span1, span2 trace.Span
+	_, span1 = tr.Start(ctx, "A")
+	_, span2 = tr.Start(ctx, "B")
+
 	state := state.(*stdManager)
 	sid, ok := Current(traceA)
 	require.False(t, ok)
@@ -72,21 +76,21 @@ func TestCurrent(t *testing.T) {
 	require.False(t, ok)
 	require.False(t, sid.IsValid())
 
-	state.push(traceA, span1)
+	state.push(traceA, span1.(sdktrace.ReadWriteSpan))
 
 	sid, ok = Current(traceA)
 	require.True(t, ok)
-	require.Equal(t, span1, sid)
+	require.Equal(t, span1.SpanContext().SpanID(), sid)
 
 	sid, ok = Current(traceB)
 	require.False(t, ok)
 	require.False(t, sid.IsValid())
 
-	state.push(traceA, span2)
+	state.push(traceA, span2.(sdktrace.ReadWriteSpan))
 
 	sid, ok = Current(traceA)
 	require.True(t, ok)
-	require.Equal(t, span2, sid)
+	require.Equal(t, span2.SpanContext().SpanID(), sid)
 
 	sid, ok = Current(traceB)
 	require.False(t, ok)
@@ -94,15 +98,15 @@ func TestCurrent(t *testing.T) {
 
 	sid, ok = state.pop(traceA)
 	require.True(t, ok)
-	require.Equal(t, span2, sid)
+	require.Equal(t, span2.SpanContext().SpanID(), sid)
 
 	sid, ok = Current(traceA)
 	require.True(t, ok)
-	require.Equal(t, span1, sid)
+	require.Equal(t, span1.SpanContext().SpanID(), sid)
 
 	sid, ok = state.pop(traceA)
 	require.True(t, ok)
-	require.Equal(t, span1, sid)
+	require.Equal(t, span1.SpanContext().SpanID(), sid)
 
 	sid, ok = Current(traceA)
 	require.False(t, ok)
@@ -124,36 +128,44 @@ func TestPush(t *testing.T) {
 	ctx := context.Background()
 	var span trace.Span
 	ctx, span = tr.Start(ctx, "A")
-	require.NoError(t, Push(span.(sdktrace.ReadOnlySpan)))
+	require.NoError(t, Push(span.(sdktrace.ReadWriteSpan)))
 	require.Equal(t,
 		[]*entrySpan{
-			{spanId: span.SpanContext().SpanID()},
+			{spanId: span.SpanContext().SpanID(), spanHandle: span.(sdktrace.ReadWriteSpan)},
 		},
 		state.spans[span.SpanContext().TraceID()],
 	)
 
 	var nonEntrySpan trace.Span
 	_, nonEntrySpan = tr.Start(ctx, "B")
-	err = Push(nonEntrySpan.(sdktrace.ReadOnlySpan))
+	err = Push(nonEntrySpan.(sdktrace.ReadWriteSpan))
 	require.Error(t, err)
 	require.Equal(t, NotEntrySpan, err)
 }
 
 func TestSetTransactionName(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
+
+	ctx := context.Background()
+	var span1, span2 trace.Span
+	_, span1 = tr.Start(ctx, "A")
+	_, span2 = tr.Start(ctx, "B")
+
 	state := state.(*stdManager)
 	state.reset()
 
 	err := SetTransactionName(traceA, "foo bar")
 	require.Error(t, err)
 
-	state.push(traceA, span1)
-	state.push(traceA, span2)
+	state.push(traceA, span1.(sdktrace.ReadWriteSpan))
+	state.push(traceA, span2.(sdktrace.ReadWriteSpan))
 
 	err = SetTransactionName(traceA, "foo bar")
 	require.Equal(t,
 		[]*entrySpan{
-			{spanId: span1},
-			{spanId: span2, txnName: "foo bar"},
+			{spanHandle: span1.(sdktrace.ReadWriteSpan), spanId: span1.SpanContext().SpanID()},
+			{spanHandle: span2.(sdktrace.ReadWriteSpan), spanId: span2.SpanContext().SpanID(), txnName: "foo bar"},
 		},
 		state.spans[traceA],
 	)
@@ -161,7 +173,7 @@ func TestSetTransactionName(t *testing.T) {
 	require.NoError(t, err)
 	curr, ok := state.current(traceA)
 	require.True(t, ok)
-	require.Equal(t, span2, curr.spanId)
+	require.Equal(t, span2.SpanContext().SpanID(), curr.spanId)
 	require.Equal(t, "foo bar", curr.txnName)
 
 	require.Equal(t, "foo bar", GetTransactionName(traceA))
@@ -169,7 +181,7 @@ func TestSetTransactionName(t *testing.T) {
 
 	sid, ok := state.pop(traceA)
 	require.True(t, ok)
-	require.Equal(t, span2, sid)
+	require.Equal(t, span2.SpanContext().SpanID(), sid)
 
 	require.Equal(t, "", GetTransactionName(traceA))
 	require.Equal(t, "", GetTransactionName(traceB))
@@ -181,38 +193,46 @@ func TestSetTransactionName(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	tr, teardown := testutils.TracerSetup()
+	defer teardown()
+
+	ctx := context.Background()
+	var span1, span2, span3, span4 trace.Span
+	_, span1 = tr.Start(ctx, "A")
+	_, span2 = tr.Start(ctx, "B")
+	_, span3 = tr.Start(ctx, "C")
+	_, span4 = tr.Start(ctx, "D")
+
 	state := state.(*stdManager)
 	state.reset()
 
-	err := state.delete(traceA, span1)
+	err := state.delete(traceA, span1.SpanContext().SpanID())
 	require.Error(t, err)
 	require.Equal(t, "could not find trace id", err.Error())
 
-	state.push(traceA, span1)
-	state.push(traceA, span2)
-	state.push(traceA, span3)
+	state.push(traceA, span1.(sdktrace.ReadWriteSpan))
+	state.push(traceA, span2.(sdktrace.ReadWriteSpan))
+	state.push(traceA, span3.(sdktrace.ReadWriteSpan))
 
-	err = state.delete(traceA, span4)
+	err = state.delete(traceA, span4.SpanContext().SpanID())
 	require.Error(t, err)
 	require.Equal(t, "could not find span id", err.Error())
 
-	err = state.delete(traceA, span2)
+	err = state.delete(traceA, span2.SpanContext().SpanID())
 	require.NoError(t, err)
 	require.Equal(t,
 		[]*entrySpan{
-			{spanId: span1},
-			{spanId: span3},
+			{spanHandle: span1.(sdktrace.ReadWriteSpan), spanId: span1.SpanContext().SpanID()},
+			{spanHandle: span3.(sdktrace.ReadWriteSpan), spanId: span3.SpanContext().SpanID()},
 		},
 		state.spans[traceA],
 	)
 
-	tr, teardown := testutils.TracerSetup()
-	defer teardown()
 	_, s := tr.Start(context.Background(), "foo bar baz")
-	state.push(s.SpanContext().TraceID(), s.SpanContext().SpanID())
+	state.push(s.SpanContext().TraceID(), s.(sdktrace.ReadWriteSpan))
 	require.Equal(t,
 		[]*entrySpan{
-			{spanId: s.SpanContext().SpanID()},
+			{spanHandle: s.(sdktrace.ReadWriteSpan), spanId: s.SpanContext().SpanID()},
 		},
 		state.spans[s.SpanContext().TraceID()],
 	)

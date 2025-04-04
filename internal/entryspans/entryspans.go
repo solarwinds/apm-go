@@ -17,10 +17,13 @@ package entryspans
 import (
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/constants"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"sync"
 )
 
 var (
@@ -34,15 +37,16 @@ var (
 )
 
 type manager interface {
-	push(tid trace.TraceID, sid trace.SpanID)
+	push(tid trace.TraceID, span sdktrace.ReadWriteSpan)
 	delete(tid trace.TraceID, sid trace.SpanID) error
 	current(tid trace.TraceID) (*entrySpan, bool)
 	setTransactionName(tid trace.TraceID, name string) error
 }
 
 type entrySpan struct {
-	spanId  trace.SpanID
-	txnName string
+	spanId     trace.SpanID
+	spanHandle sdktrace.ReadWriteSpan
+	txnName    string
 }
 
 type stdManager struct {
@@ -53,7 +57,7 @@ type stdManager struct {
 
 type noopManager struct{}
 
-func (n noopManager) push(trace.TraceID, trace.SpanID) {}
+func (n noopManager) push(trace.TraceID, sdktrace.ReadWriteSpan) {}
 
 func (n noopManager) delete(trace.TraceID, trace.SpanID) error {
 	return nil
@@ -72,7 +76,7 @@ var (
 	_ manager = &noopManager{}
 )
 
-func (e *stdManager) push(tid trace.TraceID, sid trace.SpanID) {
+func (e *stdManager) push(tid trace.TraceID, span sdktrace.ReadWriteSpan) {
 	e.mut.Lock()
 	defer e.mut.Unlock()
 	var list []*entrySpan
@@ -80,7 +84,7 @@ func (e *stdManager) push(tid trace.TraceID, sid trace.SpanID) {
 	if list, ok = e.spans[tid]; !ok {
 		list = []*entrySpan{}
 	}
-	list = append(list, &entrySpan{spanId: sid})
+	list = append(list, &entrySpan{spanHandle: span, spanId: span.SpanContext().SpanID()})
 	e.spans[tid] = list
 }
 
@@ -104,12 +108,12 @@ func (e *stdManager) currentUnsafe(tid trace.TraceID) (*entrySpan, bool) {
 	}
 }
 
-func Push(span sdktrace.ReadOnlySpan) error {
+func Push(span sdktrace.ReadWriteSpan) error {
 	if !IsEntrySpan(span) {
 		return NotEntrySpan
 	}
 
-	state.push(span.SpanContext().TraceID(), span.SpanContext().SpanID())
+	state.push(span.SpanContext().TraceID(), span)
 	return nil
 }
 
@@ -161,6 +165,9 @@ func (e *stdManager) setTransactionName(tid trace.TraceID, name string) error {
 	if !ok {
 		return fmt.Errorf("could not find entry span for trace id %s", tid)
 	}
+
+	curr.spanHandle.SetAttributes(attribute.String(constants.SwTransactionNameAttribute, name))
+
 	curr.txnName = name
 	return nil
 }

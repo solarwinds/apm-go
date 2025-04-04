@@ -19,6 +19,10 @@ import (
 	"errors"
 	"os"
 
+	"io"
+	stdlog "log"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
@@ -29,7 +33,10 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -39,9 +46,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	stdlog "log"
-	"strings"
 )
 
 var (
@@ -70,6 +74,12 @@ func SetLogOutput(w io.Writer) {
 }
 
 func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
+	if serviceKey, ok := config.ParsedServiceKey(); ok && os.Getenv(config.EnvOtelServiceNameKey) == "" {
+		if err := os.Setenv(config.EnvOtelServiceNameKey, serviceKey.ServiceName); err != nil {
+			log.Warningf("could not override unset environment variable %s based on service key, err: %s", config.EnvOtelServiceNameKey, err)
+		}
+	}
+
 	return resource.New(context.Background(),
 		resource.WithContainer(),
 		resource.WithFromEnv(),
@@ -80,6 +90,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
 		resource.WithTelemetrySDK(),
+		resource.WithDetectors(uams.New(), ec2.NewResourceDetector(), azurevm.New()),
 		resource.WithAttributes(resourceAttrs...),
 	)
 }
@@ -87,6 +98,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	ctx := context.Background()
 	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
 		return func() {
@@ -96,12 +108,17 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
 	registry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
-	_reporter, err := reporter.Start(resrc, registry, o)
+
+	reporter, err := reporter.Start(resrc, registry, o)
 	if err != nil {
 		return func() {}, err
 	}
 
-	exprtr := exporter.NewExporter(_reporter)
+	exprtr, err := exporter.NewExporter(ctx, reporter)
+	if err != nil {
+		return func() {}, err
+	}
+
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
 		return func() {}, err
