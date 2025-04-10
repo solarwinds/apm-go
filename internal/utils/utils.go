@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	"github.com/solarwinds/apm-go/internal/constants"
-	"github.com/solarwinds/apm-go/internal/log"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -53,8 +52,7 @@ func GetLineByKeyword(path string, keyword string) string {
 		return ""
 	}
 	defer func() {
-		err := file.Close()
-		log.Errorf("Error closing file %s: %v", path, err)
+		_ = file.Close()
 	}()
 
 	scanner := bufio.NewScanner(file)
