@@ -16,7 +16,6 @@ package log
 import (
 	"bytes"
 	"errors"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
 	"math/rand"
 	"os"
@@ -24,9 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/solarwinds/apm-go/internal/utils"
+
 	"sync"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDebugLevel(t *testing.T) {
@@ -50,12 +52,14 @@ func TestDebugLevel(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		os.Setenv(test.key, test.val)
+		err := os.Setenv(test.key, test.val)
+		require.NoError(t, err)
 		SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
 
-	os.Unsetenv("SW_APM_DEBUG_LEVEL")
+	err := os.Unsetenv("SW_APM_DEBUG_LEVEL")
+	require.NoError(t, err)
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 	assert.EqualValues(t, Level(), DefaultLevel)
 }
@@ -64,7 +68,8 @@ func TestLog(t *testing.T) {
 	var buffer bytes.Buffer
 	SetOutput(&buffer)
 
-	os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
+	err := os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
+	require.NoError(t, err)
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 
 	tests := map[string]string{
@@ -108,8 +113,8 @@ func TestLog(t *testing.T) {
 	assert.True(t, strings.HasSuffix(buffer.String(), "show me the code\n"))
 
 	SetOutput(os.Stderr)
-	os.Unsetenv("SW_APM_DEBUG_LEVEL")
-
+	err = os.Unsetenv("SW_APM_DEBUG_LEVEL")
+	require.NoError(t, err)
 }
 
 func TestStrToLevel(t *testing.T) {

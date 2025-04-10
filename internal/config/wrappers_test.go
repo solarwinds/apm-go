@@ -18,11 +18,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWrappers(t *testing.T) {
-	os.Unsetenv(envSolarWindsAPMCollector)
-	os.Unsetenv(envSolarWindsAPMHistogramPrecision)
+	err := os.Unsetenv(envSolarWindsAPMCollector)
+	require.NoError(t, err)
+	err = os.Unsetenv(envSolarWindsAPMHistogramPrecision)
+	require.NoError(t, err)
 	Load()
 
 	assert.NotEqual(t, nil, conf)

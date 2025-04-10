@@ -16,12 +16,13 @@ package host
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func assertContainerId(t *testing.T, filetext string, expectedContainerId string) {
@@ -158,22 +159,27 @@ func TestGetOrFallback(t *testing.T) {
 var _ = os.Setenv(envDyno, "test-dyno")
 
 func TestGetHerokuDynoId(t *testing.T) {
-	os.Setenv(envDyno, "test-dyno")
+	err := os.Setenv(envDyno, "test-dyno")
+	require.NoError(t, err)
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
-	os.Unsetenv(envDyno)
+	err = os.Unsetenv(envDyno)
+	require.NoError(t, err)
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
 
-	os.Setenv(envDyno, "take-no-effect")
+	err = os.Setenv(envDyno, "take-no-effect")
+	require.NoError(t, err)
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
 }
 
 func TestInitDyno(t *testing.T) {
 	var dynoID string
-	os.Setenv(envDyno, "test-dyno")
+	err := os.Setenv(envDyno, "test-dyno")
+	require.NoError(t, err)
 	initDyno(&dynoID)
 	assert.Equal(t, "test-dyno", dynoID)
 
-	os.Unsetenv(envDyno)
+	err = os.Unsetenv(envDyno)
+	require.NoError(t, err)
 	initDyno(&dynoID)
 	assert.Equal(t, "", dynoID)
 }

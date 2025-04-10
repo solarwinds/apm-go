@@ -33,7 +33,10 @@ import (
 const TestServiceKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go"
 
 func init() {
-	os.Setenv("SW_APM_SERVICE_KEY", TestServiceKey)
+	err := os.Setenv("SW_APM_SERVICE_KEY", TestServiceKey)
+	if err != nil {
+		log.Error("Error setting variable SW_APM_SERVICE_KEY in test package initializtion: ", err)
+	}
 	Load()
 }
 
@@ -41,11 +44,16 @@ func TestLoadConfig(t *testing.T) {
 	key1 := "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:Go"
 	key2 := "bbbb315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:Go"
 
-	os.Setenv(envSolarWindsAPMCollector, "example.com:12345")
-	os.Setenv(envSolarWindsAPMPrependDomain, "true")
-	os.Setenv(envSolarWindsAPMHistogramPrecision, "2")
-	os.Setenv(envSolarWindsAPMServiceKey, key1)
-	os.Setenv(envSolarWindsAPMEnabled, "true")
+	err := os.Setenv(envSolarWindsAPMCollector, "example.com:12345")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMPrependDomain, "true")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMHistogramPrecision, "2")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMServiceKey, key1)
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMEnabled, "true")
+	require.NoError(t, err)
 
 	c := NewConfig()
 	assert.Equal(t, "example.com:12345", c.GetCollector())
@@ -53,9 +61,12 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, 2, c.Precision)
 	assert.Equal(t, true, c.Enabled)
 
-	os.Setenv(envSolarWindsAPMCollector, "test.abc:8080")
-	os.Setenv(envSolarWindsAPMEnabled, "true")
-	os.Setenv(envSolarWindsAPMTracingMode, "always")
+	err = os.Setenv(envSolarWindsAPMCollector, "test.abc:8080")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMEnabled, "true")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMTracingMode, "always")
+	require.NoError(t, err)
 
 	c.Load()
 	assert.Equal(t, "test.abc:8080", c.GetCollector())
@@ -68,14 +79,22 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "hello.world:443", c.GetCollector())
 	assert.Equal(t, ToServiceKey(key2), c.GetServiceKey())
 
-	os.Setenv(envSolarWindsAPMServiceKey, key1)
-	os.Setenv(envSolarWindsAPMHostnameAlias, "test")
-	os.Setenv(envSolarWindsAPMTrustedPath, "test.crt")
-	os.Setenv(envSolarWindsAPMEnabled, "invalidValue")
-	os.Setenv(envSolarWindsAPMServerlessServiceName, "AWSLambda")
-	os.Setenv(envSolarWindsAPMTokenBucketCap, "2.0")
-	os.Setenv(envSolarWindsAPMTokenBucketRate, "1.0")
-	os.Setenv(envSolarWindsAPMTransactionName, "my-transaction-name")
+	err = os.Setenv(envSolarWindsAPMServiceKey, key1)
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMHostnameAlias, "test")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMTrustedPath, "test.crt")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMEnabled, "invalidValue")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMServerlessServiceName, "AWSLambda")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMTokenBucketCap, "2.0")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMTokenBucketRate, "1.0")
+	require.NoError(t, err)
+	err = os.Setenv(envSolarWindsAPMTransactionName, "my-transaction-name")
+	require.NoError(t, err)
 
 	c.Load()
 	assert.Equal(t, 2.0, c.GetTokenBucketCap())
@@ -177,7 +196,10 @@ func ClearEnvs() {
 	for _, kv := range os.Environ() {
 		kvSlice := strings.Split(kv, "=")
 		k := kvSlice[0]
-		os.Unsetenv(k)
+		err := os.Unsetenv(k)
+		if err != nil {
+			log.Error("Error Unsetenv: ", err)
+		}
 	}
 }
 
@@ -185,7 +207,10 @@ func SetEnvs(kvs []string) {
 	for _, kv := range kvs {
 		kvSlice := strings.Split(kv, "=")
 		k, v := kvSlice[0], kvSlice[1]
-		os.Setenv(k, v)
+		err := os.Setenv(k, v)
+		if err != nil {
+			log.Error("Error Setenv: ", err)
+		}
 	}
 }
 
@@ -349,14 +374,16 @@ func TestYamlConfig(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		_ = f.Close()
-		os.Remove(f.Name())
+		err = os.Remove(f.Name())
+		require.NoError(t, err)
 	}()
 	err = os.WriteFile(f.Name(), out, 0644)
 	require.NoError(t, err)
 
 	// Test with config file
 	ClearEnvs()
-	os.Setenv(envSolarWindsAPMConfigFile, f.Name())
+	err = os.Setenv(envSolarWindsAPMConfigFile, f.Name())
+	require.NoError(t, err)
 
 	c := NewConfig()
 	assert.Equal(t, &yamlConfig, c)
@@ -384,7 +411,8 @@ func TestYamlConfig(t *testing.T) {
 	}
 	ClearEnvs()
 	SetEnvs(envs)
-	os.Setenv("SW_APM_CONFIG_FILE", f.Name())
+	err = os.Setenv("SW_APM_CONFIG_FILE", f.Name())
+	require.NoError(t, err)
 
 	envConfig := Config{
 		Collector:   "collector.test.com",
@@ -433,7 +461,8 @@ func TestYamlConfig(t *testing.T) {
 	c = NewConfig()
 	assert.Equal(t, &envConfig, c)
 
-	os.Unsetenv("SW_APM_CONFIG_FILE")
+	err = os.Unsetenv("SW_APM_CONFIG_FILE")
+	require.NoError(t, err)
 }
 
 func TestSamplingConfigValidate(t *testing.T) {
@@ -469,12 +498,15 @@ func TestInvalidConfigFile(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		_ = f.Close()
-		os.Remove(f.Name())
+		err = os.Remove(f.Name())
+		require.NoError(t, err)
 	}()
 
 	ClearEnvs()
-	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("SW_APM_CONFIG_FILE", f.Name())
+	err = os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	require.NoError(t, err)
+	err = os.Setenv("SW_APM_CONFIG_FILE", f.Name())
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(f.Name(), []byte("hello"), 0644))
 
 	_ = NewConfig()
@@ -484,8 +516,10 @@ func TestInvalidConfigFile(t *testing.T) {
 
 	buf.Reset()
 	ClearEnvs()
-	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
-	os.Setenv("SW_APM_CONFIG_FILE", "/tmp/file-not-exist.yaml")
+	err = os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	require.NoError(t, err)
+	err = os.Setenv("SW_APM_CONFIG_FILE", "/tmp/file-not-exist.yaml")
+	require.NoError(t, err)
 	_ = NewConfig()
 	var exp string
 	if runtime.GOOS == "windows" {

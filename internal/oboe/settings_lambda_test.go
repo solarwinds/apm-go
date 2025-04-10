@@ -17,11 +17,12 @@
 package oboe
 
 import (
+	"os"
+	"testing"
+
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 func TestNewSettingLambdaNormalized(t *testing.T) {
@@ -113,7 +114,8 @@ func TestNewSettingLambdaFromFileErrorUnmarshal(t *testing.T) {
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	os.Remove(settingsFileName)
+	err = os.Remove(settingsFileName)
+	require.NoError(t, err)
 }
 
 func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
@@ -125,7 +127,8 @@ func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	os.Remove(settingsFileName)
+	err = os.Remove(settingsFileName)
+	require.NoError(t, err)
 }
 
 func TestNewSettingLambdaFromFile(t *testing.T) {
@@ -188,5 +191,6 @@ func TestNewSettingLambdaFromFile(t *testing.T) {
 		result.args[constants.KvSignatureKey],
 	)
 
-	os.Remove(settingsFileName)
+	err = os.Remove(settingsFileName)
+	require.NoError(t, err)
 }

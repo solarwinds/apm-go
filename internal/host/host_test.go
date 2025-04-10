@@ -26,6 +26,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/utils"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -90,8 +91,11 @@ func TestConfiguredHostname(t *testing.T) {
 	var old string
 	var has bool
 	old, has = os.LookupEnv("SW_APM_HOSTNAME_ALIAS")
-	os.Setenv("SW_APM_HOSTNAME_ALIAS", "testAlias")
-	os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	err := os.Setenv("SW_APM_HOSTNAME_ALIAS", "testAlias")
+	require.NoError(t, err)
+	err = os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go")
+	require.NoError(t, err)
+
 	config.Load()
 	log.Warningf("Accepted config items: \n%s", config.GetDelta())
 
@@ -100,7 +104,8 @@ func TestConfiguredHostname(t *testing.T) {
 	assert.True(t, strings.Contains(buf.String(), "SW_APM_HOSTNAME_ALIAS"), buf.String())
 
 	if has {
-		os.Setenv("SW_APM_HOSTNAME_ALIAS", old)
+		err = os.Setenv("SW_APM_HOSTNAME_ALIAS", old)
+		require.NoError(t, err)
 	}
 }
 
