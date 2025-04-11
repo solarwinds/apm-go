@@ -179,8 +179,7 @@ func ClearEnvs() {
 	for _, kv := range os.Environ() {
 		kvSlice := strings.Split(kv, "=")
 		k := kvSlice[0]
-		err := os.Unsetenv(k)
-		if err != nil {
+		if err := os.Unsetenv(k); err != nil {
 			log.Error("Error Unsetenv: ", err)
 		}
 	}

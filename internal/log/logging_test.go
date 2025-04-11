@@ -57,8 +57,7 @@ func TestDebugLevel(t *testing.T) {
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
 
-	err := os.Unsetenv("SW_APM_DEBUG_LEVEL")
-	require.NoError(t, err)
+	require.NoError(t, os.Unsetenv("SW_APM_DEBUG_LEVEL"))
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 	assert.EqualValues(t, Level(), DefaultLevel)
 }
