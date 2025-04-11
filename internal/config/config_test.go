@@ -33,8 +33,7 @@ import (
 const TestServiceKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:go"
 
 func init() {
-	err := os.Setenv("SW_APM_SERVICE_KEY", TestServiceKey)
-	if err != nil {
+	if err := os.Setenv("SW_APM_SERVICE_KEY", TestServiceKey); err != nil {
 		log.Error("Error setting variable SW_APM_SERVICE_KEY in test package initializtion: ", err)
 	}
 	Load()
