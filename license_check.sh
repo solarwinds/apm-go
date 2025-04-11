@@ -34,6 +34,7 @@ find . -type f \
     -not -path './CODEOWNERS' \
     -not -path './\.editorconfig' \
     -not -path './\.codecov.yaml' \
+    -not -path './\.golangci.yaml' \
     -not -path './\.idea/*' \
     -exec bash -c 'check_file "$0"' {} \; | tee $TMPFILE
 

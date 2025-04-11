@@ -18,10 +18,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/log"
 	"io"
 	"os"
 	"sync"
+
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 // FlushWriter offers an interface to write a byte slice to a specific destination.
@@ -86,7 +87,9 @@ func (lr *logWriter) Write(t WriteType, bytes []byte) (int, error) {
 	}
 
 	if !lr.syncWrite && lr.chunkSize+len(encoded) > lr.maxChunkSize {
-		lr.flush()
+		if err := lr.flush(); err != nil {
+			log.Errorf("error flushing logWriter: %v", err)
+		}
 	}
 
 	if t == EventWT {
@@ -99,7 +102,9 @@ func (lr *logWriter) Write(t WriteType, bytes []byte) (int, error) {
 
 	lr.chunkSize += len(encoded)
 	if lr.syncWrite {
-		lr.flush()
+		if err := lr.flush(); err != nil {
+			log.Errorf("error flushing logWriter: %v", err)
+		}
 	}
 
 	return len(bytes), nil

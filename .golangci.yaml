@@ -1,0 +1,6 @@
+version: "2"
+linters:
+  settings:
+    staticcheck:
+      checks:
+        - '-QF1003' # Disable could use tagged switch on
