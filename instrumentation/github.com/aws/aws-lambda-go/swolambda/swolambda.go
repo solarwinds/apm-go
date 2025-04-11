@@ -64,6 +64,22 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	}
 	ctx, span := tracer.Start(ctx, w.fnName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
 	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case error:
+				log.Error("Recovered error:", x.Error())
+				span.SetStatus(codes.Error, x.Error())
+				span.RecordError(x)
+			case string:
+				log.Error("Recovered string:", x)
+				span.SetStatus(codes.Error, x)
+			default:
+				log.Error("Recovered unknown type (%T): %v\n", x, x)
+				span.SetStatus(codes.Error, "Panic from unknown type")
+			}
+			defer panic(r)
+		}
+
 		span.End()
 		if flusher != nil {
 			if err := flusher.Flush(context.Background()); err != nil {
