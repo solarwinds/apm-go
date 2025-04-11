@@ -114,8 +114,7 @@ func TestNewSettingLambdaFromFileErrorUnmarshal(t *testing.T) {
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	err = os.Remove(settingsFileName)
-	require.NoError(t, err)
+	require.NoError(t, os.Remove(settingsFileName))
 }
 
 func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
@@ -127,8 +126,7 @@ func TestNewSettingLambdaFromFileErrorLen(t *testing.T) {
 	assert.Nil(t, res)
 	assert.Error(t, err)
 
-	err = os.Remove(settingsFileName)
-	require.NoError(t, err)
+	require.NoError(t, os.Remove(settingsFileName))
 }
 
 func TestNewSettingLambdaFromFile(t *testing.T) {
@@ -191,6 +189,5 @@ func TestNewSettingLambdaFromFile(t *testing.T) {
 		result.args[constants.KvSignatureKey],
 	)
 
-	err = os.Remove(settingsFileName)
-	require.NoError(t, err)
+	require.NoError(t, os.Remove(settingsFileName))
 }

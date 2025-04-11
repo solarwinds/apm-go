@@ -52,8 +52,7 @@ func TestDebugLevel(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := os.Setenv(test.key, test.val)
-		require.NoError(t, err)
+		require.NoError(t, os.Setenv(test.key, test.val))
 		SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 		assert.EqualValues(t, test.expected, Level(), "Test-"+test.val)
 	}
@@ -68,8 +67,7 @@ func TestLog(t *testing.T) {
 	var buffer bytes.Buffer
 	SetOutput(&buffer)
 
-	err := os.Setenv("SW_APM_DEBUG_LEVEL", "debug")
-	require.NoError(t, err)
+	require.NoError(t, os.Setenv("SW_APM_DEBUG_LEVEL", "debug"))
 	SetLevelFromStr(os.Getenv(envSolarWindsAPMLogLevel))
 
 	tests := map[string]string{
@@ -113,8 +111,7 @@ func TestLog(t *testing.T) {
 	assert.True(t, strings.HasSuffix(buffer.String(), "show me the code\n"))
 
 	SetOutput(os.Stderr)
-	err = os.Unsetenv("SW_APM_DEBUG_LEVEL")
-	require.NoError(t, err)
+	require.NoError(t, os.Unsetenv("SW_APM_DEBUG_LEVEL"))
 }
 
 func TestStrToLevel(t *testing.T) {

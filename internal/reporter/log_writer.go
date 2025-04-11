@@ -87,8 +87,9 @@ func (lr *logWriter) Write(t WriteType, bytes []byte) (int, error) {
 	}
 
 	if !lr.syncWrite && lr.chunkSize+len(encoded) > lr.maxChunkSize {
-		err := lr.flush()
-		log.Errorf("error flushing logWriter: %v", err)
+		if err := lr.flush(); err != nil {
+			log.Errorf("error flushing logWriter: %v", err)
+		}
 	}
 
 	if t == EventWT {
@@ -101,8 +102,9 @@ func (lr *logWriter) Write(t WriteType, bytes []byte) (int, error) {
 
 	lr.chunkSize += len(encoded)
 	if lr.syncWrite {
-		err := lr.flush()
-		log.Errorf("error flushing logWriter: %v", err)
+		if err := lr.flush(); err != nil {
+			log.Errorf("error flushing logWriter: %v", err)
+		}
 	}
 
 	return len(bytes), nil

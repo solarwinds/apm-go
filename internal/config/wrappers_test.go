@@ -22,10 +22,8 @@ import (
 )
 
 func TestWrappers(t *testing.T) {
-	err := os.Unsetenv(envSolarWindsAPMCollector)
-	require.NoError(t, err)
-	err = os.Unsetenv(envSolarWindsAPMHistogramPrecision)
-	require.NoError(t, err)
+	require.NoError(t, os.Unsetenv(envSolarWindsAPMCollector))
+	require.NoError(t, os.Unsetenv(envSolarWindsAPMHistogramPrecision))
 	Load()
 
 	assert.NotEqual(t, nil, conf)

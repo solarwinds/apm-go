@@ -159,27 +159,22 @@ func TestGetOrFallback(t *testing.T) {
 var _ = os.Setenv(envDyno, "test-dyno")
 
 func TestGetHerokuDynoId(t *testing.T) {
-	err := os.Setenv(envDyno, "test-dyno")
-	require.NoError(t, err)
+	require.NoError(t, os.Setenv(envDyno, "test-dyno"))
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
-	err = os.Unsetenv(envDyno)
-	require.NoError(t, err)
+	require.NoError(t, os.Unsetenv(envDyno))
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
 
-	err = os.Setenv(envDyno, "take-no-effect")
-	require.NoError(t, err)
+	require.NoError(t, os.Setenv(envDyno, "take-no-effect"))
 	assert.Equal(t, "test-dyno", getHerokuDynoId())
 }
 
 func TestInitDyno(t *testing.T) {
 	var dynoID string
-	err := os.Setenv(envDyno, "test-dyno")
-	require.NoError(t, err)
+	require.NoError(t, os.Setenv(envDyno, "test-dyno"))
 	initDyno(&dynoID)
 	assert.Equal(t, "test-dyno", dynoID)
 
-	err = os.Unsetenv(envDyno)
-	require.NoError(t, err)
+	require.NoError(t, os.Unsetenv(envDyno))
 	initDyno(&dynoID)
 	assert.Equal(t, "", dynoID)
 }
