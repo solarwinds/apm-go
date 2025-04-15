@@ -65,11 +65,13 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	ctx, span := tracer.Start(ctx, w.fnName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attrs...))
 	defer func() {
 		if r := recover(); r != nil {
+			defer panic(r)
+
 			switch x := r.(type) {
 			case error:
 				log.Error("Recovered error:", x.Error())
 				span.SetStatus(codes.Error, x.Error())
-				span.RecordError(x)
+				span.RecordError(x, trace.WithStackTrace(true))
 			case string:
 				log.Error("Recovered string:", x)
 				span.SetStatus(codes.Error, x)
@@ -77,7 +79,6 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 				log.Error("Recovered unknown type (%T): %v\n", x, x)
 				span.SetStatus(codes.Error, "Panic from unknown type")
 			}
-			defer panic(r)
 		}
 
 		span.End()
@@ -90,7 +91,7 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	res, err := w.base.Invoke(ctx, payload)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
+		span.RecordError(err, trace.WithStackTrace(true))
 	}
 	return res, err
 }
