@@ -22,7 +22,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        goversion: ['1.22', '1.23']
+        goversion: ['1.23', '1.24']
         os: ['ubuntu-latest', 'windows-latest']
     name: Go ${{ matrix.goversion }} (${{ matrix.os}}) tests
     runs-on: ${{ matrix.os }}
