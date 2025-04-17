@@ -61,20 +61,17 @@ func hasAuthorizationHeaderSet() bool {
 func setupExporterEndpoint() (isSwo bool) {
 	exporterEndpoint := ""
 	ok := false
-
 	if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); ok {
 	} else if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
 	} else {
-		exporterEndpoint = config.GetOtelCollector()
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", exporterEndpoint); err != nil {
+		swApmOtelCollector := config.GetOtelCollector()
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", swApmOtelCollector); err != nil {
 			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
 		} else {
-			log.Infof("Setting Otel exporter traces endpoint to: %s", exporterEndpoint)
+			exporterEndpoint = swApmOtelCollector
 		}
 	}
+	log.Infof("Otel exporter traces endpoint: %s", exporterEndpoint)
 
-	if strings.Contains(exporterEndpoint, "solarwinds.com") {
-		return true
-	}
-	return false
+	return strings.Contains(exporterEndpoint, "solarwinds.com")
 }
