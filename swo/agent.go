@@ -33,10 +33,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
-	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"go.opentelemetry.io/contrib/detectors/aws/ec2"
-	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -71,28 +68,6 @@ func GetLogLevel() string {
 // SetLogOutput sets the output destination for the internal logger.
 func SetLogOutput(w io.Writer) {
 	log.SetOutput(w)
-}
-
-func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
-	if serviceKey, ok := config.ParsedServiceKey(); ok && os.Getenv(config.EnvOtelServiceNameKey) == "" {
-		if err := os.Setenv(config.EnvOtelServiceNameKey, serviceKey.ServiceName); err != nil {
-			log.Warningf("could not override unset environment variable %s based on service key, err: %s", config.EnvOtelServiceNameKey, err)
-		}
-	}
-
-	return resource.New(context.Background(),
-		resource.WithContainer(),
-		resource.WithFromEnv(),
-		resource.WithOS(),
-		resource.WithProcess(),
-		// Process runtime description is not recommended[1] for Go and thus is not added by `WithProcess` above.
-		// Example value: go version go1.20.4 linux/arm64
-		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
-		resource.WithProcessRuntimeDescription(),
-		resource.WithTelemetrySDK(),
-		resource.WithDetectors(uams.New(), ec2.NewResourceDetector(), azurevm.New()),
-		resource.WithAttributes(resourceAttrs...),
-	)
 }
 
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel

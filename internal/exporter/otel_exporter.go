@@ -17,30 +17,64 @@ package exporter
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"google.golang.org/grpc"
 )
 
 func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error) {
-	setupOtelExporterEnvironment()
+	exportingToSwo := setupExporterEndpoint()
 
-	return otlptracegrpc.New(ctx,
-		otlptracegrpc.WithHeaders(map[string]string{
-			"Authorization": "Bearer " + config.GetApiToken(),
-		}),
-	)
+	exporterOptions := []otlptracegrpc.Option{}
+
+	if os.Getenv("OTEL_EXPORTER_OTLP_COMPRESSION") != "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_COMPRESSION") != "" {
+		exporterOptions = append(exporterOptions, otlptracegrpc.WithCompressor("gzip"))
+	}
+
+	if exportingToSwo && !hasAuthorizationHeaderSet() {
+		grpcOptions := []grpc.DialOption{
+			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
+		}
+		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(grpcOptions...))
+	}
+
+	return otlptracegrpc.New(ctx, exporterOptions...)
 }
 
-func setupOtelExporterEnvironment() {
-	if os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") == "" {
-		otelCollectorAddress := config.GetOtelCollector()
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", otelCollectorAddress); err != nil {
-			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
-		} else {
-			log.Infof("Setting Otel exporter traces endpoint to: %s", otelCollectorAddress)
+func hasAuthorizationHeaderSet() bool {
+	if traceHeaders, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_HEADERS "); ok {
+		if strings.Contains(strings.ToLower(traceHeaders), "authorization") {
+			return true
+		}
+	} else if otlpHeaders, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_HEADERS"); ok {
+		if strings.Contains(strings.ToLower(otlpHeaders), "authorization") {
+			return true
 		}
 	}
+	return false
+}
+
+func setupExporterEndpoint() (isSwo bool) {
+	exporterEndpoint := ""
+	ok := false
+
+	if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); ok {
+	} else if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
+	} else {
+		exporterEndpoint = config.GetOtelCollector()
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", exporterEndpoint); err != nil {
+			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
+		} else {
+			log.Infof("Setting Otel exporter traces endpoint to: %s", exporterEndpoint)
+		}
+	}
+
+	if strings.Contains(exporterEndpoint, "solarwinds.com") {
+		return true
+	}
+	return false
 }

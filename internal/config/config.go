@@ -55,25 +55,27 @@ const (
 
 // The environment variables
 const (
-	envSolarWindsAPMCollector             = "SW_APM_COLLECTOR"
-	envSolarWindsAPMServiceKey            = "SW_APM_SERVICE_KEY"
-	envSolarWindsAPMTrustedPath           = "SW_APM_TRUSTEDPATH"
-	envSolarWindsAPMReporter              = "SW_APM_REPORTER"
-	envSolarWindsAPMTracingMode           = "SW_APM_TRACING_MODE"
-	envSolarWindsAPMSampleRate            = "SW_APM_SAMPLE_RATE"
-	envSolarWindsAPMPrependDomain         = "SW_APM_PREPEND_DOMAIN"
-	envSolarWindsAPMHostnameAlias         = "SW_APM_HOSTNAME_ALIAS"
-	envSolarWindsAPMHistogramPrecision    = "SW_APM_HISTOGRAM_PRECISION"
-	envSolarWindsAPMEventsFlushInterval   = "SW_APM_EVENTS_FLUSH_INTERVAL"
-	envSolarWindsAPMMaxReqBytes           = "SW_APM_MAX_REQUEST_BYTES"
-	envSolarWindsAPMEnabled               = "SW_APM_ENABLED"
-	envSolarWindsAPMConfigFile            = "SW_APM_CONFIG_FILE"
-	envSolarWindsAPMServerlessServiceName = "SW_APM_SERVICE_NAME"
-	envSolarWindsAPMTokenBucketCap        = "SW_APM_TOKEN_BUCKET_CAPACITY"
-	envSolarWindsAPMTokenBucketRate       = "SW_APM_TOKEN_BUCKET_RATE"
-	envSolarWindsAPMTransactionName       = "SW_APM_TRANSACTION_NAME"
+	envSolarWindsAPMCollector              = "SW_APM_COLLECTOR"
+	envSolarWindsAPMServiceKey             = "SW_APM_SERVICE_KEY"
+	envSolarWindsAPMTrustedPath            = "SW_APM_TRUSTEDPATH"
+	envSolarWindsAPMReporter               = "SW_APM_REPORTER"
+	envSolarWindsAPMTracingMode            = "SW_APM_TRACING_MODE"
+	envSolarWindsAPMSampleRate             = "SW_APM_SAMPLE_RATE"
+	envSolarWindsAPMPrependDomain          = "SW_APM_PREPEND_DOMAIN"
+	envSolarWindsAPMHostnameAlias          = "SW_APM_HOSTNAME_ALIAS"
+	envSolarWindsAPMHistogramPrecision     = "SW_APM_HISTOGRAM_PRECISION"
+	envSolarWindsAPMEventsFlushInterval    = "SW_APM_EVENTS_FLUSH_INTERVAL"
+	envSolarWindsAPMMaxReqBytes            = "SW_APM_MAX_REQUEST_BYTES"
+	envSolarWindsAPMEnabled                = "SW_APM_ENABLED"
+	envSolarWindsAPMConfigFile             = "SW_APM_CONFIG_FILE"
+	envSolarWindsAPMServerlessServiceName  = "SW_APM_SERVICE_NAME"
+	envSolarWindsAPMTokenBucketCap         = "SW_APM_TOKEN_BUCKET_CAPACITY"
+	envSolarWindsAPMTokenBucketRate        = "SW_APM_TOKEN_BUCKET_RATE"
+	envSolarWindsAPMTransactionName        = "SW_APM_TRANSACTION_NAME"
+	EnvSolarwindsDisabledResourceDetectors = "SW_APM_DISABLED_RESOURCE_DETECTORS"
 
-	EnvOtelServiceNameKey = "OTEL_SERVICE_NAME"
+	EnvOtelServiceNameKey       = "OTEL_SERVICE_NAME"
+	EnvEnableInstanceIdDetector = "OTEL_GO_X_RESOURCE"
 )
 
 // Errors
@@ -960,7 +962,7 @@ func (c *Config) ParsedServiceKey() (ServiceKey, bool) {
 		log.Warningf("token or service name is not set")
 		return ServiceKey{token, serviceName}, false
 	}
-	return ServiceKey{token, serviceName}, false
+	return ServiceKey{token, serviceName}, true
 }
 
 func (c *Config) GetApiToken() string {
