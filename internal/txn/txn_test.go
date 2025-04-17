@@ -16,15 +16,16 @@ package txn
 
 import (
 	"context"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestGetTransactionName(t *testing.T) {
@@ -33,7 +34,7 @@ func TestGetTransactionName(t *testing.T) {
 
 	ctx := context.Background()
 	_, span := tr.Start(ctx, "derived")
-	roSpan, ok := span.(trace.ReadOnlySpan)
+	roSpan, ok := span.(trace.ReadWriteSpan)
 	err := entryspans.Push(roSpan)
 	require.NoError(t, err)
 	require.True(t, ok)

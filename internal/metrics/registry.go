@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/txn"
@@ -193,7 +194,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 
 	swoTags["sw.is_error"] = strconv.FormatBool(isError)
 	txnName := txn.GetTransactionName(span)
-	swoTags["sw.transaction"] = txnName
+	swoTags[constants.SwTransactionNameAttribute] = txnName
 
 	duration := span.EndTime().Sub(span.StartTime())
 	s := &HTTPSpanMessage{
@@ -221,7 +222,7 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 			s.Transaction = OtherTransactionName
 			tagsList = s.appOpticsTagsList()
 		} else {
-			tagsList[0]["sw.transaction"] = OtherTransactionName
+			tagsList[0][constants.SwTransactionNameAttribute] = OtherTransactionName
 		}
 		err := s.processMeasurements(metricName, tagsList, r.apmMetrics)
 		// This should never happen since the only failure case _should_ be ErrExceedsMetricsCountLimit

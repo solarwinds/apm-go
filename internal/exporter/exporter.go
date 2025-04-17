@@ -17,6 +17,8 @@ package exporter
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
@@ -26,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"strings"
 )
 
 type exporter struct {
@@ -46,14 +47,6 @@ func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	})
 	if entryspans.IsEntrySpan(s) {
 		evt.AddKV(attribute.String("TransactionName", txn.GetTransactionName(s)))
-		// We MUST clear the entry span here. The SpanProcessor only clears entry spans when they are `RecordOnly`
-		if err := entryspans.Delete(s); err != nil {
-			log.Warningf(
-				"could not delete entry span for trace-span %s-%s",
-				s.SpanContext().TraceID(),
-				s.SpanContext().SpanID(),
-			)
-		}
 	}
 
 	if s.Status().Code != codes.Unset {
@@ -116,7 +109,7 @@ func (e *exporter) Shutdown(ctx context.Context) error {
 	return e.r.Shutdown(ctx)
 }
 
-func NewExporter(r reporter.Reporter) sdktrace.SpanExporter {
+func NewAoExporter(r reporter.Reporter) sdktrace.SpanExporter {
 	return &exporter{
 		r: r,
 	}

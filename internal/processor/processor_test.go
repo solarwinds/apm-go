@@ -16,13 +16,14 @@ package processor
 
 import (
 	"context"
+	"testing"
+
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 type recordMock struct {
@@ -79,10 +80,9 @@ func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 
 	s.End()
 
-	// must NOT remove entry span; because it's sampled, exporter will handle deletion
-	es, ok = entryspans.Current(s.SpanContext().TraceID())
-	require.True(t, ok)
-	require.Equal(t, s.SpanContext().SpanID(), es)
+	// entry span is removed on span end
+	_, ok = entryspans.Current(s.SpanContext().TraceID())
+	require.False(t, ok)
 	assert.True(t, mock.called)
 }
 
@@ -159,4 +159,26 @@ func TestInboundMetricsSpanProcessorOnEndWithRemoteParent(t *testing.T) {
 	s2.End()
 
 	assert.True(t, mock.called)
+}
+
+func TestSpanIsRemovedFromStateManagerAfterSpanEnds(t *testing.T) {
+	ctx := context.Background()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(NewInboundMetricsSpanProcessor(&recordMock{})))
+	tracer := tp.Tracer("foo")
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			require.NoError(t, err)
+		}
+	}()
+
+	_, entrySpan := tracer.Start(ctx, "entry-span")
+
+	sid, ok := entryspans.Current(entrySpan.SpanContext().TraceID())
+	require.True(t, ok)
+	require.Equal(t, entrySpan.SpanContext().SpanID(), sid)
+
+	entrySpan.End()
+
+	_, ok = entryspans.Current(entrySpan.SpanContext().TraceID())
+	require.False(t, ok)
 }
