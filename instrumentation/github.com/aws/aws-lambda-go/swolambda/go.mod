@@ -18,7 +18,7 @@ go 1.23.0
 
 require (
 	github.com/aws/aws-lambda-go v1.48.0
-	github.com/solarwinds/apm-go v1.2.1
+	github.com/solarwinds/apm-go v1.2.2
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/trace v1.34.0
 )
