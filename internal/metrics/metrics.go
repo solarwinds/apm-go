@@ -16,12 +16,6 @@ package metrics
 
 import (
 	"errors"
-	"github.com/solarwinds/apm-go/internal/bson"
-	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/hdrhist"
-	"github.com/solarwinds/apm-go/internal/host"
-	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"runtime"
 	"sort"
 	"strconv"
@@ -29,6 +23,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/solarwinds/apm-go/internal/bson"
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/hdrhist"
+	"github.com/solarwinds/apm-go/internal/host"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/utils"
 )
 
 const (
@@ -175,63 +176,9 @@ func (s *EventQueueStats) TotalEventsAdd(n int64) {
 	atomic.AddInt64(&s.totalEvents, n)
 }
 
-// RateCounts is the rate counts reported by trace sampler
-type RateCounts struct{ requested, sampled, limited, traced, through int64 }
-
 // RateCountSummary is used to merge RateCounts from multiple token buckets
 type RateCountSummary struct {
 	Requested, Traced, Limited, TtTraced, Sampled, Through int64
-}
-
-// FlushRateCounts reset the counters and returns the current value
-func (c *RateCounts) FlushRateCounts() *RateCounts {
-	return &RateCounts{
-		requested: atomic.SwapInt64(&c.requested, 0),
-		sampled:   atomic.SwapInt64(&c.sampled, 0),
-		limited:   atomic.SwapInt64(&c.limited, 0),
-		traced:    atomic.SwapInt64(&c.traced, 0),
-		through:   atomic.SwapInt64(&c.through, 0),
-	}
-}
-
-func (c *RateCounts) RequestedInc() {
-	atomic.AddInt64(&c.requested, 1)
-}
-
-func (c *RateCounts) Requested() int64 {
-	return atomic.LoadInt64(&c.requested)
-}
-
-func (c *RateCounts) SampledInc() {
-	atomic.AddInt64(&c.sampled, 1)
-}
-
-func (c *RateCounts) Sampled() int64 {
-	return atomic.LoadInt64(&c.sampled)
-}
-
-func (c *RateCounts) LimitedInc() {
-	atomic.AddInt64(&c.limited, 1)
-}
-
-func (c *RateCounts) Limited() int64 {
-	return atomic.LoadInt64(&c.limited)
-}
-
-func (c *RateCounts) TracedInc() {
-	atomic.AddInt64(&c.traced, 1)
-}
-
-func (c *RateCounts) Traced() int64 {
-	return atomic.LoadInt64(&c.traced)
-}
-
-func (c *RateCounts) ThroughInc() {
-	atomic.AddInt64(&c.through, 1)
-}
-
-func (c *RateCounts) Through() int64 {
-	return atomic.LoadInt64(&c.through)
 }
 
 // addRequestCounters add various request-related counters to the metrics message buffer.
