@@ -19,11 +19,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/metric"
 	"math"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/constants"
@@ -125,17 +126,15 @@ func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
 	if s == nil {
 		return nil
 	}
-	regular := s.bucket.FlushRateCounts()
-	relaxedTT := s.triggerTraceRelaxedBucket.FlushRateCounts()
-	strictTT := s.triggerTraceStrictBucket.FlushRateCounts()
+	counts := metrics.RatesAggregator().FlushRateCounts()
 
 	return &metrics.RateCountSummary{
-		Sampled:   regular.Sampled(),
-		Through:   regular.Through(),
-		Requested: regular.Requested() + relaxedTT.Requested() + strictTT.Requested(),
-		Traced:    regular.Traced() + relaxedTT.Traced() + strictTT.Traced(),
-		Limited:   regular.Limited() + relaxedTT.Limited() + strictTT.Limited(),
-		TtTraced:  relaxedTT.Traced() + strictTT.Traced(),
+		Sampled:   counts.Sampled(),
+		Through:   counts.Through(),
+		Requested: counts.Requested(),
+		Traced:    counts.Traced(),
+		Limited:   counts.Limited(),
+		TtTraced:  counts.TriggerTrace(),
 	}
 }
 
@@ -161,7 +160,7 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 		sampled := (triggerTrace != ModeInvalidTriggerTrace) && (flags.TriggerTraceEnabled())
 		rsp := TtOK
 
-		ret := bucket.count(sampled, false, true)
+		ret := bucket.count(sampled, false, true, true)
 
 		if flags.TriggerTraceEnabled() && triggerTrace.Enabled() {
 			if !ret {
@@ -208,7 +207,7 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 		}
 	}
 
-	retval = bucket.count(retval, continued, doRateLimiting)
+	retval = bucket.count(retval, continued, doRateLimiting, false)
 
 	rsp := TtNotRequested
 	if triggerTrace.Requested() {

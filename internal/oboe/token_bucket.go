@@ -15,11 +15,12 @@
 package oboe
 
 import (
-	"github.com/solarwinds/apm-go/internal/metrics"
 	"math"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/solarwinds/apm-go/internal/metrics"
 )
 
 type tokenBucket struct {
@@ -28,7 +29,6 @@ type tokenBucket struct {
 	available  float64
 	last       time.Time
 	lock       sync.Mutex
-	metrics.RateCounts
 }
 
 func (b *tokenBucket) setRateCap(rate, cap float64) {
@@ -42,11 +42,11 @@ func (b *tokenBucket) setRateCap(rate, cap float64) {
 	}
 }
 
-func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
-	b.RequestedInc()
+func (b *tokenBucket) count(sampled, hasMetadata, rateLimit, isTriggerTrace bool) bool {
+	metrics.RatesAggregator().RequestedInc()
 
 	if !hasMetadata {
-		b.SampledInc()
+		metrics.RatesAggregator().SampledInc()
 	}
 
 	if !sampled {
@@ -55,15 +55,20 @@ func (b *tokenBucket) count(sampled, hasMetadata, rateLimit bool) bool {
 
 	if rateLimit {
 		if ok := b.consume(1); !ok {
-			b.LimitedInc()
+			metrics.RatesAggregator().LimitedInc()
 			return false
 		}
 	}
 
 	if hasMetadata {
-		b.ThroughInc()
+		metrics.RatesAggregator().ThroughInc()
 	}
-	b.TracedInc()
+
+	if isTriggerTrace {
+		metrics.RatesAggregator().TriggerTraceInc()
+	}
+
+	metrics.RatesAggregator().TracedInc()
 	return sampled
 }
 
