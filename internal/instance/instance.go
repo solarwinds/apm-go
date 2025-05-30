@@ -19,7 +19,11 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 )
 
-var Id = ""
+var id = ""
+
+func InstanceID() string {
+	return id
+}
 
 // We generate the instance ID on startup and keep the state here instead of `host.ID`
 // though we report it from `(*ID).InstanceID()`
@@ -27,8 +31,8 @@ func init() {
 	i, err := uuid.NewRandom()
 	if err != nil {
 		log.Error("error generating instance id", err)
-		Id = "unknown"
+		id = "unknown"
 	} else {
-		Id = i.String()
+		id = i.String()
 	}
 }

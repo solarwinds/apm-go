@@ -31,7 +31,7 @@ func WithInstanceDetector() resource.Option {
 
 func (detector instanceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	attributes := []attribute.KeyValue{
-		{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(Id)},
+		{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(InstanceID())},
 	}
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }

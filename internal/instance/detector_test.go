@@ -29,5 +29,5 @@ func TestInstanceDetectorReturnsValue(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 
 	require.NoError(t, err)
-	require.Contains(t, res.Attributes(), attribute.KeyValue{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(Id)})
+	require.Contains(t, res.Attributes(), attribute.KeyValue{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(InstanceID())})
 }

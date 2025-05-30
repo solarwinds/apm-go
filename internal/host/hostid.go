@@ -185,7 +185,7 @@ func (h *ID) AzureAppInstId() string {
 
 // InstanceID returns a string of a version 4 UUID, generated on startup
 func (h *ID) InstanceID() string {
-	return instance.Id
+	return instance.InstanceID()
 }
 
 // IDSetter defines a function type which set a field of ID
