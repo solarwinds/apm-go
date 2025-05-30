@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/instance"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2"
@@ -36,9 +37,9 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		}
 	}
 
-	if os.Getenv(config.EnvEnableInstanceIdDetector) == "" {
-		if err := os.Setenv(config.EnvEnableInstanceIdDetector, "true"); err != nil {
-			log.Warningf("could not override unset environment variable %s, err: %s", config.EnvEnableInstanceIdDetector, err)
+	if os.Getenv(config.EnvEnableExperimentalDetector) == "" {
+		if err := os.Setenv(config.EnvEnableExperimentalDetector, "false"); err != nil {
+			log.Warningf("could not override unset environment variable %s, err: %s", config.EnvEnableExperimentalDetector, err)
 		}
 	}
 
@@ -51,6 +52,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
 		resource.WithDetectors(getHostDetectors()...),
+		instance.WithInstanceDetector(),
 		resource.WithAttributes(resourceAttrs...),
 	)
 	resource, mergedError := resource.Merge(resource.Default(), customResource)

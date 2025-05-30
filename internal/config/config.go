@@ -74,8 +74,8 @@ const (
 	envSolarWindsAPMTransactionName        = "SW_APM_TRANSACTION_NAME"
 	EnvSolarwindsDisabledResourceDetectors = "SW_APM_DISABLED_RESOURCE_DETECTORS"
 
-	EnvOtelServiceNameKey       = "OTEL_SERVICE_NAME"
-	EnvEnableInstanceIdDetector = "OTEL_GO_X_RESOURCE"
+	EnvOtelServiceNameKey         = "OTEL_SERVICE_NAME"
+	EnvEnableExperimentalDetector = "OTEL_GO_X_RESOURCE"
 )
 
 // Errors
