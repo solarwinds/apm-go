@@ -36,8 +36,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
 github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
-github.com/solarwinds/apm-go v1.2.2 h1:b0fosSqsJNMr8GdxHF0Fb36ijYYd2ZJm1Fl4CtPBHf4=
-github.com/solarwinds/apm-go v1.2.2/go.mod h1:NbxxG9iIo1QVSGtLNHbt98Do1GgefJikAhykYNyo7Sg=
+github.com/solarwinds/apm-go v1.2.3 h1:y4wGWQdQGZ0kTqJu/OilG8AjGtKODaRnxsolfe0IDY8=
+github.com/solarwinds/apm-go v1.2.3/go.mod h1:NbxxG9iIo1QVSGtLNHbt98Do1GgefJikAhykYNyo7Sg=
 github.com/solarwinds/apm-proto v1.0.8 h1:vM3fsrTYHI5+6Owm+zwFX47waCDQFN8Tv8yZiCd4YXw=
 github.com/solarwinds/apm-proto v1.0.8/go.mod h1:CN4fCYBnxyOJlBV0CYNXLz6lzNH8SCfNqcCBbpai76c=
 github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
