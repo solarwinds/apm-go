@@ -15,24 +15,12 @@
 package host
 
 import (
-	"github.com/google/uuid"
-	"github.com/solarwinds/apm-go/internal/log"
 	"reflect"
 	"sync"
+
+	"github.com/solarwinds/apm-go/internal/instance"
+	"github.com/solarwinds/apm-go/internal/log"
 )
-
-var instanceId = ""
-
-// We generate the instance ID on startup and keep the state here instead of `host.ID`
-// though we report it from `(*ID).InstanceID()`
-func init() {
-	i, err := uuid.NewRandom()
-	if err != nil {
-		log.Error("error generating instance id", err)
-	} else {
-		instanceId = i.String()
-	}
-}
 
 // logging texts
 const (
@@ -197,7 +185,7 @@ func (h *ID) AzureAppInstId() string {
 
 // InstanceID returns a string of a version 4 UUID, generated on startup
 func (h *ID) InstanceID() string {
-	return instanceId
+	return instance.InstanceID()
 }
 
 // IDSetter defines a function type which set a field of ID

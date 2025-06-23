@@ -16,6 +16,10 @@ package swo
 
 import (
 	"context"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/testutils"
@@ -24,9 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestSetGetLogLevel(t *testing.T) {
@@ -96,7 +97,7 @@ func TestSetTransactionName(t *testing.T) {
 	tr, teardown := testutils.TracerSetup()
 	defer teardown()
 	ctx, s := tr.Start(context.Background(), "span name")
-	err = entryspans.Push(s.(trace.ReadOnlySpan))
+	err = entryspans.Push(s.(trace.ReadWriteSpan))
 	require.NoError(t, err)
 	err = SetTransactionName(ctx, "this should work")
 	require.NoError(t, err)

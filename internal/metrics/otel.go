@@ -16,6 +16,8 @@ package metrics
 
 import (
 	"context"
+
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/txn"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -40,7 +42,7 @@ var searchSet = map[attribute.Key]bool{
 func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
 	var attrs = []attribute.KeyValue{
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
-		attribute.String("sw.transaction", txn.GetTransactionName(span)),
+		attribute.String(constants.SwTransactionNameAttribute, txn.GetTransactionName(span)),
 	}
 	if span.SpanKind() == trace.SpanKindServer {
 		for _, attr := range span.Attributes() {

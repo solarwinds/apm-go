@@ -17,24 +17,23 @@ package exporter
 import (
 	"context"
 	"errors"
-	"github.com/solarwinds/apm-go/internal/entryspans"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	mbson "gopkg.in/mgo.v2/bson"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestExportSpan(t *testing.T) {
 	r := &capturingReporter{}
-	tr, cb := testutils.TracerWithExporter(NewExporter(r))
+	tr, cb := testutils.TracerWithExporter(NewAoExporter(r))
 	defer cb()
 
 	ctx := context.Background()
@@ -55,20 +54,8 @@ func TestExportSpan(t *testing.T) {
 		err,
 		trace.WithTimestamp(errorT),
 	)
-
-	// Set the entryspan as if it were set in the SpanProcessor, and assert
-	// it's removed at the end
-	require.NoError(t, entryspans.Push(span.(sdktrace.ReadOnlySpan)))
-	sid, ok := entryspans.Current(span.SpanContext().TraceID())
-	require.True(t, ok)
-	require.Equal(t, span.SpanContext().SpanID(), sid)
-
 	span.End(trace.WithTimestamp(end))
 	require.Len(t, r.events, 4)
-
-	// Successfully removed in the Exporter
-	_, ok = entryspans.Current(span.SpanContext().TraceID())
-	require.False(t, ok)
 
 	{ // Entry event
 		entry := r.events[0]
@@ -155,7 +142,7 @@ func TestExportSpan(t *testing.T) {
 
 func TestExportSpanBacktrace(t *testing.T) {
 	r := &capturingReporter{}
-	tr, cb := testutils.TracerWithExporter(NewExporter(r))
+	tr, cb := testutils.TracerWithExporter(NewAoExporter(r))
 	defer cb()
 
 	ctx := context.Background()
@@ -197,7 +184,7 @@ func getBsonFromEvent(t *testing.T, event reporter.Event) map[string]interface{}
 
 func TestExportSpanStatusCodes(t *testing.T) {
 	r := &capturingReporter{}
-	tr, cb := testutils.TracerWithExporter(NewExporter(r))
+	tr, cb := testutils.TracerWithExporter(NewAoExporter(r))
 	defer cb()
 
 	permutations := []struct {
