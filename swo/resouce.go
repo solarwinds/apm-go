@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/host/k8s"
 	"github.com/solarwinds/apm-go/internal/instance"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/uams"
@@ -51,7 +52,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// Example value: go version go1.20.4 linux/arm64
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
-		resource.WithDetectors(getHostDetectors()...),
+		resource.WithDetectors(getOptionalDetectors()...),
 		instance.WithInstanceDetector(),
 		resource.WithAttributes(resourceAttrs...),
 	)
@@ -60,7 +61,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 	return resource, errors.Join(customResourceErrors, mergedError)
 }
 
-func getHostDetectors() []resource.Detector {
+func getOptionalDetectors() []resource.Detector {
 	disabledResouceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
 
 	optionalDetectors := []resource.Detector{}
@@ -72,6 +73,9 @@ func getHostDetectors() []resource.Detector {
 	}
 	if !strings.Contains(disabledResouceDetectors, "azurevm") {
 		optionalDetectors = append(optionalDetectors, azurevm.New())
+	}
+	if !strings.Contains(disabledResouceDetectors, "k8s") {
+		optionalDetectors = append(optionalDetectors, k8s.NewResourceDetector())
 	}
 
 	return optionalDetectors
