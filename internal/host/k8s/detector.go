@@ -17,9 +17,9 @@ package k8s
 import (
 	"context"
 
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type resourceDetector struct {
@@ -38,8 +38,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			semconv.K8SPodName(metadata.PodName),
 			semconv.K8SNamespaceName(metadata.Namespace),
 		)
-
 	}
 
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+	return resource.NewSchemaless(attributes...), nil
 }

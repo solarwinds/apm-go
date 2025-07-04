@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestInstanceDetectorReturnsValue(t *testing.T) {

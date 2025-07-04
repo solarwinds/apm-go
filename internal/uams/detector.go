@@ -19,9 +19,9 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type resourceDetector struct {
@@ -42,5 +42,5 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		attribute.String(constants.UamsClientIdAttribute, id.String()),
 		semconv.HostID(id.String()),
 	}
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+	return resource.NewSchemaless(attributes...), nil
 }

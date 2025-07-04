@@ -16,6 +16,10 @@ package swolambda
 
 import (
 	"context"
+	"os"
+	"sync"
+	"sync/atomic"
+
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/solarwinds/apm-go/internal/config"
@@ -24,11 +28,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-	"os"
-	"sync"
-	"sync/atomic"
 )
 
 var (
