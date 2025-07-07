@@ -15,7 +15,7 @@
 package semconv
 
 import (
-	"go.opentelemetry.io/otel/attribute"
+	otelconv25 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	otelconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
@@ -25,11 +25,14 @@ const (
 	ExceptionTypeKey       = otelconv.ExceptionTypeKey
 	ExceptionStacktraceKey = otelconv.ExceptionStacktraceKey
 
-	HTTPMethodKey     = otelconv.HTTPRequestMethodKey
-	HTTPRouteKey      = otelconv.HTTPRouteKey
-	HTTPStatusCodeKey = otelconv.HTTPResponseStatusCodeKey
-	URLFullKey        = otelconv.URLFullKey
-	HTTPURLKey        = attribute.Key("http.url")
+	HTTPRequestMethodKey = otelconv.HTTPRequestMethodKey
+	HTTPRouteKey         = otelconv.HTTPRouteKey
+	HTTPStatusCodeKey    = otelconv.HTTPResponseStatusCodeKey
+	URLFullKey           = otelconv.URLFullKey
+
+	HTTPURLKey        = otelconv25.HTTPURLKey        // Deprecated in v1.26.0, use URLFullKey instead
+	HTTPMethodKey     = otelconv25.HTTPMethodKey     // Deprecated in v1.26.0, use HTTPRequestMethodKey instead
+	HttpStatusCodeKey = otelconv25.HTTPStatusCodeKey // Deprecated in v1.26.0, use HTTPResponseStatusCodeKey instead
 
 	K8SNamespaceNameKey = otelconv.K8SNamespaceNameKey
 	K8SPodNameKey       = otelconv.K8SPodNameKey

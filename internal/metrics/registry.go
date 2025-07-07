@@ -175,11 +175,12 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 	swoTags := make(map[string]string)
 	httpRoute := ""
 	for _, attr := range attrs {
-		if attr.Key == semconv.HTTPMethodKey {
+		switch attr.Key {
+		case semconv.HTTPRequestMethodKey:
 			method = attr.Value.AsString()
-		} else if attr.Key == semconv.HTTPStatusCodeKey {
+		case semconv.HTTPStatusCodeKey:
 			status = attr.Value.AsInt64()
-		} else if attr.Key == semconv.HTTPRouteKey {
+		case semconv.HTTPRouteKey:
 			httpRoute = attr.Value.AsString()
 		}
 	}

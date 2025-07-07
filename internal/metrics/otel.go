@@ -34,11 +34,11 @@ type otelRegistry struct {
 }
 
 var searchSet = map[attribute.Key]bool{
-	semconv.HTTPMethodKey:     true,
-	semconv.HTTPStatusCodeKey: true,
-	semconv.HTTPRouteKey:      true,
-	"http.method":             true,
-	"http.status_code":        true,
+	semconv.HTTPRequestMethodKey: true,
+	semconv.HTTPStatusCodeKey:    true,
+	semconv.HTTPRouteKey:         true,
+	semconv.HTTPMethodKey:        true,
+	semconv.HttpStatusCodeKey:    true,
 }
 
 func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
