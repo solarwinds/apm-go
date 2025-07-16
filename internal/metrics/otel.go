@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/solarwinds/apm-go/internal/constants"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/txn"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -25,7 +26,6 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -34,9 +34,11 @@ type otelRegistry struct {
 }
 
 var searchSet = map[attribute.Key]bool{
-	semconv.HTTPMethodKey:     true,
-	semconv.HTTPStatusCodeKey: true,
-	semconv.HTTPRouteKey:      true,
+	semconv.HTTPRequestMethodKey: true,
+	semconv.HTTPStatusCodeKey:    true,
+	semconv.HTTPRouteKey:         true,
+	semconv.HTTPMethodKey:        true,
+	semconv.HttpStatusCodeKey:    true,
 }
 
 func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {

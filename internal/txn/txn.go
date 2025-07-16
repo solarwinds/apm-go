@@ -15,14 +15,15 @@
 package txn
 
 import (
+	"log"
+	"net/url"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"log"
-	"net/url"
-	"strings"
 )
 
 // GetTransactionName retrieves the custom transaction name if it exists, otherwise calls deriveTransactionName
@@ -40,9 +41,12 @@ func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
 	if txnName == "" {
 		var httpRoute, httpUrl = "", ""
 		for _, attr := range attrs {
-			if attr.Key == semconv.HTTPRouteKey {
+			switch attr.Key {
+			case semconv.HTTPRouteKey:
 				httpRoute = attr.Value.AsString()
-			} else if attr.Key == semconv.HTTPURLKey {
+			case semconv.URLFullKey:
+				httpUrl = attr.Value.AsString()
+			case semconv.HTTPURLKey:
 				httpUrl = attr.Value.AsString()
 			}
 		}

@@ -17,9 +17,9 @@ package instance
 import (
 	"context"
 
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type instanceDetector struct {
@@ -33,5 +33,5 @@ func (detector instanceDetector) Detect(ctx context.Context) (*resource.Resource
 	attributes := []attribute.KeyValue{
 		{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(InstanceID())},
 	}
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+	return resource.NewSchemaless(attributes...), nil
 }

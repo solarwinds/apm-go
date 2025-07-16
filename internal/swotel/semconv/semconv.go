@@ -15,7 +15,8 @@
 package semconv
 
 import (
-	otelconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	otelconv25 "go.opentelemetry.io/otel/semconv/v1.25.0"
+	otelconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 const (
@@ -24,10 +25,14 @@ const (
 	ExceptionTypeKey       = otelconv.ExceptionTypeKey
 	ExceptionStacktraceKey = otelconv.ExceptionStacktraceKey
 
-	HTTPMethodKey     = otelconv.HTTPMethodKey
-	HTTPRouteKey      = otelconv.HTTPRouteKey
-	HTTPStatusCodeKey = otelconv.HTTPStatusCodeKey
-	HTTPURLKey        = otelconv.HTTPURLKey
+	HTTPRequestMethodKey = otelconv.HTTPRequestMethodKey
+	HTTPRouteKey         = otelconv.HTTPRouteKey
+	HTTPStatusCodeKey    = otelconv.HTTPResponseStatusCodeKey
+	URLFullKey           = otelconv.URLFullKey
+
+	HTTPURLKey        = otelconv25.HTTPURLKey        // Deprecated in v1.26.0, use URLFullKey instead
+	HTTPMethodKey     = otelconv25.HTTPMethodKey     // Deprecated in v1.26.0, use HTTPRequestMethodKey instead
+	HttpStatusCodeKey = otelconv25.HTTPStatusCodeKey // Deprecated in v1.26.0, use HTTPResponseStatusCodeKey instead
 
 	K8SNamespaceNameKey = otelconv.K8SNamespaceNameKey
 	K8SPodNameKey       = otelconv.K8SPodNameKey
@@ -35,7 +40,8 @@ const (
 
 	OTelStatusDescriptionKey = otelconv.OTelStatusDescriptionKey
 
-	ServiceNameKey = otelconv.ServiceNameKey
+	ServiceNameKey       = otelconv.ServiceNameKey
+	ServiceInstanceIDKey = otelconv.ServiceInstanceIDKey
 )
 
 // KeyValues
@@ -43,13 +49,14 @@ const (
 var (
 	OTelStatusCodeOk    = otelconv.OTelStatusCodeOk
 	OTelStatusCodeError = otelconv.OTelStatusCodeError
+
+	HTTPRequestMethodGet = otelconv.HTTPRequestMethodGet
 )
 
 // Functions
 
 var (
-	HTTPStatusCode = otelconv.HTTPStatusCode
-	HTTPMethod     = otelconv.HTTPMethod
+	HTTPStatusCode = otelconv.HTTPResponseStatusCode
 	HTTPRoute      = otelconv.HTTPRoute
 
 	K8SNamespaceName = otelconv.K8SNamespaceName
@@ -57,4 +64,6 @@ var (
 	K8SPodUID        = otelconv.K8SPodUID
 
 	ServiceName = otelconv.ServiceName
+
+	HostID = otelconv.HostID
 )

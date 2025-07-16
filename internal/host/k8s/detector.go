@@ -12,22 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package instance
+package k8s
 
 import (
 	"context"
-	"testing"
 
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func TestInstanceDetectorReturnsValue(t *testing.T) {
-	detector := instanceDetector{}
+type resourceDetector struct {
+}
 
-	res, err := detector.Detect(context.Background())
+func NewResourceDetector() resource.Detector {
+	return &resourceDetector{}
+}
 
-	require.NoError(t, err)
-	require.Contains(t, res.Attributes(), attribute.KeyValue{Key: semconv.ServiceInstanceIDKey, Value: attribute.StringValue(InstanceID())})
+func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	attributes := []attribute.KeyValue{}
+
+	if metadata := MemoizeMetadata(); metadata != nil {
+		attributes = append(attributes,
+			semconv.K8SPodUID(metadata.PodUid),
+			semconv.K8SPodName(metadata.PodName),
+			semconv.K8SNamespaceName(metadata.Namespace),
+		)
+	}
+
+	return resource.NewSchemaless(attributes...), nil
 }

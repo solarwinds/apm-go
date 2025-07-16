@@ -524,7 +524,7 @@ func TestRecordSpan(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(200),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("my cool route"),
 		),
 	)
@@ -614,7 +614,7 @@ func TestRecordSpanErrorStatus(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(500),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("my cool route"),
 		),
 	)
@@ -705,7 +705,7 @@ func TestRecordSpanOverflow(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(200),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("my cool route"),
 		),
 	)
@@ -718,7 +718,7 @@ func TestRecordSpanOverflow(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(200),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("this should overflow"),
 		),
 	)
@@ -789,7 +789,7 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(200),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("my cool route"),
 		),
 	)
@@ -802,7 +802,7 @@ func TestRecordSpanOverflowAppoptics(t *testing.T) {
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.HTTPStatusCode(200),
-			semconv.HTTPMethod("GET"),
+			semconv.HTTPRequestMethodGet,
 			semconv.HTTPRoute("this should overflow"),
 		),
 	)
