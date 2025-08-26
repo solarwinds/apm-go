@@ -94,6 +94,8 @@ var Load = conf.Load
 
 var GetDelta = conf.GetDelta
 
+var UseAOExport = conf.UseAOExport
+
 func init() {
 	if conf.GetEnabled() {
 		log.Warningf("Accepted config items: \n%s", conf.GetDelta())

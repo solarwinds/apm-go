@@ -971,3 +971,10 @@ func (c *Config) GetApiToken() string {
 	}
 	return ""
 }
+
+func (c *Config) UseAOExport() bool {
+	if _, ok := os.LookupEnv("USE_LEGACY_APM_EXPORTER"); ok {
+		return true
+	}
+	return false
+}

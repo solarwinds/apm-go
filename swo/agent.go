@@ -29,6 +29,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
@@ -73,7 +74,6 @@ func SetLogOutput(w io.Writer) {
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
-	ctx := context.Background()
 	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
 		return func() {
@@ -81,15 +81,30 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}, err
 	}
 	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	registry := metrics.NewLegacyRegistry(isAppoptics)
+	legacyRegistry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 
-	reporter, err := reporter.Start(resrc, registry, o)
+	ctx := context.Background()
+	conn, err := reporter.CreateGrpcConnection()
+	if err != nil {
+		log.Error("Failed to create gRPC connection", err)
+	}
+	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry, o)
 	if err != nil {
 		return func() {}, err
 	}
 
-	exprtr, err := exporter.NewExporter(ctx, reporter)
+	if conn != nil {
+		reporter.CreateAndSendOneTimeInitMessage(backgroundReporter, resrc)
+	}
+
+	exprtr, err := exporter.NewSpanExporter(ctx, backgroundReporter)
+	if err != nil {
+		return func() {}, err
+	}
+
+	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
+	err = metricsPublisher.Configure(ctx, legacyRegistry, conn, o, resrc)
 	if err != nil {
 		return func() {}, err
 	}
@@ -99,7 +114,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		return func() {}, err
 	}
 	config.Load()
-	proc := processor.NewInboundMetricsSpanProcessor(registry)
+	proc := processor.NewInboundMetricsSpanProcessor(metricsPublisher.GetMetricsRegistry())
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},
 		&propagation.Baggage{},
@@ -113,12 +128,14 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		sdktrace.WithSpanProcessor(proc),
 	)
 	otel.SetTracerProvider(tp)
+
 	return func() {
+		metricsPublisher.Shutdown()
+		backgroundReporter.Shutdown(ctx)
 		if err := tp.Shutdown(context.Background()); err != nil {
 			stdlog.Fatal(err)
 		}
 	}, nil
-
 }
 
 // SetTransactionName sets the transaction name of the current entry span. If set multiple times, the last is used.
@@ -167,7 +184,7 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	var tpOpts []sdktrace.TracerProviderOption
 	var metExp metric.Exporter
 	if metExp, err = otlpmetricgrpc.New(ctx,
-		otlpmetricgrpc.WithTemporalitySelector(metrics.TemporalitySelector),
+		otlpmetricgrpc.WithTemporalitySelector(otelsetup.MetricTemporalitySelector),
 	); err != nil {
 		return nil, err
 	}

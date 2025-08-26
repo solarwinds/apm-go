@@ -23,6 +23,8 @@ import (
 	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 )
 
+const grpcReporterVersion = "2"
+
 // Method defines the interface of an RPC call
 type Method interface {
 	// Call invokes the RPC method through a specified gRPC client. It may return

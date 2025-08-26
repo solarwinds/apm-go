@@ -55,6 +55,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		resource.WithDetectors(getOptionalDetectors()...),
 		instance.WithInstanceDetector(),
 		resource.WithAttributes(resourceAttrs...),
+		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
 	)
 	resource, mergedError := resource.Merge(resource.Default(), customResource)
 
