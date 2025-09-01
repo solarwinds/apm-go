@@ -104,7 +104,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	}
 
 	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
-	err = metricsPublisher.Configure(ctx, legacyRegistry, conn, o, resrc)
+	err = metricsPublisher.ConfigureAndStart(ctx, legacyRegistry, conn, o, resrc)
 	if err != nil {
 		return func() {}, err
 	}

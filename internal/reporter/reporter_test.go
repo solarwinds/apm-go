@@ -70,16 +70,6 @@ var _ = func() (_ struct{}) {
 	return
 }()
 
-// ========================= NULL Reporter =============================
-
-func TestNullReporter(t *testing.T) {
-	nullR := &nullReporter{}
-	require.NoError(t, nullR.ReportEvent(nil))
-	require.NoError(t, nullR.ReportStatus(nil))
-}
-
-// ========================= GRPC Reporter =============================
-
 func TestGRPCReporter(t *testing.T) {
 	// start test gRPC server
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
@@ -129,7 +119,6 @@ func TestGRPCReporter(t *testing.T) {
 
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	// require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
 	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 
@@ -472,13 +461,6 @@ func TestInitReporter(t *testing.T) {
 	require.Equal(t, "my service name", r.GetServiceName())
 }
 
-// func TestCollectMetricsNextInterval(t *testing.T) {
-// 	r := &grpcReporter{collectMetricInterval: 10}
-// 	next := r.collectMetricsNextInterval()
-// 	// very weak check
-// 	require.True(t, next <= time.Second*10, next)
-// }
-
 // testProxy performs tests of http/https proxy.
 func testProxy(t *testing.T, proxyUrl string) {
 	addr := "localhost:4567"
@@ -543,7 +525,6 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	// require.Equal(t, int32(metrics.ReportingIntervalDefault), r.collectMetricInterval)
 	require.Equal(t, grpcGetAndUpdateSettingsIntervalDefault, r.getAndUpdateSettingsInterval)
 	require.Equal(t, grpcSettingsTimeoutCheckIntervalDefault, r.settingsTimeoutCheckInterval)
 

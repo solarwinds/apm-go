@@ -1,4 +1,4 @@
-// © 2024 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,9 +37,9 @@ func NewMetricsPublisher(legacyRegistry metrics.LegacyRegistry) *MetricsPublishe
 	return &MetricsPublisher{metricsRegistry: legacyRegistry}
 }
 
-func (c *MetricsPublisher) Configure(ctx context.Context, legacyRegistry metrics.LegacyRegistry, conn *grpcConnection, o oboe.Oboe, resource *sdkresource.Resource) error {
+func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry metrics.LegacyRegistry, conn *grpcConnection, o oboe.Oboe, resource *sdkresource.Resource) error {
 	if config.UseAOExport() {
-		c.reporter = CreateAndStartPeriodicMetricsReporter(ctx, conn, legacyRegistry, o)
+		c.reporter = CreatePeriodicMetricsReporter(ctx, conn, legacyRegistry, o)
 		go c.reporter.Start()
 	} else { // Use Otel Export
 		otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)

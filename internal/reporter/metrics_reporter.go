@@ -1,3 +1,17 @@
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package reporter
 
 import (
@@ -19,12 +33,13 @@ type MetricsReporter struct {
 	registry              metrics.LegacyRegistry
 	serviceKey            string
 	oboe                  oboe.Oboe
-	exit                  <-chan struct{}
+	cancelled             <-chan struct{}
+	done                  chan struct{}
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 }
 
-func CreateAndStartPeriodicMetricsReporter(ctx context.Context, conn *grpcConnection, registry metrics.LegacyRegistry, oboe oboe.Oboe) *MetricsReporter {
+func CreatePeriodicMetricsReporter(ctx context.Context, conn *grpcConnection, registry metrics.LegacyRegistry, oboe oboe.Oboe) *MetricsReporter {
 	ctx, cancel := context.WithCancel(ctx)
 
 	conn.AddClient()
@@ -34,11 +49,17 @@ func CreateAndStartPeriodicMetricsReporter(ctx context.Context, conn *grpcConnec
 		collectMetricInterval: metrics.ReportingIntervalDefault,
 		serviceKey:            config.GetServiceKey(),
 		oboe:                  oboe,
-		exit:                  ctx.Done(),
+		cancelled:             ctx.Done(),
+		done:                  make(chan struct{}),
 		cancel:                cancel,
 		registry:              registry,
 	}
 	return r
+}
+
+func (mr *MetricsReporter) WithReportingInterval(interval int32) *MetricsReporter {
+	atomic.StoreInt32(&mr.collectMetricInterval, interval)
+	return mr
 }
 
 func (mr *MetricsReporter) Start() {
@@ -56,7 +77,7 @@ func (mr *MetricsReporter) Start() {
 
 	for {
 		select {
-		case <-mr.exit:
+		case <-mr.cancelled:
 			select {
 			case <-collectMetricsReady:
 				mr.collectMetrics(collectMetricsReady)
@@ -75,7 +96,6 @@ func (mr *MetricsReporter) Start() {
 			}
 		}
 	}
-
 }
 
 func (mr *MetricsReporter) collectMetricsNextInterval() time.Duration {
@@ -118,7 +138,7 @@ func (mr *MetricsReporter) sendMetrics(msgs [][]byte) {
 
 	method := newPostMetricsMethod(mr.serviceKey, msgs)
 
-	if err := mr.conn.InvokeRPC(mr.exit, method); err == nil {
+	if err := mr.conn.InvokeRPC(mr.done, method); err == nil {
 		log.Info(method.CallSummary())
 	} else if errors.Is(err, errInvalidServiceKey) {
 		mr.cancel()
@@ -128,7 +148,11 @@ func (mr *MetricsReporter) sendMetrics(msgs [][]byte) {
 }
 
 func (mr *MetricsReporter) Shutdown() {
-	mr.cancel()
-	mr.conn.Close()
-	mr.wg.Wait()
+	var once sync.Once
+	once.Do(func() {
+		mr.cancel()
+		mr.wg.Wait()    // wait to flush metrics
+		mr.conn.Close() // release client and close grpc connection
+		close(mr.done)
+	})
 }
