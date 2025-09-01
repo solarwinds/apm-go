@@ -16,6 +16,7 @@ package reporter
 
 import (
 	"context"
+	"path"
 	"testing"
 	"time"
 
@@ -29,8 +30,9 @@ import (
 func TestMetricsIsFlueshedOnReporterShutdown(t *testing.T) {
 	ctx := context.Background()
 	addr := "localhost:4567"
+	certFile := path.Join(".", "for_test.crt")
 	t.Setenv("SW_APM_COLLECTOR", addr)
-	t.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
+	t.Setenv("SW_APM_TRUSTEDPATH", certFile)
 	config.Load()
 	host.Start()
 	server := StartTestGRPCServer(t, addr)
