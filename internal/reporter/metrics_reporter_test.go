@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// See note in `reporter_grpc_test.go`
+//go:build !windows
+
 package reporter
 
 import (
 	"context"
-	"path"
 	"testing"
 	"time"
 
@@ -30,9 +32,8 @@ import (
 func TestMetricsIsFlueshedOnReporterShutdown(t *testing.T) {
 	ctx := context.Background()
 	addr := "localhost:4567"
-	certFile := path.Join(".", "for_test.crt")
 	t.Setenv("SW_APM_COLLECTOR", addr)
-	t.Setenv("SW_APM_TRUSTEDPATH", certFile)
+	t.Setenv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	host.Start()
 	server := StartTestGRPCServer(t, addr)
