@@ -87,10 +87,12 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	ctx := context.Background()
 	conn, err := reporter.CreateGrpcConnection()
 	if err != nil {
-		log.Error("Failed to create gRPC connection", err)
+		log.Error("Failed to create gRPC connection to SWO APM", err)
+		return func() {}, err
 	}
 	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry, o)
 	if err != nil {
+		log.Error("Failed to configure and start background reporter", err)
 		return func() {}, err
 	}
 
@@ -100,6 +102,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 	exprtr, err := exporter.NewSpanExporter(ctx, backgroundReporter)
 	if err != nil {
+		log.Error("Failed to configure span exporter", err)
 		return func() {}, err
 	}
 
