@@ -64,11 +64,6 @@ func (mr *MetricsReporter) WithReportingInterval(interval int32) *MetricsReporte
 }
 
 func (mr *MetricsReporter) Start() {
-	collectMetricsTicker := time.NewTimer(mr.collectMetricsNextInterval())
-	defer func() {
-		collectMetricsTicker.Stop()
-	}()
-
 	// set up 'ready' channels to indicate if a goroutine has terminated
 	collectMetricsReady := make(chan bool, 1)
 	collectMetricsReady <- true
@@ -76,6 +71,11 @@ func (mr *MetricsReporter) Start() {
 	mr.wg.Add(1)
 
 	go func() {
+		collectMetricsTicker := time.NewTimer(mr.collectMetricsNextInterval())
+		defer func() {
+			collectMetricsTicker.Stop()
+		}()
+
 		defer mr.wg.Done()
 		for {
 			select {
