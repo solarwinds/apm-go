@@ -17,25 +17,22 @@ package otelsetup
 import (
 	"context"
 	"os"
-	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 )
 
 func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error) {
-	exportingToSwo := setupExporterEndpoint()
-
+	exporterEndpoint := getAndSetupExporterEndpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
 	exporterOptions := []otlptracegrpc.Option{}
 
 	if os.Getenv("OTEL_EXPORTER_OTLP_COMPRESSION") != "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_COMPRESSION") != "" {
 		exporterOptions = append(exporterOptions, otlptracegrpc.WithCompressor("gzip"))
 	}
 
-	if exportingToSwo && !hasAuthorizationHeaderSet() {
+	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
 		grpcOptions := []grpc.DialOption{
 			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
 		}
@@ -43,35 +40,4 @@ func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error)
 	}
 
 	return otlptracegrpc.New(ctx, exporterOptions...)
-}
-
-func hasAuthorizationHeaderSet() bool {
-	if traceHeaders, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_HEADERS "); ok {
-		if strings.Contains(strings.ToLower(traceHeaders), "authorization") {
-			return true
-		}
-	} else if otlpHeaders, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_HEADERS"); ok {
-		if strings.Contains(strings.ToLower(otlpHeaders), "authorization") {
-			return true
-		}
-	}
-	return false
-}
-
-func setupExporterEndpoint() (isSwo bool) {
-	exporterEndpoint := ""
-	ok := false
-	if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); ok {
-	} else if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
-	} else {
-		swApmOtelCollector := config.GetOtelCollector()
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", swApmOtelCollector); err != nil {
-			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
-		} else {
-			exporterEndpoint = swApmOtelCollector
-		}
-	}
-	log.Infof("Otel exporter traces endpoint: %s", exporterEndpoint)
-
-	return strings.Contains(exporterEndpoint, "solarwinds.com")
 }

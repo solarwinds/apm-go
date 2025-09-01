@@ -25,17 +25,18 @@ import (
 )
 
 func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exporter, error) {
-	swApmOtelCollector := config.GetOtelCollector()
-
+	exporterEndpoint := getAndSetupExporterEndpoint("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
 	exporterOptions := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithTemporalitySelector(MetricTemporalitySelector),
 		otlpmetricgrpc.WithCompressor("gzip"),
-		otlpmetricgrpc.WithEndpointURL(swApmOtelCollector),
 	}
-	grpcOptions := []grpc.DialOption{
-		grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
+
+	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
+		grpcOptions := []grpc.DialOption{
+			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
+		}
+		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(grpcOptions...))
 	}
-	exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(grpcOptions...))
 
 	return otlpmetricgrpc.New(
 		ctx,
