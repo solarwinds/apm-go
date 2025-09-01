@@ -223,6 +223,7 @@ func TestInvalidKey(t *testing.T) {
 	addr := "localhost:4567"
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
+	setEnv("SW_APM_EVENTS_FLUSH_INTERVAL", "1")
 
 	// start test gRPC server
 	server := StartTestGRPCServer(t, addr)
@@ -242,10 +243,10 @@ func TestInvalidKey(t *testing.T) {
 	ev1.SetLayer("hello-from-invalid-key")
 	require.NoError(t, r.ReportEvent(ev1))
 
-	time.Sleep(time.Second)
-
 	// The agent reporter should be closed due to received INVALID_API_KEY from the collector
-	require.Equal(t, true, r.Closed())
+	require.Eventually(t, func() bool {
+		return r.Closed()
+	}, 5*time.Second, 100*time.Millisecond)
 
 	r.ShutdownNow()
 

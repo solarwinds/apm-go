@@ -346,6 +346,7 @@ func (c *grpcConnection) InvokeRPC(exit <-chan struct{}, m Method) error {
 		// this case.
 		select {
 		case <-exit:
+			return errReporterExiting
 		default:
 		}
 		var err = errConnStale

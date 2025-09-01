@@ -431,6 +431,10 @@ func (r *grpcReporter) eventSender() {
 }
 
 func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
+	defer func() {
+		log.Info("eventBatchSender goroutine exiting.")
+	}()
+
 	var closing bool
 	var messages [][]byte
 
