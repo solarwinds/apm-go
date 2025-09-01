@@ -54,7 +54,10 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry
 		if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
 			return err
 		}
-		metrics.RegisterOtelRuntimeMetrics(meterProvider)
+		err = metrics.RegisterOtelRuntimeMetrics(meterProvider)
+		if err != nil {
+			return err
+		}
 		otel.SetMeterProvider(meterProvider)
 
 		c.metricsRegistry, err = metrics.NewOtelRegistry(meterProvider)

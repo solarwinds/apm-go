@@ -106,6 +106,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
 	err = metricsPublisher.ConfigureAndStart(ctx, legacyRegistry, conn, o, resrc)
 	if err != nil {
+		log.Error("Failed to configure and start metrics publisher", err)
 		return func() {}, err
 	}
 
@@ -130,9 +131,15 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	otel.SetTracerProvider(tp)
 
 	return func() {
-		metricsPublisher.Shutdown()
-		backgroundReporter.Shutdown(ctx)
-		if err := tp.Shutdown(context.Background()); err != nil {
+		err := metricsPublisher.Shutdown()
+		if err != nil {
+			log.Error("Failed to Shutdown metrics publisher", err)
+		}
+		err = backgroundReporter.Shutdown(ctx)
+		if err != nil {
+			log.Error("Failed to Shutdown background reporter", err)
+		}
+		if err = tp.Shutdown(context.Background()); err != nil {
 			stdlog.Fatal(err)
 		}
 	}, nil
