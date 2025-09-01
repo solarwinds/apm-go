@@ -127,15 +127,21 @@ func TestExportSpan(t *testing.T) {
 
 		spanId := span.SpanContext().SpanID().String()
 		require.Equal(t, map[string]interface{}{
-			"Edge":              strings.ToUpper(spanId),
-			"sw.parent_span_id": spanId,
-			"Hostname":          host.Hostname(),
-			"Label":             "exit",
-			"Layer":             "INTERNAL:foo",
-			"PID":               host.PID(),
-			"Timestamp_u":       end.UnixMicro(),
-			"X-Trace":           exit.GetXTrace(),
-			"sw.trace_context":  exit.GetSwTraceContext(),
+			"Edge":               strings.ToUpper(spanId),
+			"sw.parent_span_id":  spanId,
+			"Hostname":           host.Hostname(),
+			"Label":              "exit",
+			"Layer":              "INTERNAL:foo",
+			"PID":                host.PID(),
+			"Timestamp_u":        end.UnixMicro(),
+			"X-Trace":            exit.GetXTrace(),
+			"sw.trace_context":   exit.GetSwTraceContext(),
+			"otel.scope.name":    "foo123",
+			"otel.scope.version": "123",
+			"otel.status_code":   "OK",
+			"sw.span_kind":       "internal",
+			"sw.span_name":       "foo",
+			"Language":           "Go",
 		}, result)
 	}
 }
