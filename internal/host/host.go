@@ -18,11 +18,12 @@
 package host
 
 import (
-	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/log"
 	"net"
 	"os"
 	"sync"
+
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 const (

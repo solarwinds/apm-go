@@ -39,7 +39,7 @@ func TestMetricsIsFlueshedOnReporterShutdown(t *testing.T) {
 	require.NoError(t, err)
 
 	metricsReporter := CreatePeriodicMetricsReporter(ctx, grpcConn, metrics.NewLegacyRegistry(false), oboe.NewOboe()).WithReportingInterval(5)
-	go metricsReporter.Start()
+	metricsReporter.Start()
 	time.Sleep(100 * time.Millisecond)
 	metricsReporter.Shutdown()
 	server.Stop()

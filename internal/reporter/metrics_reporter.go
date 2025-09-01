@@ -36,6 +36,7 @@ type MetricsReporter struct {
 	cancelled             <-chan struct{}
 	done                  chan struct{}
 	cancel                context.CancelFunc
+	shutdownOnce          sync.Once
 	wg                    sync.WaitGroup
 }
 
@@ -73,29 +74,31 @@ func (mr *MetricsReporter) Start() {
 	collectMetricsReady <- true
 
 	mr.wg.Add(1)
-	defer mr.wg.Done()
 
-	for {
-		select {
-		case <-mr.cancelled:
+	go func() {
+		defer mr.wg.Done()
+		for {
 			select {
-			case <-collectMetricsReady:
-				mr.collectMetrics(collectMetricsReady)
-			default:
-			}
-			<-collectMetricsReady
-			return
-		case <-collectMetricsTicker.C: // collect and send metrics
-			// set up ticker for next round
-			collectMetricsTicker.Reset(mr.collectMetricsNextInterval())
-			select {
-			case <-collectMetricsReady:
-				// only kick off a new goroutine if the previous one has terminated
-				go mr.collectMetrics(collectMetricsReady)
-			default:
+			case <-mr.cancelled:
+				select {
+				case <-collectMetricsReady:
+					mr.collectMetrics(collectMetricsReady)
+				default:
+				}
+				<-collectMetricsReady
+				return
+			case <-collectMetricsTicker.C: // collect and send metrics
+				// set up ticker for next round
+				collectMetricsTicker.Reset(mr.collectMetricsNextInterval())
+				select {
+				case <-collectMetricsReady:
+					// only kick off a new goroutine if the previous one has terminated
+					go mr.collectMetrics(collectMetricsReady)
+				default:
+				}
 			}
 		}
-	}
+	}()
 }
 
 func (mr *MetricsReporter) collectMetricsNextInterval() time.Duration {
@@ -148,8 +151,7 @@ func (mr *MetricsReporter) sendMetrics(msgs [][]byte) {
 }
 
 func (mr *MetricsReporter) Shutdown() {
-	var once sync.Once
-	once.Do(func() {
+	mr.shutdownOnce.Do(func() {
 		mr.cancel()
 		mr.wg.Wait()    // wait to flush metrics
 		mr.conn.Close() // release client and close grpc connection

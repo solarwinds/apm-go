@@ -40,7 +40,7 @@ func NewMetricsPublisher(legacyRegistry metrics.LegacyRegistry) *MetricsPublishe
 func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry metrics.LegacyRegistry, conn *grpcConnection, o oboe.Oboe, resource *sdkresource.Resource) error {
 	if config.UseAOExport() {
 		c.reporter = CreatePeriodicMetricsReporter(ctx, conn, legacyRegistry, o)
-		go c.reporter.Start()
+		c.reporter.Start()
 	} else { // Use Otel Export
 		otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
 		if err != nil {
