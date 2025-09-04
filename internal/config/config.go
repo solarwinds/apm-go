@@ -973,8 +973,10 @@ func (c *Config) GetApiToken() string {
 }
 
 func (c *Config) UseAOExport() bool {
-	if _, ok := os.LookupEnv("USE_LEGACY_APM_EXPORTER"); ok {
-		return true
+	v, ok := os.LookupEnv("USE_LEGACY_APM_EXPORTER")
+	if !ok {
+		return false
 	}
-	return false
+	v = strings.TrimSpace(strings.ToLower(v))
+	return v == "true" || v == "1"
 }
