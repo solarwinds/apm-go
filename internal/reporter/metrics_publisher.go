@@ -18,11 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 )
@@ -38,34 +38,43 @@ func NewMetricsPublisher(legacyRegistry metrics.LegacyRegistry) *MetricsPublishe
 }
 
 func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry metrics.LegacyRegistry, conn *grpcConnection, o oboe.Oboe, resource *sdkresource.Resource) error {
-	if config.UseAOExport() {
-		c.reporter = CreatePeriodicMetricsReporter(ctx, conn, legacyRegistry, o)
-		c.reporter.Start()
-	} else { // Use Otel Export
-		otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
-		if err != nil {
-			return err
-		}
-		meterProvider := metric.NewMeterProvider(
-			metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
-				metric.WithInterval(1*time.Minute))),
-			metric.WithResource(resource),
-		)
-		if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
-			return err
-		}
-		err = metrics.RegisterOtelRuntimeMetrics(meterProvider)
-		if err != nil {
-			return err
-		}
-		otel.SetMeterProvider(meterProvider)
+	c.reporter = CreatePeriodicMetricsReporter(ctx, conn, legacyRegistry, o)
+	c.reporter.Start()
 
-		c.metricsRegistry, err = metrics.NewOtelRegistry(meterProvider)
-		if err != nil {
-			return err
-		}
-		c.meterProvider = meterProvider
+	otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
+	if err != nil {
+		return err
 	}
+
+	extra := sdkresource.NewSchemaless(
+		attribute.String("publisher.type", "otel"),
+	)
+	resource, err = sdkresource.Merge(resource, extra)
+	if err != nil {
+		return err
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
+			metric.WithInterval(1*time.Minute))),
+		metric.WithResource(resource),
+	)
+	if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
+		return err
+	}
+	// err = metrics.RegisterOtelRuntimeMetrics(meterProvider)
+	// if err != nil {
+	// 	return err
+	// }
+	otel.SetMeterProvider(meterProvider)
+
+	otelRegistry, err := metrics.NewOtelRegistry(meterProvider)
+	if err != nil {
+		return err
+	}
+	c.meterProvider = meterProvider
+
+	c.metricsRegistry = metrics.NewCompositeRegistry(legacyRegistry, otelRegistry)
 
 	return nil
 }

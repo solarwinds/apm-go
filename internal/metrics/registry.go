@@ -197,6 +197,8 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 	txnName := txn.GetTransactionName(span)
 	swoTags[constants.SwTransactionNameAttribute] = txnName
 
+	swoTags["publisher.type"] = "ao"
+
 	duration := span.EndTime().Sub(span.StartTime())
 	s := &HTTPSpanMessage{
 		BaseSpanMessage: BaseSpanMessage{Duration: duration, HasError: isError},

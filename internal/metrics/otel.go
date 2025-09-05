@@ -43,6 +43,7 @@ func (o *otelRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
 	var attrs = []attribute.KeyValue{
 		attribute.Bool("sw.is_error", span.Status().Code == codes.Error),
 		attribute.String(constants.SwTransactionNameAttribute, txn.GetTransactionName(span)),
+		attribute.String("publisher.type", "otel"),
 	}
 	if span.SpanKind() == trace.SpanKindServer {
 		for _, attr := range span.Attributes() {

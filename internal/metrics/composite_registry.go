@@ -12,42 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package metrics
 
-import (
-	"runtime"
-	"strings"
-)
+import sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-var (
-	baseVersion = "1.2.4"
-	prerelease  = "dual"
-	build       = ""
-
-	// The SolarWinds Observability Go APM library version
-	version = joinSemVer(baseVersion, prerelease, build)
-
-	// The Go version
-	goVersion = strings.TrimPrefix(runtime.Version(), "go")
-)
-
-func joinSemVer(base, pre, build string) string {
-	v := base
-	if pre != "" {
-		v += "-" + pre
-	}
-	if build != "" {
-		v += "+" + build
-	}
-	return v
+type compositeRegistry struct {
+	registries []MetricRegistry
 }
 
-// Version returns the agent's version
-func Version() string {
-	return version
+func NewCompositeRegistry(registries ...MetricRegistry) MetricRegistry {
+	return &compositeRegistry{
+		registries: registries,
+	}
 }
 
-// GoVersion returns the Go version
-func GoVersion() string {
-	return goVersion
+func (o *compositeRegistry) RecordSpan(span sdktrace.ReadOnlySpan) {
+	for _, r := range o.registries {
+		r.RecordSpan(span)
+	}
 }

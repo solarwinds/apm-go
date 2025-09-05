@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/solarwinds/apm-go/internal/config"
@@ -101,12 +102,12 @@ func (o *oboe) RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error {
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, obs metric.Observer) error {
 			if rateCounts := o.FlushRateCounts(); rateCounts != nil {
-				obs.ObserveInt64(traceCount, rateCounts.Traced)
-				obs.ObserveInt64(sampleCount, rateCounts.Sampled)
-				obs.ObserveInt64(requestCount, rateCounts.Requested)
-				obs.ObserveInt64(tokenBucketExhaustionCount, rateCounts.Limited)
-				obs.ObserveInt64(throughTraceCount, rateCounts.Through)
-				obs.ObserveInt64(triggeredTraceCount, rateCounts.TtTraced)
+				obs.ObserveInt64(traceCount, rateCounts.Traced, metric.WithAttributes(attribute.String("publisher.type", "otel")))
+				obs.ObserveInt64(sampleCount, rateCounts.Sampled, metric.WithAttributes(attribute.String("publisher.type", "otel")))
+				obs.ObserveInt64(requestCount, rateCounts.Requested, metric.WithAttributes(attribute.String("publisher.type", "otel")))
+				obs.ObserveInt64(tokenBucketExhaustionCount, rateCounts.Limited, metric.WithAttributes(attribute.String("publisher.type", "otel")))
+				obs.ObserveInt64(throughTraceCount, rateCounts.Through, metric.WithAttributes(attribute.String("publisher.type", "otel")))
+				obs.ObserveInt64(triggeredTraceCount, rateCounts.TtTraced, metric.WithAttributes(attribute.String("publisher.type", "otel")))
 			}
 			return nil
 		},
