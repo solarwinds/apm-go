@@ -20,12 +20,27 @@ import (
 )
 
 var (
+	baseVersion = "1.2.4"
+	prerelease  = ""
+	build       = ""
+
 	// The SolarWinds Observability Go APM library version
-	version = "1.2.4-alpha"
+	version = joinSemVer(baseVersion, prerelease, build)
 
 	// The Go version
 	goVersion = strings.TrimPrefix(runtime.Version(), "go")
 )
+
+func joinSemVer(base, pre, build string) string {
+	v := base
+	if pre != "" {
+		v += "-" + pre
+	}
+	if build != "" {
+		v += "+" + build
+	}
+	return v
+}
 
 // Version returns the agent's version
 func Version() string {

@@ -12,27 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exporter
+package otelsetup
 
 import (
 	"context"
-	"os"
-
-	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/reporter"
-	"go.opentelemetry.io/otel/sdk/trace"
+	"fmt"
 )
 
-func NewExporter(ctx context.Context, r reporter.Reporter) (trace.SpanExporter, error) {
-	if !config.GetEnabled() {
-		log.Warning("SolarWinds Observability exporter is disabled.")
-		return &noopExporter{}, nil
-	}
+type bearerTokenAuthCred struct {
+	token string
+}
 
-	if _, ok := os.LookupEnv("USE_LEGACY_APM_EXPORTER"); ok {
-		return NewAoExporter(r), nil
-	}
+func (cred *bearerTokenAuthCred) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return map[string]string{
+		"authorization": fmt.Sprintf("Bearer %s", cred.token),
+	}, nil
+}
 
-	return CreateAndSetupOtelExporter(ctx)
+func (cred *bearerTokenAuthCred) RequireTransportSecurity() bool {
+	return true
 }

@@ -1,3 +1,5 @@
 *.test
 .idea/
 .DS_Store
+internal/reporter/for_test.crt
+internal/reporter/for_test.key

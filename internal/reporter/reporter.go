@@ -16,21 +16,15 @@ package reporter
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
-	"github.com/solarwinds/apm-go/internal/rand"
 	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/utils"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // defines what methods a Reporter should offer (internal to Reporter package)
@@ -48,7 +42,6 @@ type Reporter interface {
 	// SetServiceKey attaches a service key to the Reporter
 	// Returns error if service key is invalid
 	SetServiceKey(key string) error
-
 	// GetServiceName retrieves the current service name, preferring an otel `service.name` from resource attributes,
 	// falling back to the service name in the service key
 	GetServiceName() string
@@ -58,31 +51,14 @@ var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
 )
 
-// a noop reporter
-type nullReporter struct{}
-
-func newNullReporter() *nullReporter                      { return &nullReporter{} }
-func (r *nullReporter) ReportEvent(Event) error           { return nil }
-func (r *nullReporter) ReportStatus(Event) error          { return nil }
-func (r *nullReporter) Shutdown(context.Context) error    { return nil }
-func (r *nullReporter) ShutdownNow()                      {}
-func (r *nullReporter) Closed() bool                      { return true }
-func (r *nullReporter) WaitForReady(context.Context) bool { return true }
-func (r *nullReporter) SetServiceKey(string) error        { return nil }
-func (r *nullReporter) GetServiceName() string            { return "" }
-
-func Start(rsrc *resource.Resource, registry interface{}, o oboe.Oboe) (Reporter, error) {
+func CreateAndStartBackgroundReporter(conn *grpcConnection, rsrc *resource.Resource, reg metrics.LegacyRegistry, o oboe.Oboe) (Reporter, error) {
+	conn.AddClient()
 	log.SetLevelFromStr(config.DebugLevel())
-	if reg, ok := registry.(metrics.LegacyRegistry); !ok {
-		return nil, fmt.Errorf("metrics registry must implement metrics.LegacyRegistry")
-	} else {
-		rptr := initReporter(rsrc, reg, o)
-		sendInitMessage(rptr, rsrc)
-		return rptr, nil
-	}
+	rptr := initReporter(conn, rsrc, reg, o)
+	return rptr, nil
 }
 
-func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
+func initReporter(conn *grpcConnection, r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
@@ -92,34 +68,10 @@ func initReporter(r *resource.Resource, registry metrics.LegacyRegistry, o oboe.
 		log.Warning("SolarWinds Observability APM agent is disabled.")
 		return newNullReporter()
 	}
-	return newGRPCReporter(otelServiceName, registry, o)
-}
 
-func CreateInitMessage(tid trace.TraceID, r *resource.Resource) Event {
-	evt := NewEventWithRandomOpID(tid, time.Now())
-	evt.SetLabel(LabelUnset)
-	for _, kv := range r.Attributes() {
-		if kv.Key != semconv.ServiceNameKey {
-			evt.AddKV(kv)
-		}
+	if conn == nil {
+		return newNullReporter()
 	}
 
-	evt.AddKVs([]attribute.KeyValue{
-		attribute.Bool("__Init", true),
-		attribute.String("APM.Version", utils.Version()),
-	})
-	return evt
-}
-
-func sendInitMessage(r Reporter, rsrc *resource.Resource) {
-	if r.Closed() {
-		log.Info(fmt.Errorf("send init message: %w", ErrReporterIsClosed))
-		return
-	}
-	tid := trace.TraceID{0}
-	rand.Random(tid[:])
-	evt := CreateInitMessage(tid, rsrc)
-	if err := r.ReportStatus(evt); err != nil {
-		log.Error("could not send init message", err)
-	}
+	return newGRPCReporter(conn, otelServiceName, registry, o)
 }

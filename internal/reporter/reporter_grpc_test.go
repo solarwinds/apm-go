@@ -33,7 +33,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"io"
 	"net"
 	"net/http"
@@ -44,7 +43,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/solarwinds/apm-go/internal/utils"
+
 	"context"
+
 	pb "github.com/solarwinds/apm-proto/go/collectorpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

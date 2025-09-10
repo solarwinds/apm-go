@@ -12,23 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exporter
+package reporter
 
 import (
-	"context"
-	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type bearerTokenAuthCred struct {
-	token string
-}
+func TestNullReporter(t *testing.T) {
+	nullR := &nullReporter{}
 
-func (cred *bearerTokenAuthCred) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
-	return map[string]string{
-		"authorization": fmt.Sprintf("Bearer %s", cred.token),
-	}, nil
-}
-
-func (cred *bearerTokenAuthCred) RequireTransportSecurity() bool {
-	return true
+	require.NoError(t, nullR.ReportEvent(nil))
+	require.NoError(t, nullR.ReportStatus(nil))
 }

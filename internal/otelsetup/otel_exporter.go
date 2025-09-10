@@ -12,37 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exporter
+package otelsetup
 
 import (
-	"context"
 	"os"
 	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/sdk/trace"
-	"google.golang.org/grpc"
 )
 
-func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error) {
-	exportingToSwo := setupExporterEndpoint()
-
-	exporterOptions := []otlptracegrpc.Option{}
-
-	if os.Getenv("OTEL_EXPORTER_OTLP_COMPRESSION") != "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_COMPRESSION") != "" {
-		exporterOptions = append(exporterOptions, otlptracegrpc.WithCompressor("gzip"))
-	}
-
-	if exportingToSwo && !hasAuthorizationHeaderSet() {
-		grpcOptions := []grpc.DialOption{
-			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
-		}
-		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(grpcOptions...))
-	}
-
-	return otlptracegrpc.New(ctx, exporterOptions...)
+func isExportingToSwo(exporterEndpoint string) bool {
+	return strings.Contains(exporterEndpoint, "solarwinds.com")
 }
 
 func hasAuthorizationHeaderSet() bool {
@@ -58,20 +39,20 @@ func hasAuthorizationHeaderSet() bool {
 	return false
 }
 
-func setupExporterEndpoint() (isSwo bool) {
+func getAndSetupExporterEndpoint(specificExporterEnvVariable string) string {
 	exporterEndpoint := ""
 	ok := false
-	if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"); ok {
+	if exporterEndpoint, ok = os.LookupEnv(specificExporterEnvVariable); ok {
 	} else if exporterEndpoint, ok = os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
 	} else {
 		swApmOtelCollector := config.GetOtelCollector()
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", swApmOtelCollector); err != nil {
-			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_TRACES_ENDPOINT %s", err)
+		if err := os.Setenv(specificExporterEnvVariable, swApmOtelCollector); err != nil {
+			log.Warningf("could not override unset %s %s", specificExporterEnvVariable, err)
 		} else {
 			exporterEndpoint = swApmOtelCollector
 		}
 	}
-	log.Infof("Otel exporter traces endpoint: %s", exporterEndpoint)
+	log.Infof("Otel span exporter endpoint: %s", exporterEndpoint)
 
-	return strings.Contains(exporterEndpoint, "solarwinds.com")
+	return exporterEndpoint
 }

@@ -136,6 +136,8 @@ func TestExportSpan(t *testing.T) {
 			"Timestamp_u":       end.UnixMicro(),
 			"X-Trace":           exit.GetXTrace(),
 			"sw.trace_context":  exit.GetSwTraceContext(),
+			"sw.span_kind":      "internal",
+			"sw.span_name":      "foo",
 		}, result)
 	}
 }

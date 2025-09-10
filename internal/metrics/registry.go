@@ -176,9 +176,9 @@ func (r *registry) RecordSpan(span trace.ReadOnlySpan) {
 	httpRoute := ""
 	for _, attr := range attrs {
 		switch attr.Key {
-		case semconv.HTTPRequestMethodKey:
+		case semconv.HTTPRequestMethodKey, semconv.HTTPMethodKey:
 			method = attr.Value.AsString()
-		case semconv.HTTPStatusCodeKey:
+		case semconv.HTTPStatusCodeKey, semconv.HttpStatusCodeKey:
 			status = attr.Value.AsInt64()
 		case semconv.HTTPRouteKey:
 			httpRoute = attr.Value.AsString()

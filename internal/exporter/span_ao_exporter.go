@@ -36,11 +36,8 @@ type exporter struct {
 
 func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	evt := reporter.CreateEntryEvent(s.SpanContext(), s.StartTime(), s.Parent())
-	layer := fmt.Sprintf("%s:%s", strings.ToUpper(s.SpanKind().String()), s.Name())
-	evt.SetLayer(layer)
+	e.setSpanLevelAoAttributes(evt, s)
 	evt.AddKVs([]attribute.KeyValue{
-		attribute.String("sw.span_name", s.Name()),
-		attribute.String("sw.span_kind", s.SpanKind().String()),
 		attribute.String("Language", constants.Go),
 		attribute.String("otel.scope.name", s.InstrumentationScope().Name),
 		attribute.String("otel.scope.version", s.InstrumentationScope().Version),
@@ -48,7 +45,6 @@ func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	if entryspans.IsEntrySpan(s) {
 		evt.AddKV(attribute.String("TransactionName", txn.GetTransactionName(s)))
 	}
-
 	if s.Status().Code != codes.Unset {
 		if s.Status().Code == codes.Ok {
 			evt.AddKV(semconv.OTelStatusCodeOk)
@@ -59,7 +55,6 @@ func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 			evt.AddKV(semconv.OTelStatusDescriptionKey.String(s.Status().Description))
 		}
 	}
-
 	evt.AddKVs(s.Attributes())
 
 	if err := e.r.ReportEvent(evt); err != nil {
@@ -89,12 +84,20 @@ func (e *exporter) exportSpan(_ context.Context, s sdktrace.ReadOnlySpan) {
 	}
 
 	evt = reporter.CreateExitEvent(s.SpanContext(), s.EndTime())
-	evt.AddKV(attribute.String(constants.Layer, layer))
+	e.setSpanLevelAoAttributes(evt, s)
 	if err := e.r.ReportEvent(evt); err != nil {
 		log.Warning("cannot send exit event", err)
 		return
 	}
+}
 
+func (e *exporter) setSpanLevelAoAttributes(evt reporter.Event, s sdktrace.ReadOnlySpan) {
+	layer := fmt.Sprintf("%s:%s", strings.ToUpper(s.SpanKind().String()), s.Name())
+	evt.SetLayer(layer)
+	evt.AddKVs([]attribute.KeyValue{
+		attribute.String("sw.span_name", s.Name()),
+		attribute.String("sw.span_kind", s.SpanKind().String()),
+	})
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
