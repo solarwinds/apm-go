@@ -47,7 +47,7 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	}
 
 	if os.Getenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION") == "" {
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION", "explicit_bucket_histogram"); err != nil {
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION", "base2_exponential_bucket_histogram"); err != nil {
 			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION %s", err)
 		}
 	}
