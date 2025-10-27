@@ -14,7 +14,7 @@
 
 module github.com/solarwinds/apm-go/examples/http
 
-go 1.23.0
+go 1.24.0
 
 // TODO don't use the local repo
 replace github.com/solarwinds/apm-go => ../..

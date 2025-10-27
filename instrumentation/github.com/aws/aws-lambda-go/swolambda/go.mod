@@ -14,7 +14,7 @@
 
 module github.com/solarwinds/apm-go/instrumentation/github.com/aws/aws-lambda-go/swolambda
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/aws/aws-lambda-go v1.48.0
