@@ -16,8 +16,10 @@ package otelsetup
 
 import (
 	"context"
+	"os"
 
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -36,6 +38,12 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
 		}
 		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(grpcOptions...))
+	}
+
+	if os.Getenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION") == "" {
+		if err := os.Setenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION", "base2_exponential_bucket_histogram"); err != nil {
+			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION %s", err)
+		}
 	}
 
 	return otlpmetricgrpc.New(
