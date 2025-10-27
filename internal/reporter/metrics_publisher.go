@@ -46,10 +46,24 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry
 		if err != nil {
 			return err
 		}
+
+		view := metric.NewView(
+			metric.Instrument{Name: "trace.service.response_time"},
+			metric.Stream{
+				Aggregation: metric.AggregationBase2ExponentialHistogram{
+					MaxSize:  128,
+					MaxScale: 20,
+					NoMinMax: true,
+				},
+				Name: "trace.service.response_time",
+			},
+		)
+
 		meterProvider := metric.NewMeterProvider(
 			metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
 				metric.WithInterval(1*time.Minute))),
 			metric.WithResource(resource),
+			metric.WithView(view),
 		)
 		if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
 			return err
