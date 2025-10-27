@@ -55,7 +55,7 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry
 					MaxScale: 20,
 					NoMinMax: true,
 				},
-				Name: "trace.service.response_time.exp",
+				Name: "trace.service.response_time",
 			},
 		)
 
