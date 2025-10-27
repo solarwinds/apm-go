@@ -31,6 +31,7 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	exporterOptions := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithTemporalitySelector(MetricTemporalitySelector),
 		otlpmetricgrpc.WithCompressor("gzip"),
+		otlpmetricgrpc.WithAggregationSelector(MetricAggregationSelector),
 	}
 
 	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
@@ -60,4 +61,16 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 
 func MetricTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
 	return metricdata.DeltaTemporality
+}
+
+func MetricAggregationSelector(ik sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+	switch ik {
+	case sdkmetric.InstrumentKindHistogram:
+		return sdkmetric.AggregationBase2ExponentialHistogram{
+			MaxSize:  160,
+			MaxScale: 20,
+		}
+	default:
+		return sdkmetric.DefaultAggregationSelector(ik)
+	}
 }
