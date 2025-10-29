@@ -46,7 +46,6 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, legacyRegistry
 		if err != nil {
 			return err
 		}
-
 		meterProvider := metric.NewMeterProvider(
 			metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
 				metric.WithInterval(1*time.Minute))),
