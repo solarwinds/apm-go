@@ -65,7 +65,6 @@ func NewOtelRegistry(p metric.MeterProvider) (MetricRegistry, error) {
 	meter := p.Meter("sw.apm.request.metrics")
 	if histo, err := meter.Int64Histogram(
 		"trace.service.response_time",
-		metric.WithExplicitBucketBoundaries(),
 		metric.WithUnit("ms"),
 	); err != nil {
 		return nil, err
