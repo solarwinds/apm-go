@@ -43,8 +43,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
-github.com/solarwinds/apm-proto v1.0.8 h1:vM3fsrTYHI5+6Owm+zwFX47waCDQFN8Tv8yZiCd4YXw=
-github.com/solarwinds/apm-proto v1.0.8/go.mod h1:CN4fCYBnxyOJlBV0CYNXLz6lzNH8SCfNqcCBbpai76c=
+github.com/solarwinds/apm-proto/go/collectorpb v0.0.0-20251001220309-880799acb1a1 h1:WRI4MY56QsvkdD8b6uC+c0i/GLnNWNKz12JmD7FuAM8=
+github.com/solarwinds/apm-proto/go/collectorpb v0.0.0-20251001220309-880799acb1a1/go.mod h1:jf3b4bLWBlq5VHTL3jbIR3G4eTjIFrJzwlUAM84hvBQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.5.3 h1:jmXUvGomnU1o3W/V5h2VEradbpJDwGrzugQQvL0POH4=
 github.com/stretchr/objx v0.5.3/go.mod h1:rDQraq+vQZU7Fde9LOZLr8Tax6zZvy4kuNKF+QYS+U0=
