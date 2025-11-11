@@ -22,7 +22,7 @@ require (
 	github.com/aws/smithy-go v1.23.1
 	github.com/coocood/freecache v1.2.4
 	github.com/google/uuid v1.6.0
-	github.com/solarwinds/apm-proto v1.0.8
+	github.com/solarwinds/apm-proto/go/collectorpb v0.0.0-20251001220309-880799acb1a1
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/ec2 v1.38.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.10.0
