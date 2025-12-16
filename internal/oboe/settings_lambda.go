@@ -19,8 +19,6 @@ import (
 	"errors"
 	"io"
 	"os"
-
-	"github.com/solarwinds/apm-go/internal/utils"
 )
 
 type settingLambdaFromFile struct {
@@ -41,49 +39,10 @@ type settingArguments struct {
 	TriggerStrictBucketRate      float64 `json:"TriggerStrictBucketRate"`
 }
 
-// N.B. this struct adheres to the types required by the oboe.Oboe interface. In the future,
-// we should make the interface smarter about the incoming types so we're not converting from
-// known types to []byte and back. A task has been created to track this work, though it also
-// might make sense to do it when/if the GetSettings call is refactored.
-type settingLambdaNormalized struct {
-	flags []byte
-	value int64
-	ttl   int64
-	args  map[string][]byte
-}
-
-// newSettingLambdaNormalized accepts settings in json-unmarshalled format
-// for mapping to a format readable by oboe UpdateSetting.
-func newSettingLambdaNormalized(fromFile *settingLambdaFromFile) *settingLambdaNormalized {
-	flags := []byte(fromFile.Flags)
-
-	var unusedToken = "TOKEN"
-	args := utils.ArgsToMap(
-		fromFile.Arguments.BucketCapacity,
-		fromFile.Arguments.BucketRate,
-		fromFile.Arguments.TriggerRelaxedBucketCapacity,
-		fromFile.Arguments.TriggerRelaxedBucketRate,
-		fromFile.Arguments.TriggerStrictBucketCapacity,
-		fromFile.Arguments.TriggerStrictBucketRate,
-		fromFile.Arguments.MetricsFlushInterval,
-		-1,
-		[]byte(unusedToken),
-	)
-
-	settingNorm := &settingLambdaNormalized{
-		flags,
-		fromFile.Value,
-		fromFile.Ttl,
-		args,
-	}
-
-	return settingNorm
-}
-
 // newSettingLambdaFromFile unmarshals sampling settings from a JSON file at a
 // specific path in a specific format then returns values normalized for
 // oboe UpdateSetting, else returns error.
-func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
+func newSettingLambdaFromFile() (*settingLambdaFromFile, error) {
 	settingFile, err := os.Open(settingsFileName)
 	if err != nil {
 		return nil, err
@@ -103,5 +62,5 @@ func newSettingLambdaFromFile() (*settingLambdaNormalized, error) {
 
 	settingLambda := settingLambdas[0]
 
-	return newSettingLambdaNormalized(settingLambda), nil
+	return settingLambda, nil
 }

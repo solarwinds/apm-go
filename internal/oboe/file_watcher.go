@@ -62,7 +62,20 @@ func (w *fileBasedWatcher) readSettingFromFile() {
 		"Got lambda settings from file:\n%+v",
 		s,
 	)
-	w.o.UpdateSetting(s.flags, s.value, time.Second*time.Duration(s.ttl), s.args)
+	w.o.UpdateSetting(
+		SettingsUpdateArgs{
+			Value:                        s.Value,
+			Ttl:                          time.Second * time.Duration(s.Ttl),
+			Flags:                        s.Flags,
+			BucketRate:                   s.Arguments.BucketRate,
+			BucketCapacity:               s.Arguments.BucketCapacity,
+			TriggerRelaxedBucketRate:     s.Arguments.TriggerRelaxedBucketRate,
+			TriggerRelaxedBucketCapacity: s.Arguments.TriggerRelaxedBucketCapacity,
+			TriggerStrictBucketRate:      s.Arguments.TriggerStrictBucketRate,
+			TriggerStrictBucketCapacity:  s.Arguments.TriggerStrictBucketCapacity,
+			TriggerToken:                 []byte{},
+		},
+	)
 }
 
 // Start runs a ticker that checks settings expiry from cache

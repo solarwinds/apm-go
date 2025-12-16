@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
@@ -49,8 +48,22 @@ const (
 	SampleSourceDefault
 )
 
+type SettingsUpdateArgs struct {
+	Flags                        string
+	Value                        int64
+	Ttl                          time.Duration
+	TriggerToken                 []byte
+	BucketCapacity               float64
+	BucketRate                   float64
+	MetricsFlushInterval         int
+	TriggerRelaxedBucketCapacity float64
+	TriggerRelaxedBucketRate     float64
+	TriggerStrictBucketCapacity  float64
+	TriggerStrictBucketRate      float64
+}
+
 type Oboe interface {
-	UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte)
+	UpdateSetting(arg SettingsUpdateArgs)
 	CheckSettingsTimeout()
 	GetSetting() *settings
 	RemoveSetting()
@@ -267,28 +280,28 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func (o *oboe) UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte) {
+func (o *oboe) UpdateSetting(arg SettingsUpdateArgs) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
 	ns.source = SampleSourceDefault
-	ns.flags = flagStringToBin(string(flags))
+	ns.flags = flagStringToBin(arg.Flags)
 	ns.originalFlags = ns.flags
-	ns.value = adjustSampleRate(value)
-	ns.ttl = ttl
+	ns.value = adjustSampleRate(arg.Value)
+	ns.ttl = arg.Ttl
 
-	ns.TriggerToken = args[constants.KvSignatureKey]
+	ns.TriggerToken = arg.TriggerToken
 
-	rate := parseFloat64(args, constants.KvBucketRate, 0)
-	capacity := parseFloat64(args, constants.KvBucketCapacity, 0)
+	rate := arg.BucketRate
+	capacity := arg.BucketCapacity
 	ns.bucket.setRateCap(rate, capacity)
 
-	tRelaxedRate := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketRate, 0)
-	tRelaxedCapacity := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketCapacity, 0)
+	tRelaxedRate := arg.TriggerRelaxedBucketRate
+	tRelaxedCapacity := arg.TriggerRelaxedBucketCapacity
 	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
 
-	tStrictRate := parseFloat64(args, constants.KvTriggerTraceStrictBucketRate, 0)
-	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
+	tStrictRate := arg.TriggerStrictBucketRate
+	tStrictCapacity := arg.TriggerStrictBucketCapacity
 	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
 
 	ns.MergeLocalSetting()
@@ -342,23 +355,23 @@ func shouldSample(sampleRate int) bool {
 	return sampleRate == maxSamplingRate || rand.RandIntn(maxSamplingRate) <= sampleRate
 }
 
-func flagStringToBin(flagString string) settingFlag {
-	flags := settingFlag(0)
-	if flagString != "" {
-		for _, s := range strings.Split(flagString, ",") {
+func flagStringToBin(flags string) settingFlag {
+	result := settingFlag(0)
+	if flags != "" {
+		for _, s := range strings.Split(flags, ",") {
 			switch s {
 			case "OVERRIDE":
-				flags |= FlagOverride
+				result |= FlagOverride
 			case "SAMPLE_START":
-				flags |= FlagSampleStart
+				result |= FlagSampleStart
 			case "SAMPLE_THROUGH":
-				flags |= FlagSampleThrough
+				result |= FlagSampleThrough
 			case "SAMPLE_THROUGH_ALWAYS":
-				flags |= FlagSampleThroughAlways
+				result |= FlagSampleThroughAlways
 			case "TRIGGER_TRACE":
-				flags |= FlagTriggerTrace
+				result |= FlagTriggerTrace
 			}
 		}
 	}
-	return flags
+	return result
 }

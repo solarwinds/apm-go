@@ -34,20 +34,6 @@ const (
 )
 
 const (
-	KvSignatureKey                      = "SignatureKey"
-	KvBucketCapacity                    = "BucketCapacity"
-	KvBucketRate                        = "BucketRate"
-	KvTriggerTraceRelaxedBucketCapacity = "TriggerRelaxedBucketCapacity"
-	KvTriggerTraceRelaxedBucketRate     = "TriggerRelaxedBucketRate"
-	KvTriggerTraceStrictBucketCapacity  = "TriggerStrictBucketCapacity"
-	KvTriggerTraceStrictBucketRate      = "TriggerStrictBucketRate"
-	KvMetricsFlushInterval              = "MetricsFlushInterval"
-	KvEventsFlushInterval               = "EventsFlushInterval"
-	KvMaxTransactions                   = "MaxTransactions"
-	KvMaxCustomMetrics                  = "MaxCustomMetrics"
-)
-
-const (
 	SwTransactionNameAttribute = "sw.transaction"
 	UamsClientIdAttribute      = "sw.uams.client.id"
 )

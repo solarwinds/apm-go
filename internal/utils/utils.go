@@ -17,15 +17,12 @@ package utils
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
-	"math"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
 
-	"github.com/solarwinds/apm-go/internal/constants"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -136,64 +133,6 @@ func IsHigherOrEqualGoVersion(version string) bool {
 		}
 	}
 	return true
-}
-
-// ArgsToMap uses settings as float/int/bytes to create a map of string keys
-// to bytes, for usability by oboe UpdateSetting.
-func ArgsToMap(capacity, ratePerSec, tRCap, tRRate, tSCap, tSRate float64,
-	metricsFlushInterval, maxTransactions int, token []byte) map[string][]byte {
-	args := make(map[string][]byte)
-
-	if capacity > -1 {
-		bits := math.Float64bits(capacity)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvBucketCapacity] = bytes
-	}
-	if ratePerSec > -1 {
-		bits := math.Float64bits(ratePerSec)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvBucketRate] = bytes
-	}
-	if tRCap > -1 {
-		bits := math.Float64bits(tRCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvTriggerTraceRelaxedBucketCapacity] = bytes
-	}
-	if tRRate > -1 {
-		bits := math.Float64bits(tRRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvTriggerTraceRelaxedBucketRate] = bytes
-	}
-	if tSCap > -1 {
-		bits := math.Float64bits(tSCap)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvTriggerTraceStrictBucketCapacity] = bytes
-	}
-	if tSRate > -1 {
-		bits := math.Float64bits(tSRate)
-		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, bits)
-		args[constants.KvTriggerTraceStrictBucketRate] = bytes
-	}
-	if metricsFlushInterval > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(metricsFlushInterval))
-		args[constants.KvMetricsFlushInterval] = bytes
-	}
-	if maxTransactions > -1 {
-		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, uint32(maxTransactions))
-		args[constants.KvMaxTransactions] = bytes
-	}
-
-	args[constants.KvSignatureKey] = token
-
-	return args
 }
 
 // SafeBuffer is goroutine-safe buffer. It is for internal test use only.

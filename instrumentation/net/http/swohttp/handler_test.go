@@ -15,10 +15,13 @@
 package swohttp
 
 import (
+	"os"
+	"regexp"
+
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/swo"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"regexp"
 
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +37,21 @@ const (
 // TODO future: we should figure out a way to mock oboe so we can test for sampled == 01
 var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-00\z`)
 
+func setupTest(t *testing.T) func() {
+	require.NoError(t, os.Setenv("SW_APM_SERVICE_KEY", "token:service-name"))
+	require.NoError(t, os.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams,k8s"))
+
+	config.Load()
+
+	return func() {
+		os.Unsetenv("SW_APM_SERVICE_KEY")
+		os.Unsetenv("SW_APM_DISABLED_RESOURCE_DETECTORS")
+	}
+}
+
 func TestHandlerNoXOptsResponse(t *testing.T) {
+	defer setupTest(t)()
+
 	cb, err := swo.Start()
 	require.NoError(t, err)
 	defer cb()
@@ -46,6 +63,8 @@ func TestHandlerNoXOptsResponse(t *testing.T) {
 }
 
 func TestHandlerWithXOptsResponse(t *testing.T) {
+	defer setupTest(t)()
+
 	cb, err := swo.Start()
 	require.NoError(t, err)
 	defer cb()

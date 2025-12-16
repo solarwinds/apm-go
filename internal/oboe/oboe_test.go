@@ -15,16 +15,75 @@
 package oboe
 
 import (
-	"github.com/solarwinds/apm-go/internal/oboetestutils"
+	"testing"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 var (
 	sampledSwState   = w3cfmt.ParseSwTraceState("0123456789abcdef-01")
 	unsampledSwState = w3cfmt.ParseSwTraceState("0123456789abcdef-00")
 )
+
+func GetDefaultSettingForTest() SettingsUpdateArgs {
+	return SettingsUpdateArgs{
+		Flags:                        "SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE",
+		Value:                        1000000,
+		Ttl:                          120 * time.Second,
+		TriggerToken:                 []byte("token"),
+		BucketCapacity:               1000000,
+		BucketRate:                   1000000,
+		MetricsFlushInterval:         -1,
+		TriggerRelaxedBucketCapacity: 1000000,
+		TriggerRelaxedBucketRate:     1000000,
+		TriggerStrictBucketCapacity:  1000000,
+		TriggerStrictBucketRate:      1000000,
+	}
+}
+
+func (settings SettingsUpdateArgs) WithSampleThrough() SettingsUpdateArgs {
+	settings.Flags = "SAMPLE_START,SAMPLE_THROUGH,TRIGGER_TRACE"
+	return settings
+}
+
+func (settings SettingsUpdateArgs) WithDisabled() SettingsUpdateArgs {
+	settings.Flags = ""
+	settings.BucketCapacity = 0
+	settings.BucketRate = 0
+	settings.TriggerRelaxedBucketCapacity = 1
+	settings.TriggerRelaxedBucketRate = 1
+	settings.TriggerStrictBucketCapacity = 1
+	settings.TriggerStrictBucketRate = 1
+	return settings
+}
+
+func (settings SettingsUpdateArgs) WithTriggerTraceOnly() SettingsUpdateArgs {
+	settings.Flags = "TRIGGER_TRACE"
+	settings.Value = 0
+	settings.BucketCapacity = 0
+	settings.BucketRate = 0
+	return settings
+}
+
+func (settings SettingsUpdateArgs) WithNoTriggerTrace() SettingsUpdateArgs {
+	settings.Flags = "SAMPLE_START,SAMPLE_THROUGH_ALWAYS"
+	settings.TriggerRelaxedBucketCapacity = 0
+	settings.TriggerRelaxedBucketRate = 0
+	settings.TriggerStrictBucketCapacity = 0
+	settings.TriggerStrictBucketRate = 0
+	return settings
+}
+
+func (settings SettingsUpdateArgs) WithLimitedTriggerTrace() SettingsUpdateArgs {
+	settings.Flags = "SAMPLE_START,SAMPLE_THROUGH_ALWAYS,TRIGGER_TRACE"
+	settings.TriggerRelaxedBucketCapacity = 1
+	settings.TriggerRelaxedBucketRate = 1
+	settings.TriggerStrictBucketCapacity = 1
+	settings.TriggerStrictBucketRate = 1
+	return settings
+}
 
 func TestOboeSampleRequestSettingsUnavailable(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
@@ -39,7 +98,7 @@ func TestOboeSampleRequestSettingsUnavailable(t *testing.T) {
 func TestOboeSampleRequestSettingsDisabled(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddDisabled(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithDisabled())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -56,7 +115,7 @@ func TestOboeSampleRequestSettingsDisabled(t *testing.T) {
 func TestOboeSampleRequest(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
@@ -74,7 +133,7 @@ func TestOboeSampleRequest(t *testing.T) {
 func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(true, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -92,7 +151,7 @@ func TestOboeSampleRequestContinuedUnsampledSwState(t *testing.T) {
 func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddTriggerTraceOnly(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithTriggerTraceOnly())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -110,7 +169,7 @@ func TestOboeSampleRequestNoTTGivenButReporterIsTTOnly(t *testing.T) {
 func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(false, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         true,
@@ -128,7 +187,7 @@ func TestOboeSampleRequestUnsampledSwState(t *testing.T) {
 func TestOboeSampleRequestThrough(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddSampleThrough(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithSampleThrough())
 	dec := o.SampleRequest(true, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
@@ -146,7 +205,7 @@ func TestOboeSampleRequestThrough(t *testing.T) {
 func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
 	ttMode := ModeTriggerTraceNotPresent
 	o := NewOboe()
-	oboetestutils.AddSampleThrough(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithSampleThrough())
 	dec := o.SampleRequest(true, "url", ttMode, unsampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -166,7 +225,7 @@ func TestOboeSampleRequestThroughUnsampled(t *testing.T) {
 func TestOboeSampleRequestRelaxedTT(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
@@ -184,7 +243,7 @@ func TestOboeSampleRequestRelaxedTT(t *testing.T) {
 func TestOboeSampleRequestStrictTT(t *testing.T) {
 	ttMode := ModeStrictTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         true,
@@ -202,7 +261,7 @@ func TestOboeSampleRequestStrictTT(t *testing.T) {
 func TestOboeSampleRequestRelaxedTTDisabled(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddNoTriggerTrace(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithNoTriggerTrace())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -220,7 +279,7 @@ func TestOboeSampleRequestRelaxedTTDisabled(t *testing.T) {
 func TestOboeSampleRequestStrictTTDisabled(t *testing.T) {
 	ttMode := ModeStrictTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddNoTriggerTrace(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithNoTriggerTrace())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
@@ -238,7 +297,7 @@ func TestOboeSampleRequestStrictTTDisabled(t *testing.T) {
 func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 	ttMode := ModeRelaxedTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddLimitedTriggerTrace(o)
+	o.UpdateSetting(GetDefaultSettingForTest().WithLimitedTriggerTrace())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	// We expect the first TT to go through
 	expected := SampleDecision{
@@ -269,7 +328,7 @@ func TestOboeSampleRequestRelaxedTTLimited(t *testing.T) {
 func TestOboeSampleRequestInvalidTT(t *testing.T) {
 	ttMode := ModeInvalidTriggerTrace
 	o := NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(GetDefaultSettingForTest())
 	dec := o.SampleRequest(false, "url", ttMode, sampledSwState)
 	expected := SampleDecision{
 		trace:         false,
