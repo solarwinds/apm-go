@@ -126,6 +126,7 @@ func TestGRPCReporter(t *testing.T) {
 	defer cancel3()
 
 	// stop test reporter
+	o.RemoveSetting()
 	server.Stop()
 
 	// assert data received
@@ -519,6 +520,7 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	time.Sleep(time.Second)
 
+	o.RemoveSetting()
 	r.setReady(false)
 
 	require.False(t, r.isReady())
