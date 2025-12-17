@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 )
 
 type settingLambdaFromFile struct {
@@ -37,6 +38,22 @@ type settingArguments struct {
 	TriggerRelaxedBucketRate     float64 `json:"TriggerRelaxedBucketRate"`
 	TriggerStrictBucketCapacity  float64 `json:"TriggerStrictBucketCapacity"`
 	TriggerStrictBucketRate      float64 `json:"TriggerStrictBucketRate"`
+}
+
+func (s *settingLambdaFromFile) ToSettingsUpdateArgs() SettingsUpdateArgs {
+	return SettingsUpdateArgs{
+		Flags:                        s.Flags,
+		Value:                        s.Value,
+		Ttl:                          time.Second * time.Duration(s.Ttl),
+		BucketCapacity:               s.Arguments.BucketCapacity,
+		BucketRate:                   s.Arguments.BucketRate,
+		MetricsFlushInterval:         s.Arguments.MetricsFlushInterval,
+		TriggerRelaxedBucketCapacity: s.Arguments.TriggerRelaxedBucketCapacity,
+		TriggerRelaxedBucketRate:     s.Arguments.TriggerRelaxedBucketRate,
+		TriggerStrictBucketCapacity:  s.Arguments.TriggerStrictBucketCapacity,
+		TriggerStrictBucketRate:      s.Arguments.TriggerStrictBucketRate,
+		TriggerToken:                 []byte{},
+	}
 }
 
 // newSettingLambdaFromFile unmarshals sampling settings from a JSON file at a

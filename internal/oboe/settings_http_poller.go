@@ -125,20 +125,7 @@ func (sp *settingsPoller) getAndUpdateSettings(ready chan bool) {
 	settings, err := sp.getSettings()
 	if err == nil {
 		log.Debugf("Retrieved sampling settings: %+v", settings)
-		sp.oboe.UpdateSetting(
-			SettingsUpdateArgs{
-				Flags:                        settings.Flags,
-				Value:                        settings.Value,
-				Ttl:                          time.Second * time.Duration(settings.Ttl),
-				BucketCapacity:               settings.Arguments.BucketCapacity,
-				BucketRate:                   settings.Arguments.BucketRate,
-				MetricsFlushInterval:         settings.Arguments.MetricsFlushInterval,
-				TriggerRelaxedBucketCapacity: settings.Arguments.TriggerRelaxedBucketCapacity,
-				TriggerRelaxedBucketRate:     settings.Arguments.TriggerRelaxedBucketRate,
-				TriggerStrictBucketCapacity:  settings.Arguments.TriggerStrictBucketCapacity,
-				TriggerStrictBucketRate:      settings.Arguments.TriggerStrictBucketRate,
-			},
-		)
+		sp.oboe.UpdateSetting(settings.ToSettingsUpdateArgs())
 	} else if errors.Is(err, config.ErrInvalidServiceKey) {
 		log.Errorf("invalid service key, shutting down sampling settings poller: %v", err)
 		sp.Shutdown()
