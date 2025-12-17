@@ -30,7 +30,7 @@ const (
 	defaultSettingsTimeoutInterval = 10 * time.Second
 )
 
-type settingsPoller struct {
+type settingsUpdater struct {
 	updateInterval  time.Duration
 	timeoutInterval time.Duration
 	done            chan struct{}
@@ -39,15 +39,15 @@ type settingsPoller struct {
 	settingsService *settingsService
 }
 
-type SettingsPoller interface {
+type SettingsUpdater interface {
 	Start()
 	Shutdown()
 }
 
-func NewSettingsPoller(o Oboe) (SettingsPoller, error) {
+func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
 	if !config.GetEnabled() {
 		log.Info("SolarWinds Observability APM agent is disabled. Settings are not polled from the server.")
-		return newNullSettingsPoller(), nil
+		return newNullSettingsUpdater(), nil
 	}
 
 	parsedServiceKey, ok := config.ParsedServiceKey()
@@ -55,7 +55,7 @@ func NewSettingsPoller(o Oboe) (SettingsPoller, error) {
 		return nil, config.ErrInvalidServiceKey
 	}
 
-	return &settingsPoller{
+	return &settingsUpdater{
 		updateInterval:  defaultSettingsUpdateInterval,
 		timeoutInterval: defaultSettingsTimeoutInterval,
 		done:            make(chan struct{}),
@@ -73,15 +73,15 @@ func getBaseURL() string {
 	return fmt.Sprintf("https://%s", host)
 }
 
-func (sp *settingsPoller) Start() {
-	go sp.run()
+func (su *settingsUpdater) Start() {
+	go su.run()
 }
 
-func (sp *settingsPoller) run() {
+func (su *settingsUpdater) run() {
 	defer log.Info("http settings poller goroutine exiting.")
 
 	updateTimer := time.NewTimer(0) // Execute immediately on startup
-	timeoutTimer := time.NewTimer(sp.timeoutInterval)
+	timeoutTimer := time.NewTimer(su.timeoutInterval)
 	defer func() {
 		updateTimer.Stop()
 		timeoutTimer.Stop()
@@ -95,61 +95,61 @@ func (sp *settingsPoller) run() {
 
 	for {
 		select {
-		case <-sp.done:
+		case <-su.done:
 			return
 		case <-updateTimer.C:
 			// Only start new execution if previous one has completed
 			select {
 			case <-updateReady:
-				go sp.getAndUpdateSettings(updateReady)
+				go su.getAndUpdateSettings(updateReady)
 			default:
 				// Previous execution still running, skip this tick
 			}
-			updateTimer.Reset(sp.updateInterval)
+			updateTimer.Reset(su.updateInterval)
 		case <-timeoutTimer.C:
 			// Only start new execution if previous one has completed
 			select {
 			case <-timeoutReady:
-				go sp.timeoutSettings(timeoutReady)
+				go su.timeoutSettings(timeoutReady)
 			default:
 				// Previous execution still running, skip this tick
 			}
-			timeoutTimer.Reset(sp.timeoutInterval)
+			timeoutTimer.Reset(su.timeoutInterval)
 		}
 	}
 }
 
-func (sp *settingsPoller) getAndUpdateSettings(ready chan bool) {
+func (su *settingsUpdater) getAndUpdateSettings(ready chan bool) {
 	defer func() { ready <- true }()
 
-	settings, err := sp.getSettings()
+	settings, err := su.getSettings()
 	if err == nil {
 		log.Debugf("Retrieved sampling settings: %+v", settings)
-		sp.oboe.UpdateSetting(settings.ToSettingsUpdateArgs())
+		su.oboe.UpdateSetting(settings.ToSettingsUpdateArgs())
 	} else if errors.Is(err, config.ErrInvalidServiceKey) {
-		log.Errorf("invalid service key, shutting down sampling settings poller: %v", err)
-		sp.Shutdown()
+		log.Errorf("invalid service key, shutting down sampling settings updater: %v", err)
+		su.Shutdown()
 	} else {
 		log.Warningf("failed to retrieve sampling settings: %v", err)
 	}
 }
 
-func (sp *settingsPoller) getSettings() (*httpSettings, error) {
-	return sp.settingsService.getSettings()
+func (su *settingsUpdater) getSettings() (*httpSettings, error) {
+	return su.settingsService.getSettings()
 }
 
-func (sp *settingsPoller) timeoutSettings(ready chan bool) {
+func (su *settingsUpdater) timeoutSettings(ready chan bool) {
 	defer func() { ready <- true }()
 
-	sp.oboe.CheckSettingsTimeout()
-	if !sp.oboe.HasDefaultSetting() {
+	su.oboe.CheckSettingsTimeout()
+	if !su.oboe.HasDefaultSetting() {
 		log.Warning("sampling settings expired, APM library may not be functioning correctly")
 	}
 }
 
 // Shutdown stops the settings poller gracefully.
-func (sp *settingsPoller) Shutdown() {
-	sp.shutdownOnce.Do(func() {
-		close(sp.done)
+func (su *settingsUpdater) Shutdown() {
+	su.shutdownOnce.Do(func() {
+		close(su.done)
 	})
 }

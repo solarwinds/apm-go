@@ -265,23 +265,13 @@ func (o *oboe) UpdateSetting(arg SettingsUpdateArgs) {
 	ns.originalFlags = ns.flags
 	ns.value = adjustSampleRate(arg.Value)
 	ns.ttl = arg.Ttl
-
 	ns.TriggerToken = arg.TriggerToken
 
-	rate := arg.BucketRate
-	capacity := arg.BucketCapacity
-	ns.bucket.setRateCap(rate, capacity)
-
-	tRelaxedRate := arg.TriggerRelaxedBucketRate
-	tRelaxedCapacity := arg.TriggerRelaxedBucketCapacity
-	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
-
-	tStrictRate := arg.TriggerStrictBucketRate
-	tStrictCapacity := arg.TriggerStrictBucketCapacity
-	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
+	ns.bucket.setRateCap(arg.BucketRate, arg.BucketCapacity)
+	ns.triggerTraceRelaxedBucket.setRateCap(arg.TriggerRelaxedBucketRate, arg.TriggerRelaxedBucketCapacity)
+	ns.triggerTraceStrictBucket.setRateCap(arg.TriggerStrictBucketRate, arg.TriggerStrictBucketCapacity)
 
 	ns.MergeLocalSetting()
-
 	o.settings.Store(ns)
 }
 

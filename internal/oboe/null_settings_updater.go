@@ -14,16 +14,16 @@
 
 package oboe
 
-type nullSettingsPoller struct{}
+type nullSettingsUpdater struct{}
 
-func newNullSettingsPoller() SettingsPoller {
-	return &nullSettingsPoller{}
+func newNullSettingsUpdater() SettingsUpdater {
+	return &nullSettingsUpdater{}
 }
 
-func (nsp *nullSettingsPoller) Start() {
+func (nsu *nullSettingsUpdater) Start() {
 	// no-op
 }
 
-func (nsp *nullSettingsPoller) Shutdown() {
+func (nsu *nullSettingsUpdater) Shutdown() {
 	// no-op
 }

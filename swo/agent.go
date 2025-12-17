@@ -48,12 +48,12 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	legacyRegistry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 
-	settingsPoller, err := oboe.NewSettingsPoller(o)
+	settingsUpdater, err := oboe.NewSettingsUpdater(o)
 	if err != nil {
-		log.Error("Failed to create settings poller, ", err)
+		log.Error("Failed to create settings updater, ", err)
 		return func() {}, err
 	}
-	settingsPoller.Start()
+	settingsUpdater.Start()
 
 	ctx := context.Background()
 	conn, err := reporter.CreateGrpcConnection()
@@ -113,7 +113,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		if err != nil {
 			log.Error("Failed to Shutdown background reporter, ", err)
 		}
-		settingsPoller.Shutdown()
+		settingsUpdater.Shutdown()
 		if err = tp.Shutdown(context.Background()); err != nil {
 			stdlog.Fatal(err)
 		}
