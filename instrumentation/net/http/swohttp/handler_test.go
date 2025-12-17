@@ -44,8 +44,12 @@ func setupTest(t *testing.T) func() {
 	config.Load()
 
 	return func() {
-		os.Unsetenv("SW_APM_SERVICE_KEY")
-		os.Unsetenv("SW_APM_DISABLED_RESOURCE_DETECTORS")
+		if err := os.Unsetenv("SW_APM_SERVICE_KEY"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Unsetenv("SW_APM_DISABLED_RESOURCE_DETECTORS"); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

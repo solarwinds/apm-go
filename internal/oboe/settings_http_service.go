@@ -68,7 +68,11 @@ func (s *settingsService) getSettings() (*httpSettings, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Warningf("failed to close response body querying settings: %v", closeErr)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return nil, config.ErrInvalidServiceKey

@@ -16,10 +16,7 @@ package oboe
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
-	"fmt"
-	"math"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -244,27 +241,6 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 		bucketRate,
 		diceRolled,
 	}
-}
-
-func bytesToFloat64(b []byte) (float64, error) {
-	if len(b) != 8 {
-		return -1, fmt.Errorf("invalid length: %d", len(b))
-	}
-	return math.Float64frombits(binary.LittleEndian.Uint64(b)), nil
-}
-
-func parseFloat64(args map[string][]byte, key string, fb float64) float64 {
-	ret := fb
-	if c, ok := args[key]; ok {
-		v, err := bytesToFloat64(c)
-		if err == nil && v >= 0 {
-			ret = v
-			log.Debugf("parsed %s=%f", key, v)
-		} else {
-			log.Warningf("parse error: %s=%f err=%v fallback=%f", key, v, err, fb)
-		}
-	}
-	return ret
 }
 
 func adjustSampleRate(rate int64) int {
