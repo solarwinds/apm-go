@@ -51,9 +51,6 @@ type grpcReporter struct {
 	eventMessages  chan []byte // channel for event messages (sent from agent)
 	statusMessages chan []byte // channel for status messages (sent from agent)
 
-	// The reporter is considered ready if there is a valid default setting for sampling.
-	// It should be accessed atomically.
-	ready int32
 	// The condition variable to notify those who are waiting for the reporter becomes ready
 	cond *sync.Cond
 

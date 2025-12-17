@@ -110,7 +110,9 @@ func waitForServer(t *testing.T, addr string, timeout time.Duration) {
 		case <-ticker.C:
 			conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
 			if err == nil {
-				conn.Close()
+				if closeErr := conn.Close(); closeErr != nil {
+					t.Logf("warning: failed to close test connection: %v", closeErr)
+				}
 				return
 			}
 		}
