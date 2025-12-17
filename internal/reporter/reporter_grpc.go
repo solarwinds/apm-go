@@ -165,6 +165,8 @@ func (r *grpcReporter) start() {
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
+
+	r.setReady(true)
 }
 
 // ShutdownNow stops the reporter immediately.

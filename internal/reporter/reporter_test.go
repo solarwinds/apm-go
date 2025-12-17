@@ -94,8 +94,6 @@ func TestGRPCReporter(t *testing.T) {
 	defer cancel1()
 	require.False(t, r.WaitForReady(ctxTm1))
 
-	// The reporter becomes ready after it has got the default setting.
-	r.setReady(true)
 	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel2()
 	require.True(t, r.WaitForReady(ctxTm2))
@@ -120,8 +118,6 @@ func TestGRPCReporter(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	// The reporter becomes not ready after the default setting has been deleted
-	o.RemoveSetting()
 	r.setReady(false)
 
 	require.False(t, r.isReady())
@@ -523,8 +519,6 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	time.Sleep(time.Second)
 
-	// The reporter becomes not ready after the default setting has been deleted
-	o.RemoveSetting()
 	r.setReady(false)
 
 	require.False(t, r.isReady())
