@@ -25,7 +25,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
 
@@ -70,9 +69,6 @@ type grpcReporter struct {
 
 	// metrics
 	registry metrics.LegacyRegistry
-
-	// oboe
-	oboe oboe.Oboe
 }
 
 // gRPC reporter errors
@@ -92,7 +88,7 @@ func getProxyCertPath() string {
 
 // initializes a new GRPC reporter from scratch (called once on program startup)
 // returns	GRPC Reporter object
-func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
+func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry metrics.LegacyRegistry) Reporter {
 	r := &grpcReporter{
 		conn: grpcConn,
 
@@ -106,7 +102,6 @@ func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry 
 		done: make(chan struct{}),
 
 		registry: registry,
-		oboe:     o,
 	}
 
 	r.start()
@@ -165,8 +160,6 @@ func (r *grpcReporter) start() {
 	if !periodicTasksDisabled {
 		go r.periodicTasks()
 	}
-
-	r.setReady(true)
 }
 
 // ShutdownNow stops the reporter immediately.
@@ -201,7 +194,6 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 			close(r.done)
 
 			r.closeConns()
-			r.setReady(false)
 			host.Stop()
 			uams.Stop()
 			log.Warning("SolarWinds Observability APM agent is stopped.")
@@ -221,49 +213,6 @@ func (r *grpcReporter) Closed() bool {
 	case <-r.done:
 		return true
 	default:
-		return false
-	}
-}
-
-func (r *grpcReporter) setReady(ready bool) {
-	var s int32
-	if ready {
-		s = 1
-	}
-	atomic.StoreInt32(&r.ready, s)
-}
-
-func (r *grpcReporter) isReady() bool {
-	return atomic.LoadInt32(&r.ready) == 1
-}
-
-// WaitForReady waits until the reporter becomes ready or the context is canceled.
-//
-// The reporter is still considered `not ready` if (in rare cases) the default
-// setting is retrieved from the collector but expires after the TTL, and no new
-// setting is fetched.
-func (r *grpcReporter) WaitForReady(ctx context.Context) bool {
-	if r.isReady() {
-		return true
-	}
-
-	ready := make(chan struct{})
-	var e int32
-
-	go func(ch chan struct{}, exit *int32) {
-		r.cond.L.Lock()
-		for !r.isReady() && (atomic.LoadInt32(exit) != 1) {
-			r.cond.Wait()
-		}
-		r.cond.L.Unlock()
-		close(ch)
-	}(ready, &e)
-
-	select {
-	case <-ready:
-		return true
-	case <-ctx.Done():
-		atomic.StoreInt32(&e, 1)
 		return false
 	}
 }

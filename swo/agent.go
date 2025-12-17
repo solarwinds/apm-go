@@ -61,7 +61,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		log.Error("Failed to create gRPC connection to SWO APM", err)
 		return func() {}, err
 	}
-	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry, o)
+	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry)
 	if err != nil {
 		log.Error("Failed to configure and start background reporter", err)
 		return func() {}, err

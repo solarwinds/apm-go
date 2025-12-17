@@ -101,7 +101,6 @@ func (e *exporter) setSpanLevelAoAttributes(evt reporter.Event, s sdktrace.ReadO
 }
 
 func (e *exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	e.r.WaitForReady(ctx)
 	for _, s := range spans {
 		e.exportSpan(ctx, s)
 	}

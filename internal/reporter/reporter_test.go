@@ -30,7 +30,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/reporter/mocks"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/utils"
@@ -76,28 +75,16 @@ func TestGRPCReporter(t *testing.T) {
 	config.Load()
 	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
-	time.Sleep(100 * time.Millisecond)
 
 	// set gRPC reporter
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
+	setEnv("SW_APM_EVENTS_FLUSH_INTERVAL", "1")
 	config.Load()
 	registry := metrics.NewLegacyRegistry(false)
-	o := oboe.NewOboe()
 	grpcConn, err := CreateGrpcConnection()
 	require.NoError(t, err)
-	r := newGRPCReporter(grpcConn, "myservice", registry, o).(*grpcReporter)
-
-	// Test WaitForReady
-	// The reporter is not ready when there is no default setting.
-	ctxTm1, cancel1 := context.WithTimeout(context.Background(), 0)
-	defer cancel1()
-	require.False(t, r.WaitForReady(ctxTm1))
-
-	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel2()
-	require.True(t, r.WaitForReady(ctxTm2))
-	require.True(t, r.isReady())
+	r := newGRPCReporter(grpcConn, "myservice", registry).(*grpcReporter)
 
 	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
@@ -116,17 +103,13 @@ func TestGRPCReporter(t *testing.T) {
 
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	time.Sleep(time.Second)
+	// Wait for messages to be received by the server
+	server.waitForMessages(t, "events", 1, 10*time.Second)
+	server.waitForMessages(t, "status", 1, 10*time.Second)
 
-	r.setReady(false)
-
-	require.False(t, r.isReady())
-	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
-	require.False(t, r.WaitForReady(ctxTm3))
-	defer cancel3()
+	r.ShutdownNow()
 
 	// stop test reporter
-	o.RemoveSetting()
 	server.Stop()
 
 	// assert data received
@@ -157,17 +140,15 @@ func TestShutdownGRPCReporter(t *testing.T) {
 	setEnv("SW_APM_DEBUG_LEVEL", "debug")
 	addr := "localhost:4567"
 	server := StartTestGRPCServer(t, addr)
-	time.Sleep(100 * time.Millisecond)
 
 	// set gRPC reporter
 	setEnv("SW_APM_COLLECTOR", addr)
 	setEnv("SW_APM_TRUSTEDPATH", testCertFile)
 	config.Load()
 	registry := metrics.NewLegacyRegistry(false)
-	o := oboe.NewOboe()
 	grpcConn, err := CreateGrpcConnection()
 	require.NoError(t, err)
-	r := newGRPCReporter(grpcConn, "myservice", registry, o).(*grpcReporter)
+	r := newGRPCReporter(grpcConn, "myservice", registry).(*grpcReporter)
 	r.ShutdownNow()
 
 	require.Equal(t, true, r.Closed())
@@ -220,7 +201,6 @@ func TestInvalidKey(t *testing.T) {
 
 	// start test gRPC server
 	server := StartTestGRPCServer(t, addr)
-	time.Sleep(100 * time.Millisecond)
 
 	// set gRPC reporter
 	config.Load()
@@ -228,10 +208,9 @@ func TestInvalidKey(t *testing.T) {
 	log.SetLevel(log.INFO)
 	registry := metrics.NewLegacyRegistry(false)
 
-	o := oboe.NewOboe()
 	grpcConn, err := CreateGrpcConnection()
 	require.NoError(t, err)
-	r := newGRPCReporter(grpcConn, "myservice", registry, o).(*grpcReporter)
+	r := newGRPCReporter(grpcConn, "myservice", registry).(*grpcReporter)
 	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("hello-from-invalid-key")
 	require.NoError(t, r.ReportEvent(ev1))
@@ -438,10 +417,9 @@ func TestInitReporter(t *testing.T) {
 	setEnv("SW_APM_ENABLED", "false")
 	config.Load()
 	registry := metrics.NewLegacyRegistry(false)
-	o := oboe.NewOboe()
 	grpcConn, err := CreateGrpcConnection()
 	require.NoError(t, err)
-	r := initReporter(grpcConn, resource.Empty(), registry, o)
+	r := initReporter(grpcConn, resource.Empty(), registry)
 	require.IsType(t, &nullReporter{}, r)
 
 	// Test enable agent
@@ -450,7 +428,7 @@ func TestInitReporter(t *testing.T) {
 	config.Load()
 	require.True(t, config.GetEnabled())
 
-	r = initReporter(grpcConn, resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry, o)
+	r = initReporter(grpcConn, resource.NewWithAttributes("", semconv.ServiceName("my service name")), registry)
 	require.IsType(t, &grpcReporter{}, r)
 	require.Equal(t, "my service name", r.GetServiceName())
 }
@@ -476,27 +454,12 @@ func testProxy(t *testing.T, proxyUrl string) {
 	config.Load()
 
 	server := StartTestGRPCServer(t, addr)
-	time.Sleep(100 * time.Millisecond)
 
 	registry := metrics.NewLegacyRegistry(false)
 
-	o := oboe.NewOboe()
 	grpcConn, err := CreateGrpcConnection()
 	require.NoError(t, err)
-	r := newGRPCReporter(grpcConn, "myservice", registry, o).(*grpcReporter)
-
-	// Test WaitForReady
-	// The reporter is not ready when there is no default setting.
-	ctxTm1, cancel1 := context.WithTimeout(context.Background(), 0)
-	defer cancel1()
-	require.False(t, r.WaitForReady(ctxTm1))
-
-	// The reporter becomes ready after it has got the default setting.
-	r.setReady(true)
-	ctxTm2, cancel2 := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel2()
-	require.True(t, r.WaitForReady(ctxTm2))
-	require.True(t, r.isReady())
+	r := newGRPCReporter(grpcConn, "myservice", registry).(*grpcReporter)
 
 	ev1 := CreateInfoEvent(validSpanContext, time.Now())
 	ev1.SetLayer("layer1")
@@ -518,15 +481,9 @@ func testProxy(t *testing.T, proxyUrl string) {
 
 	require.Equal(t, TestServiceKey, r.serviceKey.Load())
 
-	time.Sleep(time.Second)
-
-	o.RemoveSetting()
-	r.setReady(false)
-
-	require.False(t, r.isReady())
-	ctxTm3, cancel3 := context.WithTimeout(context.Background(), 0)
-	require.False(t, r.WaitForReady(ctxTm3))
-	defer cancel3()
+	// Wait for messages to be received by the server
+	server.waitForMessages(t, "events", 1, 2*time.Second)
+	server.waitForMessages(t, "status", 1, 2*time.Second)
 
 	// stop test reporter
 	server.Stop()
