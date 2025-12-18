@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -46,9 +47,9 @@ func TestSettingsUpdater_QueriesAndUpdatesSettings(t *testing.T) {
 		},
 	}
 
-	requestCount := 0
+	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		assert.Equal(t, "/v1/settings/"+serviceName+"/unknown", r.URL.Path)
 		assert.Equal(t, "Bearer "+token, r.Header.Get("Authorization"))
 
@@ -88,15 +89,15 @@ func TestSettingsUpdater_QueriesAndUpdatesSettings(t *testing.T) {
 	for !synchronized {
 		select {
 		case <-timeout:
-			t.Fatalf("timeout waiting for synchronization. requestCount=%d", requestCount)
+			t.Fatalf("timeout waiting for synchronization. requestCount=%d", requestCount.Load())
 		case <-ticker.C:
-			if requestCount > 0 {
+			if requestCount.Load() > 0 {
 				synchronized = true
 			}
 		}
 	}
 
-	assert.Equal(t, 1, requestCount, "HTTP server should have been called once")
+	assert.Equal(t, int32(1), requestCount.Load(), "HTTP server should have been called once")
 
 	storedSettings := o.GetSetting()
 	require.NotNil(t, storedSettings, "oboe should have stored settings")
