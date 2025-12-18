@@ -321,23 +321,23 @@ func shouldSample(sampleRate int) bool {
 	return sampleRate == maxSamplingRate || rand.RandIntn(maxSamplingRate) <= sampleRate
 }
 
-func flagStringToBin(flags string) settingFlag {
-	result := settingFlag(0)
-	if flags != "" {
-		for _, s := range strings.Split(flags, ",") {
+func flagStringToBin(flagString string) settingFlag {
+	flags := settingFlag(0)
+	if flagString != "" {
+		for s := range strings.SplitSeq(flagString, ",") {
 			switch s {
 			case "OVERRIDE":
-				result |= FlagOverride
+				flags |= FlagOverride
 			case "SAMPLE_START":
-				result |= FlagSampleStart
+				flags |= FlagSampleStart
 			case "SAMPLE_THROUGH":
-				result |= FlagSampleThrough
+				flags |= FlagSampleThrough
 			case "SAMPLE_THROUGH_ALWAYS":
-				result |= FlagSampleThroughAlways
+				flags |= FlagSampleThroughAlways
 			case "TRIGGER_TRACE":
-				result |= FlagTriggerTrace
+				flags |= FlagTriggerTrace
 			}
 		}
 	}
-	return result
+	return flags
 }

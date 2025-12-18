@@ -110,11 +110,11 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 		err := metricsPublisher.Shutdown()
 		if err != nil {
-			log.Error("Failed to Shutdown metrics publisher, ", err)
+			log.Error("Failed to shutdown metrics publisher: ", err)
 		}
 		err = backgroundReporter.Shutdown(ctx)
 		if err != nil {
-			log.Error("Failed to Shutdown background reporter, ", err)
+			log.Error("Failed to shutdown background reporter: ", err)
 		}
 		if err = tp.Shutdown(ctx); err != nil {
 			stdlog.Fatal(err)

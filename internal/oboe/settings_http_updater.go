@@ -62,11 +62,11 @@ func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
 
 func (su *settingsUpdater) Start(ctx context.Context) func() {
 	ctx, cancel := context.WithCancel(ctx)
-	go su.run(ctx)
+	go su.run(ctx, cancel)
 	return cancel
 }
 
-func (su *settingsUpdater) run(ctx context.Context) {
+func (su *settingsUpdater) run(ctx context.Context, cancel context.CancelFunc) {
 	defer log.Info("http settings updater exiting.")
 
 	updateTimer := time.NewTimer(0) // Execute immediately on startup
@@ -91,7 +91,12 @@ func (su *settingsUpdater) run(ctx context.Context) {
 			// Only start new execution if previous one has completed
 			select {
 			case <-updateReady:
-				go su.getAndUpdateSettings(ctx, updateReady)
+				go func() {
+					if !su.getAndUpdateSettings(ctx, updateReady) {
+						// Invalid service key - stop polling
+						cancel()
+					}
+				}()
 			default:
 				// Previous execution still running, skip this tick
 			}
@@ -109,18 +114,20 @@ func (su *settingsUpdater) run(ctx context.Context) {
 	}
 }
 
-func (su *settingsUpdater) getAndUpdateSettings(ctx context.Context, ready chan bool) {
+func (su *settingsUpdater) getAndUpdateSettings(ctx context.Context, ready chan bool) bool {
 	defer func() { ready <- true }()
 
 	settings, err := su.getSettings(ctx)
 	if err == nil {
 		log.Debugf("Retrieved sampling settings: %+v", settings)
 		su.oboe.UpdateSetting(settings.ToSettingsUpdateArgs())
+		return true
 	} else if errors.Is(err, config.ErrInvalidServiceKey) {
-		log.Errorf("invalid service key, cannot continue polling: %v", err)
-		// Context will be cancelled by caller
+		log.Errorf("invalid service key, stopping settings updater: %v", err)
+		return false
 	} else {
 		log.Warningf("failed to retrieve sampling settings: %v", err)
+		return true
 	}
 }
 
