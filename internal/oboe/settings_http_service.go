@@ -15,6 +15,7 @@
 package oboe
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,10 +55,10 @@ func newSettingsService(baseURL, serviceName, hostName, bearerToken string) *set
 	}
 }
 
-func (s *settingsService) getSettings() (*httpSettings, error) {
+func (s *settingsService) getSettings(ctx context.Context) (*httpSettings, error) {
 	requestUrl := s.buildURL()
 	log.Debugf("Fetching settings from URL: %s", requestUrl)
-	req, err := http.NewRequest(http.MethodGet, requestUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

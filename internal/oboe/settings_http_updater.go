@@ -15,10 +15,8 @@
 package oboe
 
 import (
+	"context"
 	"errors"
-	"fmt"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
@@ -33,15 +31,12 @@ const (
 type settingsUpdater struct {
 	updateInterval  time.Duration
 	timeoutInterval time.Duration
-	done            chan struct{}
-	shutdownOnce    sync.Once
 	oboe            Oboe
 	settingsService *settingsService
 }
 
 type SettingsUpdater interface {
-	Start()
-	Shutdown()
+	Start(ctx context.Context) func()
 }
 
 func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
@@ -55,30 +50,24 @@ func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
 		return nil, config.ErrInvalidServiceKey
 	}
 
+	settingsUrl := config.SettingsURL()
+
 	return &settingsUpdater{
 		updateInterval:  defaultSettingsUpdateInterval,
 		timeoutInterval: defaultSettingsTimeoutInterval,
-		done:            make(chan struct{}),
 		oboe:            o,
-		settingsService: newSettingsService(getBaseURL(), parsedServiceKey.ServiceName, "", parsedServiceKey.Token),
+		settingsService: newSettingsService(settingsUrl, parsedServiceKey.ServiceName, "", parsedServiceKey.Token),
 	}, nil
 }
 
-func getBaseURL() string {
-	collector := config.GetCollector()
-	host := collector
-	if idx := strings.LastIndex(collector, ":"); idx != -1 {
-		host = collector[:idx]
-	}
-	return fmt.Sprintf("https://%s", host)
+func (su *settingsUpdater) Start(ctx context.Context) func() {
+	ctx, cancel := context.WithCancel(ctx)
+	go su.run(ctx)
+	return cancel
 }
 
-func (su *settingsUpdater) Start() {
-	go su.run()
-}
-
-func (su *settingsUpdater) run() {
-	defer log.Info("http settings poller goroutine exiting.")
+func (su *settingsUpdater) run(ctx context.Context) {
+	defer log.Info("http settings updater exiting.")
 
 	updateTimer := time.NewTimer(0) // Execute immediately on startup
 	timeoutTimer := time.NewTimer(su.timeoutInterval)
@@ -95,13 +84,14 @@ func (su *settingsUpdater) run() {
 
 	for {
 		select {
-		case <-su.done:
+		case <-ctx.Done():
+			log.Infof("http settings updater requested to stop: %v", ctx.Err())
 			return
 		case <-updateTimer.C:
 			// Only start new execution if previous one has completed
 			select {
 			case <-updateReady:
-				go su.getAndUpdateSettings(updateReady)
+				go su.getAndUpdateSettings(ctx, updateReady)
 			default:
 				// Previous execution still running, skip this tick
 			}
@@ -119,23 +109,23 @@ func (su *settingsUpdater) run() {
 	}
 }
 
-func (su *settingsUpdater) getAndUpdateSettings(ready chan bool) {
+func (su *settingsUpdater) getAndUpdateSettings(ctx context.Context, ready chan bool) {
 	defer func() { ready <- true }()
 
-	settings, err := su.getSettings()
+	settings, err := su.getSettings(ctx)
 	if err == nil {
 		log.Debugf("Retrieved sampling settings: %+v", settings)
 		su.oboe.UpdateSetting(settings.ToSettingsUpdateArgs())
 	} else if errors.Is(err, config.ErrInvalidServiceKey) {
-		log.Errorf("invalid service key, shutting down sampling settings updater: %v", err)
-		su.Shutdown()
+		log.Errorf("invalid service key, cannot continue polling: %v", err)
+		// Context will be cancelled by caller
 	} else {
 		log.Warningf("failed to retrieve sampling settings: %v", err)
 	}
 }
 
-func (su *settingsUpdater) getSettings() (*httpSettings, error) {
-	return su.settingsService.getSettings()
+func (su *settingsUpdater) getSettings(ctx context.Context) (*httpSettings, error) {
+	return su.settingsService.getSettings(ctx)
 }
 
 func (su *settingsUpdater) timeoutSettings(ready chan bool) {
@@ -145,11 +135,4 @@ func (su *settingsUpdater) timeoutSettings(ready chan bool) {
 	if !su.oboe.HasDefaultSetting() {
 		log.Warning("sampling settings expired, APM library may not be functioning correctly")
 	}
-}
-
-// Shutdown stops the settings poller gracefully.
-func (su *settingsUpdater) Shutdown() {
-	su.shutdownOnce.Do(func() {
-		close(su.done)
-	})
 }

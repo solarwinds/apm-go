@@ -53,18 +53,19 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		log.Error("Failed to create settings updater, ", err)
 		return func() {}, err
 	}
-	settingsUpdater.Start()
 
 	ctx := context.Background()
+	stopSettingsUpdater := settingsUpdater.Start(ctx)
+
 	conn, err := reporter.CreateGrpcConnection()
 	if err != nil {
 		log.Error("Failed to create gRPC connection to SWO APM", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry)
 	if err != nil {
 		log.Error("Failed to configure and start background reporter", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	if conn != nil {
@@ -74,19 +75,19 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	exprtr, err := exporter.NewSpanExporter(ctx, backgroundReporter)
 	if err != nil {
 		log.Error("Failed to configure span exporter", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
 	err = metricsPublisher.ConfigureAndStart(ctx, legacyRegistry, conn, o, resrc)
 	if err != nil {
 		log.Error("Failed to configure and start metrics publisher", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 	config.Load()
 	proc := processor.NewInboundMetricsSpanProcessor(metricsPublisher.GetMetricsRegistry())
@@ -105,6 +106,8 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	otel.SetTracerProvider(tp)
 
 	return func() {
+		stopSettingsUpdater()
+
 		err := metricsPublisher.Shutdown()
 		if err != nil {
 			log.Error("Failed to Shutdown metrics publisher, ", err)
@@ -113,8 +116,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		if err != nil {
 			log.Error("Failed to Shutdown background reporter, ", err)
 		}
-		settingsUpdater.Shutdown()
-		if err = tp.Shutdown(context.Background()); err != nil {
+		if err = tp.Shutdown(ctx); err != nil {
 			stdlog.Fatal(err)
 		}
 	}, nil

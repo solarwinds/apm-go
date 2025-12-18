@@ -94,6 +94,9 @@ type Config struct {
 	// Collector defines the host and port of the SolarWinds Observability collector
 	Collector string `yaml:"Collector,omitempty" env:"SW_APM_COLLECTOR" default:"apm.collector.na-01.cloud.solarwinds.com:443"`
 
+	// SettingsURL defines the HTTP URL for fetching sampling settings
+	SettingsURL string
+
 	// ServiceKey defines the service key and service name
 	ServiceKey string `yaml:"ServiceKey,omitempty" env:"SW_APM_SERVICE_KEY"`
 
@@ -771,6 +774,21 @@ func (c *Config) GetCollector() string {
 		}
 	}
 	return target
+}
+
+func (c *Config) GetSettingsURL() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	if c.SettingsURL != "" {
+		return c.SettingsURL
+	}
+	collector := c.Collector
+	host := collector
+	if idx := strings.LastIndex(collector, ":"); idx != -1 {
+		host = collector[:idx]
+	}
+	return fmt.Sprintf("https://%s", host)
 }
 
 // GetServiceKey returns the service key

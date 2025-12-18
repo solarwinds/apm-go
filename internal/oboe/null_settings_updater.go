@@ -14,16 +14,16 @@
 
 package oboe
 
+import "context"
+
 type nullSettingsUpdater struct{}
 
 func newNullSettingsUpdater() SettingsUpdater {
 	return &nullSettingsUpdater{}
 }
 
-func (nsu *nullSettingsUpdater) Start() {
-	// no-op
-}
-
-func (nsu *nullSettingsUpdater) Shutdown() {
-	// no-op
+func (nsu *nullSettingsUpdater) Start(ctx context.Context) func() {
+	return func() {
+		// no-op
+	}
 }
