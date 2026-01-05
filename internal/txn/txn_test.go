@@ -16,7 +16,6 @@ package txn
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -109,9 +108,6 @@ func TestTransactionNamePrecedenceOrder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Ensure clean environment
-			os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
-
 			for k, v := range tt.envVars {
 				t.Setenv(k, v)
 			}
@@ -123,9 +119,6 @@ func TestTransactionNamePrecedenceOrder(t *testing.T) {
 }
 
 func TestDeriveTransactionName_PathParsing(t *testing.T) {
-	// Ensure clean environment
-	os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
-
 	pathTests := []struct {
 		name     string
 		path     string
@@ -189,9 +182,6 @@ func TestDeriveTransactionName_PathParsing(t *testing.T) {
 }
 
 func TestDeriveTransactionName_EdgeCases(t *testing.T) {
-	// Ensure clean environment
-	os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME")
-
 	t.Run("trims spaces from span name", func(t *testing.T) {
 		result := deriveTransactionName("  my transaction  ", nil)
 		require.Equal(t, "my transaction", result)
