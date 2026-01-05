@@ -25,12 +25,14 @@ const (
 	ExceptionTypeKey       = otelconv.ExceptionTypeKey
 	ExceptionStacktraceKey = otelconv.ExceptionStacktraceKey
 
+	FaaSNameKey = otelconv.FaaSNameKey
+
 	HTTPRequestMethodKey = otelconv.HTTPRequestMethodKey
 	HTTPRouteKey         = otelconv.HTTPRouteKey
 	HTTPStatusCodeKey    = otelconv.HTTPResponseStatusCodeKey
-	URLFullKey           = otelconv.URLFullKey
+	URLPathKey           = otelconv.URLPathKey
 
-	HTTPURLKey        = otelconv25.HTTPURLKey        // Deprecated in v1.26.0, use URLFullKey instead
+	HTTPTargetKey     = otelconv25.HTTPTargetKey     // Deprecated in v1.26.0, use URLPathKey instead
 	HTTPMethodKey     = otelconv25.HTTPMethodKey     // Deprecated in v1.26.0, use HTTPRequestMethodKey instead
 	HttpStatusCodeKey = otelconv25.HTTPStatusCodeKey // Deprecated in v1.26.0, use HTTPResponseStatusCodeKey instead
 

@@ -15,8 +15,7 @@
 package txn
 
 import (
-	"log"
-	"net/url"
+	"os"
 	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
@@ -36,40 +35,49 @@ func GetTransactionName(span sdktrace.ReadOnlySpan) string {
 }
 
 // deriveTransactionName returns transaction name from given span name and attributes, falling back to "unknown"
-func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
+func deriveTransactionName(spanName string, attrs []attribute.KeyValue) string {
+	// First priority: Check configuration
 	txnName := config.GetTransactionName()
-	if txnName == "" {
-		var httpRoute, httpUrl = "", ""
-		for _, attr := range attrs {
-			switch attr.Key {
-			case semconv.HTTPRouteKey:
-				httpRoute = attr.Value.AsString()
-			case semconv.URLFullKey:
-				httpUrl = attr.Value.AsString()
-			case semconv.HTTPURLKey:
-				httpUrl = attr.Value.AsString()
-			}
-		}
 
-		if httpRoute != "" {
-			txnName = httpRoute
-		} else if name != "" {
-			txnName = name
-		}
-		if httpUrl != "" && strings.TrimSpace(txnName) == "" {
-			parsed, err := url.Parse(httpUrl)
-			if err != nil {
-				// We can't import internal logger in the util package, so we default to "log". However, this should be
-				// infrequent.
-				log.Println("could not parse URL from span", httpUrl)
-			} else {
-				// Clear user/password
-				parsed.User = nil
-				txnName = parsed.String()
-			}
+	// Second priority: Environment variables
+	if txnName == "" {
+		if valFromEnv := os.Getenv("AWS_LAMBDA_FUNCTION_NAME"); valFromEnv != "" {
+			txnName = valFromEnv
 		}
 	}
 
+	// Third priority: Derive from span attributes
+	if txnName == "" {
+		var faasName, httpRoute, urlPath string
+		for _, attr := range attrs {
+			switch attr.Key {
+			case semconv.FaaSNameKey:
+				faasName = attr.Value.AsString()
+			case semconv.HTTPRouteKey:
+				httpRoute = attr.Value.AsString()
+			case semconv.URLPathKey:
+				urlPath = attr.Value.AsString()
+			case semconv.HTTPTargetKey:
+				urlPath = attr.Value.AsString()
+			}
+		}
+
+		// Priority: faas.name > http.route > url.path/http.target
+		if faasName != "" {
+			txnName = faasName
+		} else if httpRoute != "" {
+			txnName = httpRoute
+		} else if urlPath != "" {
+			txnName = extractTransactionNameFromPath(urlPath)
+		}
+	}
+
+	// Fourth priority: Use span name if nothing else is available
+	if txnName == "" {
+		txnName = spanName
+	}
+
+	// Final fallback: use "unknown"
 	txnName = strings.TrimSpace(txnName)
 	if txnName == "" {
 		txnName = "unknown"
@@ -79,4 +87,27 @@ func deriveTransactionName(name string, attrs []attribute.KeyValue) string {
 		txnName = txnName[:255]
 	}
 	return txnName
+}
+
+// extractTransactionNameFromPath extracts up to 2 path segments from a URL path,
+// ignoring query parameters and fragments
+func extractTransactionNameFromPath(urlPath string) string {
+	// Drop query parameters and fragment
+	if idx := strings.IndexAny(urlPath, "?#"); idx != -1 {
+		urlPath = urlPath[:idx]
+	}
+
+	// Split path into segments (limit to 4 to get first 2 non-empty segments)
+	segments := strings.SplitN(urlPath, "/", 4)
+
+	switch len(segments) {
+	case 0, 1:
+		return urlPath
+	case 2:
+		// Path has 1 segment: /segment
+		return "/" + segments[1]
+	default:
+		// Path has 2+ segments: take first 2
+		return "/" + segments[1] + "/" + segments[2]
+	}
 }

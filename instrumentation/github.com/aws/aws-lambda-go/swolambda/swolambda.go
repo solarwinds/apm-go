@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
-	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/swo"
 	"go.opentelemetry.io/otel"
@@ -40,10 +39,9 @@ var (
 )
 
 type wrappedHandler struct {
-	base    lambda.Handler
-	fnName  string
-	txnName string
-	region  string
+	base   lambda.Handler
+	fnName string
+	region string
 }
 
 var _ lambda.Handler = &wrappedHandler{}
@@ -52,7 +50,6 @@ func (w *wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, er
 	// Note: We need to figure out how to determine `faas.trigger` attribute
 	// which is required by semconv
 	attrs := []attribute.KeyValue{
-		attribute.String("sw.transaction", w.txnName),
 		semconv.FaaSColdstart(!warmStart.Swap(true)),
 		semconv.FaaSInvokedName(w.fnName),
 		semconv.FaaSInvokedProviderAWS,
@@ -106,14 +103,9 @@ func WrapHandler(f interface{}) lambda.Handler {
 		tracer = otel.GetTracerProvider().Tracer("swolambda")
 	})
 	fnName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
-	txnName := config.GetTransactionName()
-	if txnName == "" {
-		txnName = fnName
-	}
 	return &wrappedHandler{
-		base:    lambda.NewHandler(f),
-		fnName:  fnName,
-		txnName: txnName,
-		region:  os.Getenv("AWS_REGION"),
+		base:   lambda.NewHandler(f),
+		fnName: fnName,
+		region: os.Getenv("AWS_REGION"),
 	}
 }
