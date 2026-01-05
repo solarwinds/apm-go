@@ -92,7 +92,72 @@ func StartTestGRPCServer(t *testing.T, addr string) *TestGRPCServer {
 	go func() {
 		_ = grpcServer.Serve(lis)
 	}()
+	waitForServer(t, addr, 5*time.Second)
 	return testServer
+}
+
+func waitForServer(t *testing.T, addr string, timeout time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			t.Fatalf("server at %s did not become ready within %v", addr, timeout)
+		case <-ticker.C:
+			conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+			if err == nil {
+				if closeErr := conn.Close(); closeErr != nil {
+					t.Logf("warning: failed to close test connection: %v", closeErr)
+				}
+				return
+			}
+		}
+	}
+}
+
+func (s *TestGRPCServer) waitForMessages(t *testing.T, msgType string, expectedCount int, timeout time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			s.mutex.Lock()
+			actualCount := 0
+			switch msgType {
+			case "events":
+				actualCount = len(s.events)
+			case "status":
+				actualCount = len(s.status)
+			case "metrics":
+				actualCount = len(s.metrics)
+			}
+			s.mutex.Unlock()
+			t.Fatalf("timeout waiting for %s: expected %d, got %d", msgType, expectedCount, actualCount)
+		case <-ticker.C:
+			s.mutex.Lock()
+			count := 0
+			switch msgType {
+			case "events":
+				count = len(s.events)
+			case "status":
+				count = len(s.status)
+			case "metrics":
+				count = len(s.metrics)
+			}
+			s.mutex.Unlock()
+			if count >= expectedCount {
+				return
+			}
+		}
+	}
 }
 
 func printMessageRequest(req *pb.MessageRequest) {

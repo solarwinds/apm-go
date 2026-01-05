@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,17 @@
 
 package oboe
 
-import (
-	"encoding/json"
-	"errors"
-	"io"
-	"os"
-	"time"
-)
+import "time"
 
-type settingLambdaFromFile struct {
-	Arguments *settingArguments `json:"arguments"`
-	Flags     string            `json:"flags"`
-	Timestamp int64             `json:"timestamp"`
-	Ttl       int64             `json:"ttl"`
-	Value     int64             `json:"value"`
+type httpSettings struct {
+	Arguments *httpSettingArguments `json:"arguments"`
+	Flags     string                `json:"flags"`
+	Timestamp int64                 `json:"timestamp"`
+	Ttl       int64                 `json:"ttl"`
+	Value     int64                 `json:"value"`
 }
 
-type settingArguments struct {
+type httpSettingArguments struct {
 	BucketCapacity               float64 `json:"BucketCapacity"`
 	BucketRate                   float64 `json:"BucketRate"`
 	MetricsFlushInterval         int     `json:"MetricsFlushInterval"`
@@ -40,7 +34,7 @@ type settingArguments struct {
 	TriggerStrictBucketRate      float64 `json:"TriggerStrictBucketRate"`
 }
 
-func (s *settingLambdaFromFile) ToSettingsUpdateArgs() SettingsUpdateArgs {
+func (s *httpSettings) ToSettingsUpdateArgs() SettingsUpdateArgs {
 	return SettingsUpdateArgs{
 		Flags:                        s.Flags,
 		Value:                        s.Value,
@@ -52,32 +46,5 @@ func (s *settingLambdaFromFile) ToSettingsUpdateArgs() SettingsUpdateArgs {
 		TriggerRelaxedBucketRate:     s.Arguments.TriggerRelaxedBucketRate,
 		TriggerStrictBucketCapacity:  s.Arguments.TriggerStrictBucketCapacity,
 		TriggerStrictBucketRate:      s.Arguments.TriggerStrictBucketRate,
-		TriggerToken:                 []byte{},
 	}
-}
-
-// newSettingLambdaFromFile unmarshals sampling settings from a JSON file at a
-// specific path in a specific format then returns values normalized for
-// oboe UpdateSetting, else returns error.
-func newSettingLambdaFromFile() (*settingLambdaFromFile, error) {
-	settingFile, err := os.Open(settingsFileName)
-	if err != nil {
-		return nil, err
-	}
-	settingBytes, err := io.ReadAll(settingFile)
-	if err != nil {
-		return nil, err
-	}
-	// Settings file should be an array with a single settings object
-	var settingLambdas []*settingLambdaFromFile
-	if err = json.Unmarshal(settingBytes, &settingLambdas); err != nil {
-		return nil, err
-	}
-	if len(settingLambdas) != 1 {
-		return nil, errors.New("settings file is incorrectly formatted")
-	}
-
-	settingLambda := settingLambdas[0]
-
-	return settingLambda, nil
 }

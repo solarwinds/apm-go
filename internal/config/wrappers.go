@@ -23,6 +23,9 @@ var conf = NewConfig()
 // GetCollector is a wrapper to the method of the global config
 var GetCollector = conf.GetCollector
 
+// SettingsURL is a wrapper to the method of the global config
+var SettingsURL = conf.GetSettingsURL
+
 // GetServiceKey is a wrapper to the method of the global config
 var GetServiceKey = conf.GetServiceKey
 

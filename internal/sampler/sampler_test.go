@@ -16,6 +16,10 @@ package sampler
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"github.com/solarwinds/apm-go/internal/swotel"
@@ -24,9 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -281,7 +282,7 @@ func requireAttrEqual(t *testing.T, attrs attribute.Set, key string, expected at
 
 func (s SamplingScenario) test(t *testing.T) {
 	o := oboe.NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(oboetestutils.GetDefaultSettingForTest())
 	var err error
 
 	smplr, err := NewSampler(o)
@@ -448,7 +449,7 @@ func TestHydrateTraceStateBadSignature(t *testing.T) {
 	sig := "invalid signature"
 	ctx = context.WithValue(ctx, xtrace.SignatureKey, sig)
 	o := oboe.NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(oboetestutils.GetDefaultSettingForTest())
 	xto := xtrace.GetXTraceOptions(ctx, o)
 	ts := hydrateTraceState(sc, xto, "")
 	fullResp, err := swotel.GetInternalState(ts, swotel.XTraceOptResp)
@@ -476,7 +477,7 @@ func TestHydrateTraceStateNoSignatureKey(t *testing.T) {
 func TestHydrateTraceStateValidSignature(t *testing.T) {
 	// set test reporter so we can use the hmac token for signing the xto
 	o := oboe.NewOboe()
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(oboetestutils.GetDefaultSettingForTest())
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: traceId,
 		SpanID:  spanId,

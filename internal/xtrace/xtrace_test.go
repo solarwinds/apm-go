@@ -21,10 +21,11 @@ package xtrace
 import (
 	"context"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/oboe"
-	"github.com/solarwinds/apm-go/internal/oboetestutils"
 	"testing"
 	"time"
+
+	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/oboetestutils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -32,7 +33,7 @@ import (
 var o = oboe.NewOboe()
 
 func TestGetXTraceOptions(t *testing.T) {
-	oboetestutils.AddDefaultSetting(o)
+	o.UpdateSetting(oboetestutils.GetDefaultSettingForTest())
 	ctx := context.Background()
 	// Timestamp required in signature validation
 	opts := fmt.Sprintf("sw-keys=check-id:check-1013,website-id;booking-demo;ts=%d", time.Now().Unix())

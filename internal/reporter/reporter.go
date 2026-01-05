@@ -21,7 +21,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -37,8 +36,6 @@ type Reporter interface {
 	ShutdownNow()
 	// Closed returns if the Reporter is already closed.
 	Closed() bool
-	// WaitForReady waits until the Reporter becomes ready or the context is canceled.
-	WaitForReady(context.Context) bool
 	// SetServiceKey attaches a service key to the Reporter
 	// Returns error if service key is invalid
 	SetServiceKey(key string) error
@@ -51,14 +48,14 @@ var (
 	periodicTasksDisabled = false // disable periodic tasks, for testing
 )
 
-func CreateAndStartBackgroundReporter(conn *grpcConnection, rsrc *resource.Resource, reg metrics.LegacyRegistry, o oboe.Oboe) (Reporter, error) {
+func CreateAndStartBackgroundReporter(conn *grpcConnection, rsrc *resource.Resource, reg metrics.LegacyRegistry) (Reporter, error) {
 	conn.AddClient()
 	log.SetLevelFromStr(config.DebugLevel())
-	rptr := initReporter(conn, rsrc, reg, o)
+	rptr := initReporter(conn, rsrc, reg)
 	return rptr, nil
 }
 
-func initReporter(conn *grpcConnection, r *resource.Resource, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
+func initReporter(conn *grpcConnection, r *resource.Resource, registry metrics.LegacyRegistry) Reporter {
 	otelServiceName := ""
 	if sn, ok := r.Set().Value(semconv.ServiceNameKey); ok {
 		otelServiceName = strings.TrimSpace(sn.AsString())
@@ -73,5 +70,5 @@ func initReporter(conn *grpcConnection, r *resource.Resource, registry metrics.L
 		return newNullReporter()
 	}
 
-	return newGRPCReporter(conn, otelServiceName, registry, o)
+	return newGRPCReporter(conn, otelServiceName, registry)
 }

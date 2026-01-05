@@ -16,10 +16,7 @@ package oboe
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
-	"fmt"
-	"math"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -27,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/rand"
@@ -49,8 +45,22 @@ const (
 	SampleSourceDefault
 )
 
+type SettingsUpdateArgs struct {
+	Flags                        string
+	Value                        int64
+	Ttl                          time.Duration
+	TriggerToken                 []byte
+	BucketCapacity               float64
+	BucketRate                   float64
+	MetricsFlushInterval         int
+	TriggerRelaxedBucketCapacity float64
+	TriggerRelaxedBucketRate     float64
+	TriggerStrictBucketCapacity  float64
+	TriggerStrictBucketRate      float64
+}
+
 type Oboe interface {
-	UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte)
+	UpdateSetting(arg SettingsUpdateArgs)
 	CheckSettingsTimeout()
 	GetSetting() *settings
 	RemoveSetting()
@@ -233,27 +243,6 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 	}
 }
 
-func bytesToFloat64(b []byte) (float64, error) {
-	if len(b) != 8 {
-		return -1, fmt.Errorf("invalid length: %d", len(b))
-	}
-	return math.Float64frombits(binary.LittleEndian.Uint64(b)), nil
-}
-
-func parseFloat64(args map[string][]byte, key string, fb float64) float64 {
-	ret := fb
-	if c, ok := args[key]; ok {
-		v, err := bytesToFloat64(c)
-		if err == nil && v >= 0 {
-			ret = v
-			log.Debugf("parsed %s=%f", key, v)
-		} else {
-			log.Warningf("parse error: %s=%f err=%v fallback=%f", key, v, err, fb)
-		}
-	}
-	return ret
-}
-
 func adjustSampleRate(rate int64) int {
 	if rate < 0 {
 		log.Debugf("Invalid sample rate: %d", rate)
@@ -267,32 +256,22 @@ func adjustSampleRate(rate int64) int {
 	return int(rate)
 }
 
-func (o *oboe) UpdateSetting(flags []byte, value int64, ttl time.Duration, args map[string][]byte) {
+func (o *oboe) UpdateSetting(arg SettingsUpdateArgs) {
 	ns := newOboeSettings()
 
 	ns.timestamp = time.Now()
 	ns.source = SampleSourceDefault
-	ns.flags = flagStringToBin(string(flags))
+	ns.flags = flagStringToBin(arg.Flags)
 	ns.originalFlags = ns.flags
-	ns.value = adjustSampleRate(value)
-	ns.ttl = ttl
+	ns.value = adjustSampleRate(arg.Value)
+	ns.ttl = arg.Ttl
+	ns.TriggerToken = arg.TriggerToken
 
-	ns.TriggerToken = args[constants.KvSignatureKey]
-
-	rate := parseFloat64(args, constants.KvBucketRate, 0)
-	capacity := parseFloat64(args, constants.KvBucketCapacity, 0)
-	ns.bucket.setRateCap(rate, capacity)
-
-	tRelaxedRate := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketRate, 0)
-	tRelaxedCapacity := parseFloat64(args, constants.KvTriggerTraceRelaxedBucketCapacity, 0)
-	ns.triggerTraceRelaxedBucket.setRateCap(tRelaxedRate, tRelaxedCapacity)
-
-	tStrictRate := parseFloat64(args, constants.KvTriggerTraceStrictBucketRate, 0)
-	tStrictCapacity := parseFloat64(args, constants.KvTriggerTraceStrictBucketCapacity, 0)
-	ns.triggerTraceStrictBucket.setRateCap(tStrictRate, tStrictCapacity)
+	ns.bucket.setRateCap(arg.BucketRate, arg.BucketCapacity)
+	ns.triggerTraceRelaxedBucket.setRateCap(arg.TriggerRelaxedBucketRate, arg.TriggerRelaxedBucketCapacity)
+	ns.triggerTraceStrictBucket.setRateCap(arg.TriggerStrictBucketRate, arg.TriggerStrictBucketCapacity)
 
 	ns.MergeLocalSetting()
-
 	o.settings.Store(ns)
 }
 
@@ -345,7 +324,7 @@ func shouldSample(sampleRate int) bool {
 func flagStringToBin(flagString string) settingFlag {
 	flags := settingFlag(0)
 	if flagString != "" {
-		for _, s := range strings.Split(flagString, ",") {
+		for s := range strings.SplitSeq(flagString, ",") {
 			switch s {
 			case "OVERRIDE":
 				flags |= FlagOverride

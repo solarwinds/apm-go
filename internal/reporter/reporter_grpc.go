@@ -22,38 +22,28 @@ import (
 	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/host"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
-	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
 
 	"context"
 
-	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	uatomic "go.uber.org/atomic"
 )
 
 const (
-	// These are hard-coded parameters for the gRPC reporter. Any of them become
-	// configurable in future versions will be moved to package config.
-	// TODO: use time.Time
-	grpcGetAndUpdateSettingsIntervalDefault = 30               // default settings retrieval interval in seconds
-	grpcSettingsTimeoutCheckIntervalDefault = 10               // default check interval for timed out settings in seconds
-	grpcPingIntervalDefault                 = 20               // default interval for keep alive pings in seconds
-	grpcRetryDelayInitial                   = 500              // initial connection/send retry delay in milliseconds
-	grpcRetryDelayMultiplier                = 1.5              // backoff multiplier for unsuccessful retries
-	grpcCtxTimeout                          = 10 * time.Second // gRPC method invocation timeout in seconds
-	grpcRedirectMax                         = 20               // max allowed collector redirects
-	grpcRetryLogThreshold                   = 10               // log prints after this number of retries (about 56.7s)
+	grpcPingIntervalDefault  = 20               // default interval for keep alive pings in seconds
+	grpcRetryDelayInitial    = 500              // initial connection/send retry delay in milliseconds
+	grpcRetryDelayMultiplier = 1.5              // backoff multiplier for unsuccessful retries
+	grpcCtxTimeout           = 10 * time.Second // gRPC method invocation timeout in seconds
+	grpcRedirectMax          = 20               // max allowed collector redirects
+	grpcRetryLogThreshold    = 10               // log prints after this number of retries (about 56.7s)
 )
 
 type grpcReporter struct {
-	conn                         *grpcConnection // used for all RPC calls
-	getAndUpdateSettingsInterval int             // settings retrieval interval in seconds
-	settingsTimeoutCheckInterval int             // check interval for timed out settings in seconds
+	conn *grpcConnection // used for all RPC calls
 
 	serviceKey      *uatomic.String // service key
 	otelServiceName string
@@ -61,9 +51,6 @@ type grpcReporter struct {
 	eventMessages  chan []byte // channel for event messages (sent from agent)
 	statusMessages chan []byte // channel for status messages (sent from agent)
 
-	// The reporter is considered ready if there is a valid default setting for sampling.
-	// It should be accessed atomically.
-	ready int32
 	// The condition variable to notify those who are waiting for the reporter becomes ready
 	cond *sync.Cond
 
@@ -79,9 +66,6 @@ type grpcReporter struct {
 
 	// metrics
 	registry metrics.LegacyRegistry
-
-	// oboe
-	oboe oboe.Oboe
 }
 
 // gRPC reporter errors
@@ -101,12 +85,9 @@ func getProxyCertPath() string {
 
 // initializes a new GRPC reporter from scratch (called once on program startup)
 // returns	GRPC Reporter object
-func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry metrics.LegacyRegistry, o oboe.Oboe) Reporter {
+func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry metrics.LegacyRegistry) Reporter {
 	r := &grpcReporter{
 		conn: grpcConn,
-
-		getAndUpdateSettingsInterval: grpcGetAndUpdateSettingsIntervalDefault,
-		settingsTimeoutCheckInterval: grpcSettingsTimeoutCheckIntervalDefault,
 
 		serviceKey:      uatomic.NewString(config.GetServiceKey()),
 		otelServiceName: otelServiceName,
@@ -118,7 +99,6 @@ func newGRPCReporter(grpcConn *grpcConnection, otelServiceName string, registry 
 		done: make(chan struct{}),
 
 		registry: registry,
-		oboe:     o,
 	}
 
 	r.start()
@@ -211,7 +191,6 @@ func (r *grpcReporter) Shutdown(ctx context.Context) error {
 			close(r.done)
 
 			r.closeConns()
-			r.setReady(false)
 			host.Stop()
 			uams.Stop()
 			log.Warning("SolarWinds Observability APM agent is stopped.")
@@ -235,97 +214,18 @@ func (r *grpcReporter) Closed() bool {
 	}
 }
 
-func (r *grpcReporter) setReady(ready bool) {
-	var s int32
-	if ready {
-		s = 1
-	}
-	atomic.StoreInt32(&r.ready, s)
-}
-
-func (r *grpcReporter) isReady() bool {
-	return atomic.LoadInt32(&r.ready) == 1
-}
-
-// WaitForReady waits until the reporter becomes ready or the context is canceled.
-//
-// The reporter is still considered `not ready` if (in rare cases) the default
-// setting is retrieved from the collector but expires after the TTL, and no new
-// setting is fetched.
-func (r *grpcReporter) WaitForReady(ctx context.Context) bool {
-	if r.isReady() {
-		return true
-	}
-
-	ready := make(chan struct{})
-	var e int32
-
-	go func(ch chan struct{}, exit *int32) {
-		r.cond.L.Lock()
-		for !r.isReady() && (atomic.LoadInt32(exit) != 1) {
-			r.cond.Wait()
-		}
-		r.cond.L.Unlock()
-		close(ch)
-	}(ready, &e)
-
-	select {
-	case <-ready:
-		return true
-	case <-ctx.Done():
-		atomic.StoreInt32(&e, 1)
-		return false
-	}
-}
-
 // long-running goroutine that kicks off periodic tasks like collectMetrics() and getAndUpdateSettings()
 func (r *grpcReporter) periodicTasks() {
 	defer log.Info("periodicTasks goroutine exiting.")
 
-	// set up tickers
-	getAndUpdateSettingsTicker := time.NewTimer(0)
-	settingsTimeoutCheckTicker := time.NewTimer(time.Duration(r.settingsTimeoutCheckInterval) * time.Second)
-
 	defer func() {
-		getAndUpdateSettingsTicker.Stop()
-		settingsTimeoutCheckTicker.Stop()
 		r.conn.pingTicker.Stop()
 	}()
 
-	getAndUpdateSettingsReady := make(chan bool, 1)
-	settingsTimeoutCheckReady := make(chan bool, 1)
-	getAndUpdateSettingsReady <- true
-	settingsTimeoutCheckReady <- true
-
 	for {
-		// Exit if the reporter's done channel is closed.
 		select {
 		case <-r.done:
-			if !r.isGracefully() {
-				return
-			}
-		default:
-		}
-
-		select {
-		case <-getAndUpdateSettingsTicker.C: // get settings from collector
-			// set up ticker for next round
-			getAndUpdateSettingsTicker.Reset(time.Duration(r.getAndUpdateSettingsInterval) * time.Second)
-			select {
-			case <-getAndUpdateSettingsReady:
-				// only kick off a new goroutine if the previous one has terminated
-				go r.getAndUpdateSettings(getAndUpdateSettingsReady)
-			default:
-			}
-		case <-settingsTimeoutCheckTicker.C: // check for timed out settings
-			// set up ticker for next round
-			settingsTimeoutCheckTicker.Reset(time.Duration(r.settingsTimeoutCheckInterval) * time.Second)
-			select {
-			case <-settingsTimeoutCheckReady:
-				// only kick off a new goroutine if the previous one has terminated
-				go r.checkSettingsTimeout(settingsTimeoutCheckReady)
-			default:
-			}
+			return
 		case <-r.conn.pingTicker.C: // ping on event connection (keep alive)
 			// set up ticker for next round
 			r.conn.resetPing()
@@ -470,81 +370,6 @@ func (r *grpcReporter) eventBatchSender(batches <-chan [][]byte) {
 		if closing {
 			return
 		}
-	}
-}
-
-// ================================ Settings Handling ====================================
-
-// retrieves the settings from the collector and updates APM with them
-// ready	a 'ready' channel to indicate if this routine has terminated
-func (r *grpcReporter) getAndUpdateSettings(ready chan bool) {
-	// notify caller that this routine has terminated (defered to end of routine)
-	defer func() { ready <- true }()
-
-	remoteSettings, err := r.getSettings()
-	if err == nil {
-		r.updateSettings(remoteSettings)
-	} else if errors.Is(err, errInvalidServiceKey) {
-		r.ShutdownNow()
-	} else {
-		log.Errorf("Could not getAndUpdateSettings: %s", err)
-	}
-}
-
-// retrieves settings from collector and returns them
-func (r *grpcReporter) getSettings() (*collector.SettingsResult, error) {
-	method := newGetSettingsMethod(r.serviceKey.Load())
-	if err := r.conn.InvokeRPC(r.done, method); err == nil {
-		logger := log.Info
-		if method.Resp.Warning != "" {
-			logger = log.Warning
-		}
-		logger(method.CallSummary())
-		return method.Resp, nil
-	} else {
-		log.Infof("getSettings: %s", err)
-		return nil, err
-	}
-}
-
-// updates the existing settings with the newly received
-// settings	new settings
-func (r *grpcReporter) updateSettings(settings *collector.SettingsResult) {
-	for _, s := range settings.GetSettings() {
-		r.oboe.UpdateSetting(s.Flags, s.Value, time.Duration(s.Ttl)*time.Second, s.Arguments)
-
-		// update events flush interval
-		o := config.ReporterOpts()
-		ei := ParseInt32(s.Arguments, constants.KvEventsFlushInterval, int32(o.GetEventFlushInterval()))
-		o.SetEventFlushInterval(int64(ei))
-
-		// update MaxTransactions
-		mt := ParseInt32(s.Arguments, constants.KvMaxTransactions, r.registry.ApmMetricsCap())
-		r.registry.SetApmMetricsCap(mt)
-
-		maxCustomMetrics := ParseInt32(s.Arguments, constants.KvMaxCustomMetrics, r.registry.CustomMetricsCap())
-		r.registry.SetCustomMetricsCap(maxCustomMetrics)
-	}
-
-	if !r.isReady() && r.oboe.HasDefaultSetting() {
-		r.cond.L.Lock()
-		r.setReady(true)
-		log.Warningf("Got dynamic settings. The SolarWinds Observability APM agent (%v) is ready.", r.done)
-		r.cond.Broadcast()
-		r.cond.L.Unlock()
-	}
-}
-
-// delete settings that have timed out according to their TTL
-// ready	a 'ready' channel to indicate if this routine has terminated
-func (r *grpcReporter) checkSettingsTimeout(ready chan bool) {
-	// notify caller that this routine has terminated (defered to end of routine)
-	defer func() { ready <- true }()
-
-	r.oboe.CheckSettingsTimeout()
-	if r.isReady() && !r.oboe.HasDefaultSetting() {
-		log.Warningf("Sampling setting expired. SolarWinds Observability APM library (%v) is not working.", r.done)
-		r.setReady(false)
 	}
 }
 

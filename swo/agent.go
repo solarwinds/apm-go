@@ -16,60 +16,24 @@ package swo
 
 import (
 	"context"
-	"errors"
-	"os"
 
-	"io"
 	stdlog "log"
 	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/exporter"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
-	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
-
-var (
-	errInvalidLogLevel = errors.New("invalid log level")
-)
-
-// SetLogLevel changes the logging level of the library
-// Valid logging levels: DEBUG, INFO, WARN, ERROR
-func SetLogLevel(level string) error {
-	l, ok := log.ToLogLevel(level)
-	if !ok {
-		return errInvalidLogLevel
-	}
-	log.SetLevel(l)
-	return nil
-}
-
-// GetLogLevel returns the current logging level of the library
-func GetLogLevel() string {
-	return log.LevelStr[log.Level()]
-}
-
-// SetLogOutput sets the output destination for the internal logger.
-func SetLogOutput(w io.Writer) {
-	log.SetOutput(w)
-}
 
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
@@ -84,16 +48,24 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	legacyRegistry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 
+	settingsUpdater, err := oboe.NewSettingsUpdater(o)
+	if err != nil {
+		log.Error("Failed to create settings updater, ", err)
+		return func() {}, err
+	}
+
 	ctx := context.Background()
+	stopSettingsUpdater := settingsUpdater.Start(ctx)
+
 	conn, err := reporter.CreateGrpcConnection()
 	if err != nil {
 		log.Error("Failed to create gRPC connection to SWO APM", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
-	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry, o)
+	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry)
 	if err != nil {
 		log.Error("Failed to configure and start background reporter", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	if conn != nil {
@@ -103,19 +75,19 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	exprtr, err := exporter.NewSpanExporter(ctx, backgroundReporter)
 	if err != nil {
 		log.Error("Failed to configure span exporter", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
 	err = metricsPublisher.ConfigureAndStart(ctx, legacyRegistry, conn, o, resrc)
 	if err != nil {
 		log.Error("Failed to configure and start metrics publisher", err)
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
-		return func() {}, err
+		return func() { stopSettingsUpdater() }, err
 	}
 	config.Load()
 	proc := processor.NewInboundMetricsSpanProcessor(metricsPublisher.GetMetricsRegistry())
@@ -134,124 +106,18 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	otel.SetTracerProvider(tp)
 
 	return func() {
+		stopSettingsUpdater()
+
 		err := metricsPublisher.Shutdown()
 		if err != nil {
-			log.Error("Failed to Shutdown metrics publisher", err)
+			log.Error("Failed to shutdown metrics publisher: ", err)
 		}
 		err = backgroundReporter.Shutdown(ctx)
 		if err != nil {
-			log.Error("Failed to Shutdown background reporter", err)
+			log.Error("Failed to shutdown background reporter: ", err)
 		}
-		if err = tp.Shutdown(context.Background()); err != nil {
+		if err = tp.Shutdown(ctx); err != nil {
 			stdlog.Fatal(err)
 		}
 	}, nil
-}
-
-// SetTransactionName sets the transaction name of the current entry span. If set multiple times, the last is used.
-// Returns nil on success; Error if the provided name is blank, or we are unable to set the transaction name.
-func SetTransactionName(ctx context.Context, name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return errors.New("invalid transaction name")
-	}
-	sc := trace.SpanContextFromContext(ctx)
-	if !sc.IsValid() {
-		return errors.New("could not obtain OpenTelemetry SpanContext from given context")
-	}
-	return entryspans.SetTransactionName(sc.TraceID(), name)
-}
-
-type Flusher interface {
-	Flush(ctx context.Context) error
-}
-
-type lambdaFlusher struct {
-	Reader *metric.PeriodicReader
-}
-
-func (l lambdaFlusher) Flush(ctx context.Context) error {
-	return l.Reader.ForceFlush(ctx)
-}
-
-var _ Flusher = &lambdaFlusher{}
-
-func StartLambda(lambdaLogStreamName string) (Flusher, error) {
-	// By default, the Go OTEL SDK sets this to `https://localhost:4317`, however
-	// we do not use https for the local collector in Lambda. We override if not
-	// already set.
-	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
-		if err := os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"); err != nil {
-			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_ENDPOINT %s", err)
-		}
-	}
-	ctx := context.Background()
-	o := oboe.NewOboe()
-	settingsWatcher := oboe.NewFileBasedWatcher(o)
-	// settingsWatcher is started but never stopped in Lambda
-	settingsWatcher.Start()
-	var err error
-	var tpOpts []sdktrace.TracerProviderOption
-	var metExp metric.Exporter
-	if metExp, err = otlpmetricgrpc.New(ctx,
-		otlpmetricgrpc.WithTemporalitySelector(otelsetup.MetricTemporalitySelector),
-	); err != nil {
-		return nil, err
-	}
-	// The reader is flushed manually
-	reader := metric.NewPeriodicReader(metExp)
-	// The flusher is called after every invocation. We only need to flush
-	// metrics here because traces are sent synchronously.
-	flusher := &lambdaFlusher{
-		Reader: reader,
-	}
-	mp := metric.NewMeterProvider(
-		metric.WithReader(reader),
-	)
-	otel.SetMeterProvider(mp)
-	if err = o.RegisterOtelSampleRateMetrics(mp); err != nil {
-		return nil, err
-	}
-	if exprtr, err := otlptracegrpc.New(ctx); err != nil {
-		return nil, err
-	} else {
-		// Use WithSyncer to flush all spans each invocation
-		tpOpts = append(tpOpts, sdktrace.WithSyncer(exprtr))
-	}
-	registry, err := metrics.NewOtelRegistry(mp)
-	if err != nil {
-		return nil, err
-	}
-	proc := processor.NewInboundMetricsSpanProcessor(registry)
-	prop := propagation.NewCompositeTextMapPropagator(
-		&propagation.TraceContext{},
-		&propagation.Baggage{},
-		&propagator.SolarwindsPropagator{},
-	)
-	smplr, err := sampler.NewSampler(o)
-	if err != nil {
-		return nil, err
-	}
-	otel.SetTextMapPropagator(prop)
-	// Default resource detection plus our required attributes
-	var resrc *resource.Resource
-	resrc, err = resource.Merge(
-		resource.Default(),
-		resource.NewSchemaless(
-			attribute.String("sw.data.module", "apm"),
-			attribute.String("sw.apm.version", utils.Version()),
-			attribute.String("faas.instance", lambdaLogStreamName),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	tpOpts = append(tpOpts,
-		sdktrace.WithResource(resrc),
-		sdktrace.WithSampler(smplr),
-		sdktrace.WithSpanProcessor(proc),
-	)
-	otel.SetTracerProvider(sdktrace.NewTracerProvider(tpOpts...))
-	return flusher, nil
 }

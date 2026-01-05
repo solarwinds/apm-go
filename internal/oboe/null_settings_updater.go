@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,28 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package constants
+package oboe
 
-const (
+import "context"
 
-	// Other
+type nullSettingsUpdater struct{}
 
-	Edge       = "Edge"
-	Go         = "Go"
-	Label      = "Label"
-	Layer      = "Layer"
-	TraceState = "tracestate"
+func newNullSettingsUpdater() SettingsUpdater {
+	return &nullSettingsUpdater{}
+}
 
-	// Label strings
-
-	EntryLabel   = "entry"
-	ErrorLabel   = "error"
-	ExitLabel    = "exit"
-	InfoLabel    = "info"
-	UnknownLabel = "UNKNOWN"
-)
-
-const (
-	SwTransactionNameAttribute = "sw.transaction"
-	UamsClientIdAttribute      = "sw.uams.client.id"
-)
+func (nsu *nullSettingsUpdater) Start(ctx context.Context) func() {
+	return func() {
+		// no-op
+	}
+}
