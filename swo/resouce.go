@@ -25,7 +25,8 @@ import (
 	"github.com/solarwinds/apm-go/internal/instance"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/uams"
-	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"github.com/solarwinds/apm-go/internal/utils"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -56,6 +57,7 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		instance.WithInstanceDetector(),
 		resource.WithAttributes(resourceAttrs...),
 		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
+		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),
 	)
 	resource, mergedError := resource.Merge(resource.Default(), customResource)
 
