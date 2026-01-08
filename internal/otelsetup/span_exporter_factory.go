@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reporter
+package otelsetup
 
 import (
-	"testing"
+	"context"
 
-	"github.com/stretchr/testify/require"
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestNullReporter(t *testing.T) {
-	nullR := &nullReporter{}
-
-	require.NoError(t, nullR.ReportEvent(nil))
-	require.NoError(t, nullR.ReportStatus(nil))
+func NewSpanExporter(ctx context.Context) (trace.SpanExporter, error) {
+	if !config.GetEnabled() {
+		log.Warning("SolarWinds Observability exporter is disabled.")
+		return &noopExporter{}, nil
+	}
+	return CreateAndSetupOtelExporter(ctx)
 }

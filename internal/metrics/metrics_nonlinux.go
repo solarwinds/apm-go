@@ -15,10 +15,6 @@
 
 package metrics
 
-import (
-	"github.com/solarwinds/apm-go/internal/bson"
-)
-
-func appendUname(bbuf *bson.Buffer) {}
-
-func addHostMetrics(bbuf *bson.Buffer, index *int) {}
+func getHostMetrics() (hostMetrics, bool) {
+	return hostMetrics{}, false
+}

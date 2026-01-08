@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/proxy"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
@@ -27,6 +28,14 @@ import (
 func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error) {
 	exporterEndpoint := getAndSetupExporterEndpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
 	exporterOptions := []otlptracegrpc.Option{}
+
+	if proxyUrl := config.GetProxy(); proxyUrl != "" {
+		dialOpt := grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
+			Proxy:         proxyUrl,
+			ProxyCertPath: config.GetProxyCertPath(),
+		}))
+		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(dialOpt))
+	}
 
 	if os.Getenv("OTEL_EXPORTER_OTLP_COMPRESSION") != "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_COMPRESSION") != "" {
 		exporterOptions = append(exporterOptions, otlptracegrpc.WithCompressor("gzip"))

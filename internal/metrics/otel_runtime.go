@@ -115,6 +115,19 @@ func RegisterOtelRuntimeMetrics(mp metric.MeterProvider) error {
 		return err
 	}
 
+	hostMemoryTotalRAM, err := meter.Int64ObservableGauge("trace.go.memory.TotalRAM")
+	if err != nil {
+		return err
+	}
+	hostMemoryfreeRAM, err := meter.Int64ObservableGauge("trace.go.memory.FreeRAM")
+	if err != nil {
+		return err
+	}
+	hostSystemLoad1, err := meter.Float64ObservableGauge("trace.go.system.Load1")
+	if err != nil {
+		return err
+	}
+
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, obs metric.Observer) error {
 			// category runtime
@@ -146,6 +159,12 @@ func RegisterOtelRuntimeMetrics(mp metric.MeterProvider) error {
 			obs.ObserveInt64(heapObjects, int64(mem.HeapObjects))
 			obs.ObserveInt64(stackInuse, int64(mem.StackInuse))
 			obs.ObserveInt64(stackSys, int64(mem.StackSys))
+
+			if hostMetrics, ok := getHostMetrics(); ok {
+				obs.ObserveInt64(hostMemoryTotalRAM, int64(hostMetrics.memoryTotalRAM))
+				obs.ObserveInt64(hostMemoryfreeRAM, int64(hostMetrics.memoryfreeRAM))
+				obs.ObserveFloat64(hostSystemLoad1, hostMetrics.systemLoad1)
+			}
 
 			return nil
 		},

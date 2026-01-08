@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hdrhist
+package otelsetup
 
-const (
-	encodingV2CookieBase           = 0x1c849303
-	compressedEncodingV2CookieBase = 0x1c849304
+import (
+	"context"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+type noopExporter struct{}
+
+func (e *noopExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
+	return nil
+}
+
+func (e *noopExporter) Shutdown(_ context.Context) error {
+	return nil
+}

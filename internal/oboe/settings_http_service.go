@@ -26,6 +26,7 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/proxy"
 )
 
 const (
@@ -44,14 +45,27 @@ func newSettingsService(baseURL, serviceName, hostName, bearerToken string) *set
 	if hostName == "" {
 		hostName = "unknown"
 	}
+
+	httpClient := &http.Client{
+		Timeout: defaultTimeout,
+	}
+
+	if proxyUrl := config.GetProxy(); proxyUrl != "" {
+		if transport, err := proxy.NewHttpTransport(
+			proxy.ProxyOptions{
+				Proxy:         config.GetProxy(),
+				ProxyCertPath: config.GetProxyCertPath()},
+		); err == nil {
+			httpClient.Transport = transport
+		}
+	}
+
 	return &settingsService{
 		baseURL:     baseURL,
 		serviceName: serviceName,
 		hostName:    hostName,
 		bearerToken: bearerToken,
-		client: &http.Client{
-			Timeout: defaultTimeout,
-		},
+		client:      httpClient,
 	}
 }
 
