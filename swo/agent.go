@@ -18,13 +18,11 @@ import (
 	"context"
 
 	stdlog "log"
-	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/exporter"
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
@@ -44,8 +42,6 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-	isAppoptics := strings.Contains(strings.ToLower(config.GetCollector()), "appoptics.com")
-	legacyRegistry := metrics.NewLegacyRegistry(isAppoptics)
 	o := oboe.NewOboe()
 
 	settingsUpdater, err := oboe.NewSettingsUpdater(o)
@@ -57,29 +53,14 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	ctx := context.Background()
 	stopSettingsUpdater := settingsUpdater.Start(ctx)
 
-	conn, err := reporter.CreateGrpcConnection()
-	if err != nil {
-		log.Error("Failed to create gRPC connection to SWO APM", err)
-		return func() { stopSettingsUpdater() }, err
-	}
-	backgroundReporter, err := reporter.CreateAndStartBackgroundReporter(conn, resrc, legacyRegistry)
-	if err != nil {
-		log.Error("Failed to configure and start background reporter", err)
-		return func() { stopSettingsUpdater() }, err
-	}
-
-	if conn != nil {
-		reporter.CreateAndSendOneTimeInitMessage(backgroundReporter, resrc)
-	}
-
-	exprtr, err := exporter.NewSpanExporter(ctx, backgroundReporter)
+	exprtr, err := otelsetup.NewSpanExporter(ctx)
 	if err != nil {
 		log.Error("Failed to configure span exporter", err)
 		return func() { stopSettingsUpdater() }, err
 	}
 
-	metricsPublisher := reporter.NewMetricsPublisher(legacyRegistry)
-	err = metricsPublisher.ConfigureAndStart(ctx, legacyRegistry, conn, o, resrc)
+	metricsPublisher := reporter.NewMetricsPublisher()
+	err = metricsPublisher.ConfigureAndStart(ctx, o, resrc)
 	if err != nil {
 		log.Error("Failed to configure and start metrics publisher", err)
 		return func() { stopSettingsUpdater() }, err
@@ -111,10 +92,6 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		err := metricsPublisher.Shutdown()
 		if err != nil {
 			log.Error("Failed to shutdown metrics publisher: ", err)
-		}
-		err = backgroundReporter.Shutdown(ctx)
-		if err != nil {
-			log.Error("Failed to shutdown background reporter: ", err)
 		}
 		if err = tp.Shutdown(ctx); err != nil {
 			stdlog.Fatal(err)

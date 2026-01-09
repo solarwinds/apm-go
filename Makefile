@@ -11,20 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-certgen:
-	@cd internal/reporter && ./certgen.sh
-
 runtest:
 	go test -race -timeout 3m -count=1 -short -covermode=atomic  ./... && echo "All tests passed."
 
 runtestfast:
 	go test -race -timeout 3m -short -covermode=atomic ./... && echo "All tests passed."
 
-removecert:
-	@cd internal/reporter && rm for_test.crt for_test.key
-
-test: certgen runtest removecert
-testfast: certgen runtestfast removecert
+test: runtest
+testfast: runtestfast
 
 vet:
 	@go vet -composites=false ./... && echo "Go vet analysis passed."
@@ -40,4 +34,4 @@ license-check:
 
 sure: clean test vet lint license-check
 
-.PHONY: certgen test removecert vet clean lint license-check
+.PHONY: test vet clean lint license-check

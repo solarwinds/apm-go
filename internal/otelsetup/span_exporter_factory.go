@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package otelsetup
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"context"
+
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestTxnMap(t *testing.T) {
-	m := newTxnMap(3)
-	assert.EqualValues(t, 3, m.cap())
-	assert.True(t, m.isWithinLimit("t1"))
-	assert.True(t, m.isWithinLimit("t2"))
-	assert.True(t, m.isWithinLimit("t3"))
-	assert.False(t, m.isWithinLimit("t4"))
-	assert.True(t, m.isWithinLimit("t2"))
-	assert.True(t, m.isOverflowed())
-
-	m.SetCap(4)
-	m.reset()
-	assert.EqualValues(t, 4, m.cap())
-	assert.False(t, m.isOverflowed())
+func NewSpanExporter(ctx context.Context) (trace.SpanExporter, error) {
+	if !config.GetEnabled() {
+		log.Warning("SolarWinds Observability exporter is disabled.")
+		return &noopExporter{}, nil
+	}
+	return CreateAndSetupOtelExporter(ctx)
 }

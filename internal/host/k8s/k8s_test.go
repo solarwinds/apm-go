@@ -17,14 +17,15 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	"github.com/solarwinds/apm-go/internal/testutils"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"os"
 	"runtime"
 	"sync"
 	"testing"
+
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
+	"github.com/solarwinds/apm-go/internal/testutils"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // Test MemoizeMetadata
@@ -126,20 +127,6 @@ func TestRequestMetadataNoNamespace(t *testing.T) {
 	require.Nil(t, md)
 	require.True(t, os.IsNotExist(err))
 }
-
-func TestMetadata_ToPB(t *testing.T) {
-	md := &Metadata{
-		Namespace: "foo",
-		PodName:   "bar",
-		PodUid:    "baz",
-	}
-	pb := md.ToPB()
-	require.Equal(t, md.Namespace, pb.Namespace)
-	require.Equal(t, md.PodName, pb.PodName)
-	require.Equal(t, md.PodUid, pb.PodUid)
-}
-
-// Test getNamespaceFromFile
 
 func TestGetNamespaceFromFallbackFile(t *testing.T) {
 	f, err := os.CreateTemp("", "")

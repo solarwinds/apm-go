@@ -20,6 +20,7 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/proxy"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -31,6 +32,14 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	exporterOptions := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithTemporalitySelector(MetricTemporalitySelector),
 		otlpmetricgrpc.WithCompressor("gzip"),
+	}
+
+	if proxyUrl := config.GetProxy(); proxyUrl != "" {
+		dialOpt := grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
+			Proxy:         proxyUrl,
+			ProxyCertPath: config.GetProxyCertPath(),
+		}))
+		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(dialOpt))
 	}
 
 	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {

@@ -36,31 +36,7 @@ func (r *recordMock) RecordSpan(span sdktrace.ReadOnlySpan) {
 	r.called = true
 }
 
-func (r *recordMock) BuildBuiltinMetricsMessage(int32, *metrics.EventQueueStats, *metrics.RateCountSummary, bool) []byte {
-	panic("should not be called in this test")
-}
-
-func (r *recordMock) BuildCustomMetricsMessage(int32) []byte {
-	panic("should not be called in this test")
-}
-
-func (r *recordMock) ApmMetricsCap() int32 {
-	panic("should not be called in this test")
-}
-
-func (r *recordMock) SetApmMetricsCap(int32) {
-	panic("should not be called in this test")
-}
-
-func (r *recordMock) CustomMetricsCap() int32 {
-	panic("should not be called in this test")
-}
-
-func (r *recordMock) SetCustomMetricsCap(int32) {
-	panic("should not be called in this test")
-}
-
-var _ metrics.LegacyRegistry = &recordMock{}
+var _ metrics.MetricRegistry = &recordMock{}
 
 func TestInboundMetricsSpanProcessorOnEnd(t *testing.T) {
 	mock := &recordMock{}
