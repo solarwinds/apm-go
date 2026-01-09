@@ -172,6 +172,7 @@ func RegisterOtelRuntimeMetrics(mp metric.MeterProvider) error {
 		numForcedGC, GCCPUFraction, alloc, totalAlloc, sys, lookups,
 		mallocs, frees, heapAlloc, heapSys, heapIdle, heapInuse,
 		heapReleased, heapObjects, stackInuse, stackSys,
+		hostMemoryTotalRAM, hostMemoryfreeRAM, hostSystemLoad1,
 	)
 	return err
 }
