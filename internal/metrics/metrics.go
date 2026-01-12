@@ -19,8 +19,8 @@ type RateCountSummary struct {
 	Requested, Traced, Limited, TtTraced, Sampled, Through int64
 }
 
-type hostMetrics struct {
-	memoryTotalRAM uint64
-	memoryfreeRAM  uint64
-	systemLoad1    float64
+type HostMetrics interface {
+	getTotalRAM() (uint64, bool)
+	getFreeRAM() (uint64, bool)
+	getSystemLoad1() (float64, bool)
 }

@@ -15,6 +15,6 @@
 
 package metrics
 
-func getHostMetrics() (hostMetrics, bool) {
-	return hostMetrics{}, false
+func getHostMetrics() HostMetrics {
+	return nil
 }

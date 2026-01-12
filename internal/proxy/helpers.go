@@ -33,8 +33,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-const proxyAuthHeader = "Proxy-Authorization"
-const grpcUA = "grpc-go/" + grpc.Version
+const (
+	proxyAuthHeader = "Proxy-Authorization"
+	grpcUA          = "grpc-go/" + grpc.Version
+)
 
 type ProxyOptions struct {
 	Proxy         string

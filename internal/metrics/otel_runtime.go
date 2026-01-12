@@ -160,10 +160,16 @@ func RegisterOtelRuntimeMetrics(mp metric.MeterProvider) error {
 			obs.ObserveInt64(stackInuse, int64(mem.StackInuse))
 			obs.ObserveInt64(stackSys, int64(mem.StackSys))
 
-			if hostMetrics, ok := getHostMetrics(); ok {
-				obs.ObserveInt64(hostMemoryTotalRAM, int64(hostMetrics.memoryTotalRAM))
-				obs.ObserveInt64(hostMemoryfreeRAM, int64(hostMetrics.memoryfreeRAM))
-				obs.ObserveFloat64(hostSystemLoad1, hostMetrics.systemLoad1)
+			if hostMetrics := getHostMetrics(); hostMetrics != nil {
+				if totalRAM, ok := hostMetrics.getTotalRAM(); ok {
+					obs.ObserveInt64(hostMemoryTotalRAM, int64(totalRAM))
+				}
+				if freeRAM, ok := hostMetrics.getFreeRAM(); ok {
+					obs.ObserveInt64(hostMemoryfreeRAM, int64(freeRAM))
+				}
+				if systemLoad1, ok := hostMetrics.getSystemLoad1(); ok {
+					obs.ObserveFloat64(hostSystemLoad1, systemLoad1)
+				}
 			}
 
 			return nil
