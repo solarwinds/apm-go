@@ -27,7 +27,6 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel/semconv"
-	collector "github.com/solarwinds/apm-proto/go/collectorpb"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -48,14 +47,6 @@ type Metadata struct {
 	Namespace string
 	PodName   string
 	PodUid    string
-}
-
-func (m *Metadata) ToPB() *collector.K8S {
-	return &collector.K8S{
-		Namespace: m.Namespace,
-		PodName:   m.PodName,
-		PodUid:    m.PodUid,
-	}
 }
 
 func determineNamspaceFileForOS() string {

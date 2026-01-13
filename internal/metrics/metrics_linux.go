@@ -16,65 +16,48 @@
 package metrics
 
 import (
-	"github.com/solarwinds/apm-go/internal/bson"
-	"github.com/solarwinds/apm-go/internal/utils"
-	"os"
 	"strconv"
 	"strings"
-	"syscall"
+
+	"github.com/solarwinds/apm-go/internal/utils"
 )
 
-// gets and appends UnameSysName/UnameVersion to a BSON buffer
-// bbuf	the BSON buffer to append the KVs to
-func appendUname(bbuf *bson.Buffer) {
-	var uname syscall.Utsname
-	if err := syscall.Uname(&uname); err == nil {
-		sysname := utils.Byte2String(uname.Sysname[:])
-		release := utils.Byte2String(uname.Release[:])
-		bbuf.AppendString("UnameSysName", strings.TrimRight(sysname, "\x00"))
-		bbuf.AppendString("UnameVersion", strings.TrimRight(release, "\x00"))
-	}
+type linuxHostMetrics struct{}
+
+func getHostMetrics() HostMetrics {
+	return &linuxHostMetrics{}
 }
 
-func addHostMetrics(bbuf *bson.Buffer, index *int) {
-	// system load of last minute
-	if s := utils.GetStrByKeyword("/proc/loadavg", ""); s != "" {
-		load, err := strconv.ParseFloat(strings.Fields(s)[0], 64)
-		if err == nil {
-			addMetricsValue(bbuf, index, "Load1", load)
-		}
-	}
-
-	// system total memory
+func (hm *linuxHostMetrics) getTotalRAM() (uint64, bool) {
 	if s := utils.GetStrByKeyword("/proc/meminfo", "MemTotal"); s != "" {
 		memTotal := strings.Fields(s) // MemTotal: 7657668 kB
 		if len(memTotal) == 3 {
 			if total, err := strconv.Atoi(memTotal[1]); err == nil {
-				addMetricsValue(bbuf, index, "TotalRAM", int64(total*1024))
+				return uint64(total * 1024), true
 			}
 		}
 	}
+	return 0, false
+}
 
-	// free memory
+func (hm *linuxHostMetrics) getFreeRAM() (uint64, bool) {
 	if s := utils.GetStrByKeyword("/proc/meminfo", "MemFree"); s != "" {
 		memFree := strings.Fields(s) // MemFree: 161396 kB
 		if len(memFree) == 3 {
 			if free, err := strconv.Atoi(memFree[1]); err == nil {
-				addMetricsValue(bbuf, index, "FreeRAM", int64(free*1024)) // bytes
+				return uint64(free * 1024), true
 			}
 		}
 	}
+	return 0, false
+}
 
-	// process memory
-	if s := utils.GetStrByKeyword("/proc/self/statm", ""); s != "" {
-		processRAM := strings.Fields(s)
-		if len(processRAM) != 0 {
-			for _, ps := range processRAM {
-				if p, err := strconv.Atoi(ps); err == nil {
-					addMetricsValue(bbuf, index, "ProcessRAM", p*os.Getpagesize())
-					break
-				}
-			}
+func (hm *linuxHostMetrics) getSystemLoad1() (float64, bool) {
+	if s := utils.GetStrByKeyword("/proc/loadavg", ""); s != "" {
+		load, err := strconv.ParseFloat(strings.Fields(s)[0], 64)
+		if err == nil {
+			return load, true
 		}
 	}
+	return 0, false
 }
