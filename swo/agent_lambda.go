@@ -26,7 +26,6 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/sampler"
 	"github.com/solarwinds/apm-go/internal/utils"
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -85,10 +84,6 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	)
 	otel.SetMeterProvider(mp)
 	if err = o.RegisterOtelSampleRateMetrics(mp); err != nil {
-		return nil, err
-	}
-	// Register OpenTelemetry contrib runtime metrics
-	if err = runtime.Start(runtime.WithMeterProvider(mp)); err != nil {
 		return nil, err
 	}
 	if exprtr, err := otlptracegrpc.New(ctx); err != nil {
