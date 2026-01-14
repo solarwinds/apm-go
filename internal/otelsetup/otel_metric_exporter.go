@@ -22,6 +22,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/proxy"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/sdk/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/grpc"
@@ -67,6 +68,12 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	)
 }
 
-func MetricTemporalitySelector(sdkmetric.InstrumentKind) metricdata.Temporality {
-	return metricdata.DeltaTemporality
+func MetricTemporalitySelector(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	switch kind {
+	case metric.InstrumentKindUpDownCounter, metric.InstrumentKindObservableUpDownCounter:
+		return metricdata.CumulativeTemporality
+	default:
+		// For Histograms, Gauges and Counters, use Delta
+		return metricdata.DeltaTemporality
+	}
 }
