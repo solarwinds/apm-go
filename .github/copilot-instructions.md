@@ -12,7 +12,9 @@ When generating code for this repository:
 
 ## Repository Purpose
 
-The apm-go repository is a Go instrumentation library that provides Application Performance Monitoring (APM) capabilities for SolarWinds Observability. It wraps and extends the OpenTelemetry SDK to deliver production-ready observability with SolarWinds-specific features and optimizations.
+## Overview
+
+The apm-go library is used to instrument Go services and export telemetry data to SolarWinds Observability (SWO). It provides a comprehensive solution for monitoring application performance by wrapping the OpenTelemetry SDK with SolarWinds-specific enhancements.
 
 ## Golang Versions
 
