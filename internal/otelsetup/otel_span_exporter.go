@@ -28,24 +28,26 @@ import (
 func CreateAndSetupOtelExporter(ctx context.Context) (trace.SpanExporter, error) {
 	exporterEndpoint := getAndSetupExporterEndpoint("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
 	exporterOptions := []otlptracegrpc.Option{}
+	gprcDialOptions := []grpc.DialOption{}
 
 	if proxyUrl := config.GetProxy(); proxyUrl != "" {
-		dialOpt := grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
+		exporterOptions = append(exporterOptions, otlptracegrpc.WithEndpoint(proxy.ReplaceSchemeWithPassthrough(exporterEndpoint)))
+		gprcDialOptions = append(gprcDialOptions, grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
 			Proxy:         proxyUrl,
 			ProxyCertPath: config.GetProxyCertPath(),
-		}))
-		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(dialOpt))
+		})))
+	}
+
+	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
+		gprcDialOptions = append(gprcDialOptions, grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}))
+	}
+
+	if len(gprcDialOptions) > 0 {
+		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(gprcDialOptions...))
 	}
 
 	if os.Getenv("OTEL_EXPORTER_OTLP_COMPRESSION") != "" && os.Getenv("OTEL_EXPORTER_OTLP_TRACES_COMPRESSION") != "" {
 		exporterOptions = append(exporterOptions, otlptracegrpc.WithCompressor("gzip"))
-	}
-
-	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
-		grpcOptions := []grpc.DialOption{
-			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
-		}
-		exporterOptions = append(exporterOptions, otlptracegrpc.WithDialOption(grpcOptions...))
 	}
 
 	return otlptracegrpc.New(ctx, exporterOptions...)

@@ -34,20 +34,21 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 		otlpmetricgrpc.WithTemporalitySelector(MetricTemporalitySelector),
 		otlpmetricgrpc.WithCompressor("gzip"),
 	}
+	gprcDialOptions := []grpc.DialOption{}
 
 	if proxyUrl := config.GetProxy(); proxyUrl != "" {
-		dialOpt := grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
+		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithEndpoint(proxy.ReplaceSchemeWithPassthrough(exporterEndpoint)))
+		gprcDialOptions = append(gprcDialOptions, grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
 			Proxy:         proxyUrl,
 			ProxyCertPath: config.GetProxyCertPath(),
-		}))
-		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(dialOpt))
+		})))
+	}
+	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
+		gprcDialOptions = append(gprcDialOptions, grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}))
 	}
 
-	if isExportingToSwo(exporterEndpoint) && !hasAuthorizationHeaderSet() {
-		grpcOptions := []grpc.DialOption{
-			grpc.WithPerRPCCredentials(&bearerTokenAuthCred{token: config.GetApiToken()}),
-		}
-		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(grpcOptions...))
+	if len(gprcDialOptions) > 0 {
+		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(gprcDialOptions...))
 	}
 
 	if os.Getenv("OTEL_METRIC_EXPORT_INTERVAL") == "" {

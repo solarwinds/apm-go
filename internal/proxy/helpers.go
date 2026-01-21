@@ -28,6 +28,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/solarwinds/apm-go/internal/log"
 	"google.golang.org/grpc"
@@ -166,4 +167,15 @@ func getProxyCertPool(certPath string) (*x509.CertPool, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(cert)
 	return caCertPool, nil
+}
+
+// ReplaceSchemeWithPassthrough replaces the existing scheme in the provided
+// endpoint with "passthrough:///" to skip DNS resolution when using a proxy.
+// If no scheme is present, it adds the passthrough scheme.
+func ReplaceSchemeWithPassthrough(endpoint string) string {
+	if strings.Contains(endpoint, "://") {
+		parts := strings.SplitN(endpoint, "://", 2)
+		return "passthrough:///" + parts[1]
+	}
+	return "passthrough:///" + endpoint
 }
