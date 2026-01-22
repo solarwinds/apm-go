@@ -58,14 +58,11 @@ const (
 	envSolarWindsAPMCollector              = "SW_APM_COLLECTOR"
 	envSolarWindsAPMServiceKey             = "SW_APM_SERVICE_KEY"
 	envSolarWindsAPMTrustedPath            = "SW_APM_TRUSTEDPATH"
-	envSolarWindsAPMReporter               = "SW_APM_REPORTER"
 	envSolarWindsAPMTracingMode            = "SW_APM_TRACING_MODE"
 	envSolarWindsAPMSampleRate             = "SW_APM_SAMPLE_RATE"
 	envSolarWindsAPMPrependDomain          = "SW_APM_PREPEND_DOMAIN"
 	envSolarWindsAPMHostnameAlias          = "SW_APM_HOSTNAME_ALIAS"
 	envSolarWindsAPMHistogramPrecision     = "SW_APM_HISTOGRAM_PRECISION"
-	envSolarWindsAPMEventsFlushInterval    = "SW_APM_EVENTS_FLUSH_INTERVAL"
-	envSolarWindsAPMMaxReqBytes            = "SW_APM_MAX_REQUEST_BYTES"
 	envSolarWindsAPMEnabled                = "SW_APM_ENABLED"
 	envSolarWindsAPMConfigFile             = "SW_APM_CONFIG_FILE"
 	envSolarWindsAPMServerlessServiceName  = "SW_APM_SERVICE_NAME"
@@ -480,10 +477,14 @@ func (d *Delta) items() []DeltaItem {
 
 func (d *Delta) sanitize() *Delta {
 	for idx := range d.delta {
-		// mask the sensitive service key
-		if d.delta[idx].key == "ServiceKey" {
+		// mask the sensitive service key and proxy url
+		switch d.delta[idx].key {
+		case "ServiceKey":
 			d.delta[idx].value = MaskServiceKey(d.delta[idx].value)
+		case "Proxy":
+			d.delta[idx].value = MaskUrl(d.delta[idx].value)
 		}
+
 	}
 	return d
 }

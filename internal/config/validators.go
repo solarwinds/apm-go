@@ -16,12 +16,14 @@ package config
 
 import (
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/log"
 	"net"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/solarwinds/apm-go/internal/log"
 )
 
 // InvalidEnv returns a string indicating invalid environment variables
@@ -179,4 +181,25 @@ func MaskServiceKey(validKey string) string {
 		masked += s[1]
 	}
 	return masked
+}
+
+// MaskUrl masks the password in a URL if credentials are present.
+// For example:
+// url: "http://user:password@example.com:8080/path"
+// masked: "http://user:****@example.com:8080/path"
+func MaskUrl(urlStr string) string {
+	parsedUrl, err := url.Parse(urlStr)
+	if err != nil {
+		return urlStr
+	}
+
+	if parsedUrl.User == nil {
+		return urlStr
+	}
+
+	if _, hasPassword := parsedUrl.User.Password(); !hasPassword {
+		return urlStr
+	}
+
+	return strings.Replace(parsedUrl.Redacted(), "xxxxx", "****", 1)
 }

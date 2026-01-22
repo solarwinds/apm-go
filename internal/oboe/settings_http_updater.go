@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	defaultSettingsUpdateInterval  = 30 * time.Second
-	defaultSettingsTimeoutInterval = 10 * time.Second
+	defaultSettingsUpdateInterval   = 60 * time.Second
+	defaultSettingsTTLCheckInterval = 30 * time.Second
 )
 
 type settingsUpdater struct {
-	updateInterval  time.Duration
-	timeoutInterval time.Duration
-	oboe            Oboe
-	settingsService *settingsService
+	updateInterval   time.Duration
+	ttlCheckInterval time.Duration
+	oboe             Oboe
+	settingsService  *settingsService
 }
 
 type SettingsUpdater interface {
@@ -53,10 +53,10 @@ func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
 	settingsUrl := config.SettingsURL()
 
 	return &settingsUpdater{
-		updateInterval:  defaultSettingsUpdateInterval,
-		timeoutInterval: defaultSettingsTimeoutInterval,
-		oboe:            o,
-		settingsService: newSettingsService(settingsUrl, parsedServiceKey.ServiceName, "", parsedServiceKey.Token),
+		updateInterval:   defaultSettingsUpdateInterval,
+		ttlCheckInterval: defaultSettingsTTLCheckInterval,
+		oboe:             o,
+		settingsService:  newSettingsService(settingsUrl, parsedServiceKey.ServiceName, "", parsedServiceKey.Token),
 	}, nil
 }
 
@@ -70,17 +70,17 @@ func (su *settingsUpdater) run(ctx context.Context, cancel context.CancelFunc) {
 	defer log.Info("http settings updater exiting.")
 
 	updateTimer := time.NewTimer(0) // Execute immediately on startup
-	timeoutTimer := time.NewTimer(su.timeoutInterval)
+	ttlTimer := time.NewTimer(su.ttlCheckInterval)
 	defer func() {
 		updateTimer.Stop()
-		timeoutTimer.Stop()
+		ttlTimer.Stop()
 	}()
 
 	// Semaphores to prevent overlapping executions
 	updateReady := make(chan bool, 1)
-	timeoutReady := make(chan bool, 1)
+	ttlCheckReady := make(chan bool, 1)
 	updateReady <- true
-	timeoutReady <- true
+	ttlCheckReady <- true
 
 	for {
 		select {
@@ -101,15 +101,15 @@ func (su *settingsUpdater) run(ctx context.Context, cancel context.CancelFunc) {
 				// Previous execution still running, skip this tick
 			}
 			updateTimer.Reset(su.updateInterval)
-		case <-timeoutTimer.C:
+		case <-ttlTimer.C:
 			// Only start new execution if previous one has completed
 			select {
-			case <-timeoutReady:
-				go su.timeoutSettings(timeoutReady)
+			case <-ttlCheckReady:
+				go su.ttlSettingsCheck(ttlCheckReady)
 			default:
 				// Previous execution still running, skip this tick
 			}
-			timeoutTimer.Reset(su.timeoutInterval)
+			ttlTimer.Reset(su.ttlCheckInterval)
 		}
 	}
 }
@@ -135,7 +135,7 @@ func (su *settingsUpdater) getSettings(ctx context.Context) (*httpSettings, erro
 	return su.settingsService.getSettings(ctx)
 }
 
-func (su *settingsUpdater) timeoutSettings(ready chan bool) {
+func (su *settingsUpdater) ttlSettingsCheck(ready chan bool) {
 	defer func() { ready <- true }()
 
 	su.oboe.CheckSettingsTimeout()
