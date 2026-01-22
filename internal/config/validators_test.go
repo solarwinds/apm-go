@@ -15,8 +15,9 @@ package config
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -122,4 +123,70 @@ func TestIsValidHost(t *testing.T) {
 	require.False(t, IsValidHost("localhost:321:321"))
 	require.False(t, IsValidHost("2001:db8::ff00:42:8329"))
 	require.False(t, IsValidHost("2001:db8::ff00:42:8329:1234"))
+}
+
+func TestMaskUrl(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "URL with username and password",
+			input:    "https://admin:P@ssw0rd!123@api.example.com/v1/data",
+			expected: "https://admin:****@api.example.com/v1/data",
+		},
+		{
+			name:     "URL with username only (no password)",
+			input:    "http://user@example.com/path",
+			expected: "http://user@example.com/path",
+		},
+		{
+			name:     "URL with query parameters and credentials",
+			input:    "http://user:secret@example.com/api?key=value&foo=bar",
+			expected: "http://user:****@example.com/api?key=value&foo=bar",
+		},
+		{
+			name:     "URL with empty password",
+			input:    "http://user:@example.com/path",
+			expected: "http://user:****@example.com/path",
+		},
+		{
+			name:     "Simple HTTP URL without credentials",
+			input:    "http://example.com",
+			expected: "http://example.com",
+		},
+		{
+			name:     "FTP URL with credentials",
+			input:    "ftp://ftpuser:ftppass@ftp.example.com/file.txt",
+			expected: "ftp://ftpuser:****@ftp.example.com/file.txt",
+		},
+		{
+			name:     "URL with IPv4 address and credentials",
+			input:    "http://user:pass@192.168.1.1:8080/api",
+			expected: "http://user:****@192.168.1.1:8080/api",
+		},
+		{
+			name:     "URL with IPv6 address and credentials",
+			input:    "http://user:pass@[2001:db8::1]:8080/api",
+			expected: "http://user:****@[2001:db8::1]:8080/api",
+		},
+		{
+			name:     "Invalid URL (no scheme)",
+			input:    "not-a-valid-url",
+			expected: "not-a-valid-url",
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := MaskUrl(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
