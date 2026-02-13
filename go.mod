@@ -17,7 +17,7 @@ module github.com/solarwinds/apm-go
 go 1.24.0
 
 require (
-	github.com/coocood/freecache v1.2.4
+	github.com/coocood/freecache v1.2.5
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.2.0
