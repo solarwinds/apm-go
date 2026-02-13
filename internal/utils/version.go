@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	baseVersion = "2.0.0"
+	baseVersion = "1.3.0"
 	prerelease  = ""
 	build       = ""
 
