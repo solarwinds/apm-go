@@ -16,12 +16,13 @@ package swohttp
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/swotel"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"strings"
 )
 
 const (
@@ -31,8 +32,7 @@ const (
 
 // WrapBaseHandler wraps a handler with our instrumentation, as well as
 // otelhttp instrumentation. It is intended for use with the base handler as
-// provided to a mux. Individual route handlers should use
-// `otelhttp.WithRouteTag` instead.
+// provided to a mux.
 func WrapBaseHandler(h http.Handler, operation string) http.Handler {
 	// Wrap with our instrumentation
 	h = NewBaseHandler(h)

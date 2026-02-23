@@ -49,7 +49,7 @@ echoHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 })
 mux := http.NewServeMux()
 // Wrap the route handler with otelhttp instrumentation, adding the route tag
-mux.Handle("/echo", otelhttp.WithRouteTag("/echo", echoHandler))
+mux.Handle("/echo", echoHandler)
 // Wrap the mux (base handler) with our instrumentation
 http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
 ```

@@ -15,17 +15,17 @@
 package main
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/XSAM/otelsql"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/solarwinds/apm-go/instrumentation/net/http/swohttp"
 	"github.com/solarwinds/apm-go/swo"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	"net/http"
 )
 
 func main() {
@@ -88,7 +88,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	// Wrap the route handler with otelhttp instrumentation, adding the route tag
-	mux.Handle("/echo", otelhttp.WithRouteTag("/echo", echoHandler))
+	mux.Handle("/echo", echoHandler)
 	// Wrap the mux (base handler) with our instrumentation
 	http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
 }
