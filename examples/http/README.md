@@ -17,7 +17,8 @@ SW_APM_SERVICE_KEY="${SW_APM_TOKEN}:golang-testbed" go run .
 If the agent successfully connects, you will see a log line like this:
 
 ```
-[solarwinds_apm] Got dynamic settings. The SolarWinds Observability APM agent (0x140001007e0) is ready.
+[solarwinds_apm] Accepted config items:
+ - ServiceKey (SW_APM_SERVICE_KEY) =
 ```
 
 Call the http service like so:

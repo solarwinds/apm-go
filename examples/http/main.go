@@ -24,7 +24,7 @@ import (
 	"github.com/solarwinds/apm-go/swo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -53,7 +53,7 @@ func main() {
 		// We set the Otel semantic convention attribute `db.system` to `sqlite`.
 		// otelsql provides standard attributes for many database systems such
 		// as MySQL, PostgreSQL, and many others.
-		otelsql.WithAttributes(semconv.DBSystemSqlite),
+		otelsql.WithAttributes(semconv.DBSystemNameSQLite),
 	)
 	if err != nil {
 		panic(err)
@@ -87,8 +87,8 @@ func main() {
 	})
 
 	mux := http.NewServeMux()
-	// Wrap the route handler with otelhttp instrumentation, adding the route tag
-	mux.Handle("/echo", echoHandler)
-	// Wrap the mux (base handler) with our instrumentation
-	http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
+	// Wrap echoHandler function with otelhttp instrumentation
+	mux.Handle("/echo", swohttp.WrapBaseHandler(echoHandler, "/echo"))
+
+	http.ListenAndServe(":8080", mux)
 }
