@@ -48,10 +48,10 @@ echoHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 	}
 })
 mux := http.NewServeMux()
-// Wrap the route handler with otelhttp instrumentation, adding the route tag
-mux.Handle("/echo", otelhttp.WithRouteTag("/echo", echoHandler))
-// Wrap the mux (base handler) with our instrumentation
-http.ListenAndServe(":8080", swohttp.WrapBaseHandler(mux, "server"))
+// Wrap echoHandler function with otelhttp instrumentation
+mux.Handle("/echo", swohttp.WrapBaseHandler(echoHandler, "/echo"))
+
+http.ListenAndServe(":8080", mux)
 ```
 
 There are many instrumented libraries available. Here are the libraries we
