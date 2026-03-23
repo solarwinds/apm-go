@@ -81,6 +81,7 @@ func main() {
 				w.WriteHeader(http.StatusInternalServerError)
 			} else {
 				// If no error, we simply echo back.
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				_, _ = w.Write(text)
 			}
 		}
