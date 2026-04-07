@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"testing"
 	"time"
+	// "fmt"
 )
 
 func TestLoggableTraceIDFromContext(t *testing.T) {
@@ -151,4 +152,39 @@ func TestHandle(t *testing.T) {
 
 		})
 	}
+}
+
+func TestLogHandlerEnabled(t *testing.T) {
+	baseHandler := slog.NewJSONHandler(bytes.NewBuffer(nil), &slog.HandlerOptions{
+		Level: slog.LevelWarn,
+	})
+	handler := NewLogHandler(baseHandler)
+
+	require.False(t, handler.Enabled(context.Background(), slog.LevelInfo))
+	require.True(t, handler.Enabled(context.Background(), slog.LevelWarn))
+	require.True(t, handler.Enabled(context.Background(), slog.LevelError))
+}
+
+func TestLogHandlerWithAttrs(t *testing.T) {
+	writer := bytes.NewBuffer(nil)
+	baseHandler := slog.NewJSONHandler(writer, &slog.HandlerOptions{})
+	handler := NewLogHandler(baseHandler)
+	attrHandler := handler.WithAttrs([]slog.Attr{slog.String("key", "value")})
+
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test", 0)
+	require.NoError(t, attrHandler.Handle(context.Background(), record))
+	require.Contains(t, writer.String(), `"msg":"test"`)
+	require.Contains(t, writer.String(), `"key":"value"`)
+}
+
+func TestLogHandlerWithGroup(t *testing.T) {
+	writer := bytes.NewBuffer(nil)
+	baseHandler := slog.NewJSONHandler(writer, &slog.HandlerOptions{})
+	handler := NewLogHandler(baseHandler)
+	groupHandler := handler.WithGroup("mygroup")
+
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "test", 0)
+	require.NoError(t, groupHandler.Handle(context.Background(), record))
+	require.Contains(t, writer.String(), `"msg":"test"`)
+	require.Contains(t, writer.String(), "mygroup")
 }
