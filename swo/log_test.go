@@ -24,7 +24,6 @@ import (
 	"log/slog"
 	"testing"
 	"time"
-	// "fmt"
 )
 
 func TestLoggableTraceIDFromContext(t *testing.T) {
