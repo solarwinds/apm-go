@@ -54,9 +54,9 @@ func TestSetLogOutput(t *testing.T) {
 	}()
 
 	var buf utils.SafeBuffer
-	log.SetOutput(&buf)
+	SetLogOutput(&buf)
 	defer func() {
-		log.SetOutput(os.Stderr)
+		SetLogOutput(os.Stderr)
 	}()
 
 	log.Info("hello world")
