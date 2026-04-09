@@ -99,3 +99,26 @@ func doRequest(t *testing.T, xtOpts string) *http.Response {
 	handler.ServeHTTP(recorder, req)
 	return recorder.Result()
 }
+
+func TestWrapBaseHandler(t *testing.T) {
+	defer setupTest(t)()
+
+	cb, err := swo.Start()
+	require.NoError(t, err)
+	defer cb()
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("wrapped"))
+		require.NoError(t, err)
+	})
+	handler := WrapBaseHandler(inner, "test-operation")
+
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
+	handler.ServeHTTP(recorder, req)
+
+	resp := recorder.Result()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, XTrace, resp.Header.Get(ACEHdr))
+	require.Regexp(t, xtraceRegexp, resp.Header.Get(XTrace))
+}
