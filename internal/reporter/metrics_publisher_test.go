@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package uams
+package reporter
 
 import (
-	"github.com/google/uuid"
-	"github.com/solarwinds/apm-go/internal/log"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func readUamsClientId() (uuid.UUID, error) {
-	f := determineFileForOS()
-	i, err := ReadFromFile(f)
+func TestNewMetricsPublisher(t *testing.T) {
+	p := NewMetricsPublisher()
 
-	if err != nil {
-		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(clientUrl)
-		if err != nil {
-			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
-		}
-	}
-	return i, err
+	require.NotNil(t, p)
+}
+
+func TestMetricsPublisherGetMetricsRegistryBeforeStart(t *testing.T) {
+	p := NewMetricsPublisher()
+
+	require.Nil(t, p.GetMetricsRegistry())
+}
+
+func TestMetricsPublisherShutdownWhenNotConfigured(t *testing.T) {
+	p := NewMetricsPublisher()
+
+	require.NoError(t, p.Shutdown())
 }

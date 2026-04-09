@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,20 +15,20 @@
 package uams
 
 import (
-	"github.com/google/uuid"
-	"github.com/solarwinds/apm-go/internal/log"
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func readUamsClientId() (uuid.UUID, error) {
-	f := determineFileForOS()
-	i, err := ReadFromFile(f)
+// TestDetect_WhenUamsNotAvailable verifies that Detect returns nil resource and
+// no error when the UAMS client is not available in the environment. The
+// detector treats a missing UAMS client as a non-fatal condition.
+func TestDetectWhenUamsNotAvailable(t *testing.T) {
+	detector := New()
 
-	if err != nil {
-		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(clientUrl)
-		if err != nil {
-			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
-		}
-	}
-	return i, err
+	res, err := detector.Detect(context.Background())
+
+	require.NoError(t, err)
+	require.Nil(t, res)
 }
