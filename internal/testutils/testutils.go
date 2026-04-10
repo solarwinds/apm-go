@@ -17,15 +17,17 @@ package testutils
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const SpanIdHex = "0123456789abcdef"
@@ -110,4 +112,23 @@ func Setenv(t *testing.T, k string, v string) func() {
 	return func() {
 		require.NoError(t, os.Unsetenv(k))
 	}
+}
+
+// WriteUUIDFile creates a temporary file containing the given UUID string and
+// registers t.Cleanup to remove it. Returns the file path.
+func WriteUUIDFile(t *testing.T, id uuid.UUID) string {
+	t.Helper()
+	f, err := os.CreateTemp("", "uams-test-*")
+	require.NoError(t, err)
+	_, err = f.WriteString(id.String())
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	t.Cleanup(func() { _ = os.Remove(f.Name()) })
+	return f.Name()
+}
+
+// UamsClientResponse returns a JSON response body matching the UAMS HTTP
+// endpoint format with the given UUID as the uamsclient_id.
+func UamsClientResponse(id uuid.UUID) string {
+	return fmt.Sprintf(`{"is_registered":true,"otel_endpoint_access":false,"usc_connectivity":true,"uamsclient_id":"%s"}`, id.String())
 }

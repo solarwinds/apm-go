@@ -16,19 +16,86 @@ package uams
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/solarwinds/apm-go/internal/constants"
+	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// TestDetect_WhenUamsNotAvailable verifies that Detect returns nil resource and
-// no error when the UAMS client is not available in the environment. The
-// detector treats a missing UAMS client as a non-fatal condition.
-func TestDetectWhenUamsNotAvailable(t *testing.T) {
-	detector := New()
+func resourceAttrs(r *resource.Resource) map[string]string {
+	attrs := make(map[string]string)
+	for _, kv := range r.Attributes() {
+		attrs[string(kv.Key)] = kv.Value.AsString()
+	}
+	return attrs
+}
 
-	res, err := detector.Detect(context.Background())
+func TestDetectFileExistsHttpOK(t *testing.T) {
+	fileUUID, err := uuid.NewRandom()
+	require.NoError(t, err)
+	httpUUID, err := uuid.NewRandom()
+	require.NoError(t, err)
 
+	filePath := testutils.WriteUUIDFile(t, fileUUID)
+	svr := testutils.Srv(t, testutils.UamsClientResponse(httpUUID), http.StatusOK)
+	defer svr.Close()
+	overrideUamsFile(t, filePath)
+	overrideUamsURL(t, svr.URL)
+
+	res, err := New().Detect(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, fileUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, fileUUID.String(), attrs["host.id"])
+}
+
+func TestDetectFileMissingHttpOK(t *testing.T) {
+	httpUUID, err := uuid.NewRandom()
+	require.NoError(t, err)
+
+	svr := testutils.Srv(t, testutils.UamsClientResponse(httpUUID), http.StatusOK)
+	defer svr.Close()
+	overrideUamsFile(t, nonexistentFile)
+	overrideUamsURL(t, svr.URL)
+
+	res, err := New().Detect(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, httpUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, httpUUID.String(), attrs["host.id"])
+}
+
+func TestDetectFileExistsHttpError(t *testing.T) {
+	fileUUID, err := uuid.NewRandom()
+	require.NoError(t, err)
+
+	filePath := testutils.WriteUUIDFile(t, fileUUID)
+	svr := testutils.Srv(t, "", http.StatusInternalServerError)
+	defer svr.Close()
+	overrideUamsFile(t, filePath)
+	overrideUamsURL(t, svr.URL)
+
+	res, err := New().Detect(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, fileUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, fileUUID.String(), attrs["host.id"])
+}
+
+func TestDetectFileMissingHttpError(t *testing.T) {
+	svr := testutils.Srv(t, "", http.StatusInternalServerError)
+	defer svr.Close()
+	overrideUamsFile(t, nonexistentFile)
+	overrideUamsURL(t, svr.URL)
+
+	res, err := New().Detect(context.Background())
 	require.NoError(t, err)
 	require.Nil(t, res)
 }

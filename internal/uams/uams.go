@@ -19,13 +19,17 @@ import (
 	"github.com/solarwinds/apm-go/internal/log"
 )
 
+var (
+	uamsFilePath  = determineFileForOS()
+	uamsClientURL = clientUrl
+)
+
 func readUamsClientId() (uuid.UUID, error) {
-	f := determineFileForOS()
-	i, err := ReadFromFile(f)
+	i, err := ReadFromFile(uamsFilePath)
 
 	if err != nil {
 		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(clientUrl)
+		i, err = ReadFromHttp(uamsClientURL)
 		if err != nil {
 			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
 		}
