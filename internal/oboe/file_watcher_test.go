@@ -89,6 +89,25 @@ func TestFileBasedWatcherStop(t *testing.T) {
 	}
 }
 
+// pollUntil retries cond every 5ms until it returns true or deadline elapses.
+// Returns true if the condition was met, false if it timed out.
+func pollUntil(deadline time.Duration, cond func() bool) bool {
+	pollTicker := time.NewTicker(5 * time.Millisecond)
+	defer pollTicker.Stop()
+	timer := time.NewTimer(deadline)
+	defer timer.Stop()
+	for {
+		if cond() {
+			return true
+		}
+		select {
+		case <-timer.C:
+			return cond() // one final check after deadline
+		case <-pollTicker.C:
+		}
+	}
+}
+
 func TestFileBasedWatcherStartStop(t *testing.T) {
 	t.Run("without file", func(t *testing.T) {
 		ensureNoSettingsFile(t)
@@ -100,11 +119,12 @@ func TestFileBasedWatcherStartStop(t *testing.T) {
 		w.Start()
 		// Stop sends a signal into the exit channel, causing the goroutine to return
 		w.Stop()
-		time.Sleep(50 * time.Millisecond)
-		// No file present: goroutine started and stopped cleanly, settings remain unset
+		// No file present: goroutine started and stopped cleanly, settings remain unset.
+		// readSettingFromFile is called synchronously inside Start, so this is already set.
 		assert.False(t, o.HasDefaultSetting())
-		// The exit channel must be empty after the goroutine consumed the signal
-		assert.Equal(t, 0, len(exit))
+		// Wait until the goroutine has consumed the stop signal (channel becomes empty).
+		assert.True(t, pollUntil(2*time.Second, func() bool { return len(exit) == 0 }),
+			"goroutine did not consume stop signal within deadline")
 	})
 
 	t.Run("with file", func(t *testing.T) {
@@ -116,11 +136,12 @@ func TestFileBasedWatcherStartStop(t *testing.T) {
 		// Start calls readSettingFromFile immediately (before the ticker fires)
 		w.Start()
 		w.Stop()
-		time.Sleep(50 * time.Millisecond)
-		// Settings must be applied by the immediate read inside Start
+		// Settings must be applied by the immediate synchronous read inside Start
 		require.True(t, o.HasDefaultSetting())
 		assert.Equal(t, int64(1000000), int64(o.GetSetting().value))
-		assert.Equal(t, 0, len(exit))
+		// Wait until the goroutine has consumed the stop signal (channel becomes empty).
+		assert.True(t, pollUntil(2*time.Second, func() bool { return len(exit) == 0 }),
+			"goroutine did not consume stop signal within deadline")
 	})
 }
 
