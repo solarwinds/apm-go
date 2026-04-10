@@ -148,3 +148,15 @@ func TestDistro(t *testing.T) {
 		assert.Contains(t, distro, "unknown")
 	}
 }
+
+func TestBestEffortCurrentID(t *testing.T) {
+	id := BestEffortCurrentID()
+	assert.NotNil(t, id)
+	assert.NotEmpty(t, id.Hostname())
+	assert.Equal(t, os.Getpid(), id.Pid())
+}
+
+func TestDistroFunc(t *testing.T) {
+	d := Distro()
+	assert.NotEmpty(t, d)
+}

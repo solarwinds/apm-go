@@ -79,6 +79,12 @@ func TestIsValidTracingMode(t *testing.T) {
 	assert.Equal(t, false, IsValidTracingMode("NEVER"))
 }
 
+func TestMissingEnv(t *testing.T) {
+	assert.Equal(t, "missing env - SW_APM_SERVICE_KEY", MissingEnv("SW_APM_SERVICE_KEY"))
+	assert.Equal(t, "missing env - SW_APM_HOSTNAME_ALIAS", MissingEnv("SW_APM_HOSTNAME_ALIAS"))
+	assert.Equal(t, "missing env - ", MissingEnv(""))
+}
+
 func TestConverters(t *testing.T) {
 	assert.Equal(t, DisabledTracingMode, NormalizeTracingMode("disabled"))
 	assert.Equal(t, DisabledTracingMode, NormalizeTracingMode("never"))

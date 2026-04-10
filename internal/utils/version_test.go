@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package host
+package utils
 
 import (
 	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// Mem returns the current memory statistics. Don't call this function too often
-// as it stops the world while gathering the information.
-func Mem(m *runtime.MemStats) {
-	runtime.ReadMemStats(m)
+func TestVersion(t *testing.T) {
+	v := Version()
+	assert.NotEmpty(t, v)
+}
+
+func TestGoVersion(t *testing.T) {
+	v := GoVersion()
+	assert.NotEmpty(t, v)
+	assert.Equal(t, strings.TrimPrefix(runtime.Version(), "go"), v)
+	assert.False(t, strings.HasPrefix(v, "go"))
 }
