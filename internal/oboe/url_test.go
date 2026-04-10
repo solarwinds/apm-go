@@ -74,6 +74,12 @@ func TestUrlFilter(t *testing.T) {
 }
 
 func TestReloadURLsConfig(t *testing.T) {
+	// Capture the original config so we can restore it after the test, regardless
+	// of which ReloadURLsConfig call is last. Without this, the package-level urls
+	// state leaks into other tests that rely on the default transaction filtering.
+	orig := config.GetTransactionFiltering()
+	t.Cleanup(func() { ReloadURLsConfig(orig) })
+
 	// Load a config with one disabled extension filter
 	ReloadURLsConfig([]config.TransactionFilter{
 		{Type: "url", Extensions: []string{"gif"}, Tracing: config.DisabledTracingMode},
@@ -103,7 +109,7 @@ func TestReloadURLsConfig(t *testing.T) {
 	assert.Equal(t, int64(3), urls.cache.EntryCount())
 	assert.Equal(t, int64(1), urls.cache.HitCount())
 
-	// Restore to empty config
+	// Reload to empty; cache must be cleared (restoration to original is via t.Cleanup)
 	ReloadURLsConfig(nil)
 	assert.Equal(t, int64(0), urls.cache.EntryCount())
 	assert.Equal(t, int64(0), urls.cache.HitCount())

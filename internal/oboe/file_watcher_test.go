@@ -35,7 +35,10 @@ func TestNewFileBasedWatcher(t *testing.T) {
 // starts from a clean state regardless of previous test failures.
 func ensureNoSettingsFile(t *testing.T) {
 	t.Helper()
-	_ = os.Remove(settingsFileName)
+	err := os.Remove(settingsFileName)
+	if err == nil || os.IsNotExist(err) {
+		return
+	}
 }
 
 func writeSettingsFile(t *testing.T, content []byte) {
