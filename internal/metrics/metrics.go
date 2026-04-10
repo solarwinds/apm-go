@@ -18,9 +18,3 @@ package metrics
 type RateCountSummary struct {
 	Requested, Traced, Limited, TtTraced, Sampled, Through int64
 }
-
-type HostMetrics interface {
-	getTotalRAM() (uint64, bool)
-	getFreeRAM() (uint64, bool)
-	getSystemLoad1() (float64, bool)
-}
