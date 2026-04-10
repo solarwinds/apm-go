@@ -49,10 +49,6 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, o oboe.Oboe, r
 	if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
 		return err
 	}
-	err = metrics.RegisterOtelRuntimeMetrics(meterProvider)
-	if err != nil {
-		return err
-	}
 	// Register OpenTelemetry contrib runtime metrics
 	if err = runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
 		return err
