@@ -39,6 +39,7 @@ func ensureNoSettingsFile(t *testing.T) {
 	if err == nil || os.IsNotExist(err) {
 		return
 	}
+	t.Fatalf("unexpected error removing settings file: %s", err)
 }
 
 func writeSettingsFile(t *testing.T, content []byte) {
