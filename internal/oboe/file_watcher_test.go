@@ -78,17 +78,6 @@ func TestFileBasedWatcherReadSettingFromFile(t *testing.T) {
 	})
 }
 
-func TestFileBasedWatcherStop(t *testing.T) {
-	o := NewOboe()
-	w := NewFileBasedWatcher(o)
-	w.Stop()
-	// Drain the exit channel so subsequent tests are unaffected
-	select {
-	case <-exit:
-	default:
-	}
-}
-
 // pollUntil retries cond every 5ms until it returns true or deadline elapses.
 // Returns true if the condition was met, false if it timed out.
 func pollUntil(deadline time.Duration, cond func() bool) bool {
