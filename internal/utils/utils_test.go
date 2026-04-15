@@ -15,7 +15,6 @@
 package utils
 
 import (
-	"os"
 	"runtime"
 	"testing"
 
@@ -37,65 +36,6 @@ func TestSPrintBsonInvalidBytes(t *testing.T) {
 	// Malformed BSON should return the error string rather than panic
 	result := SPrintBson([]byte{0x00, 0x01})
 	assert.NotEmpty(t, result)
-}
-
-func TestGetLineByKeyword(t *testing.T) {
-	f, err := os.CreateTemp("", "utils_test_*")
-	require.NoError(t, err)
-	defer func() { _ = os.Remove(f.Name()) }()
-
-	_, err = f.WriteString("line one\nfoo:bar\nline three\n")
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-
-	assert.Equal(t, "foo:bar", GetLineByKeyword(f.Name(), "foo"))
-	assert.Equal(t, "line one", GetLineByKeyword(f.Name(), "line one"))
-	assert.Equal(t, "", GetLineByKeyword(f.Name(), "nonexistent"))
-	assert.Equal(t, "", GetLineByKeyword("", "foo"))
-	assert.Equal(t, "", GetLineByKeyword("/nonexistent/path/file.txt", "foo"))
-}
-
-func TestGetStrByKeyword(t *testing.T) {
-	f, err := os.CreateTemp("", "utils_test_*")
-	require.NoError(t, err)
-	defer func() { _ = os.Remove(f.Name()) }()
-
-	_, err = f.WriteString("foo:bar\n")
-	require.NoError(t, err)
-	require.NoError(t, f.Close())
-
-	assert.Equal(t, "foo:bar", GetStrByKeyword(f.Name(), "foo"))
-	assert.Equal(t, "", GetStrByKeyword(f.Name(), "nonexistent"))
-}
-
-func TestGetStrByKeywordFiles(t *testing.T) {
-	f1, err := os.CreateTemp("", "utils_test_*")
-	require.NoError(t, err)
-	defer func() { _ = os.Remove(f1.Name()) }()
-
-	f2, err := os.CreateTemp("", "utils_test_*")
-	require.NoError(t, err)
-	defer func() { _ = os.Remove(f2.Name()) }()
-
-	_, err = f1.WriteString("match line\n")
-	require.NoError(t, err)
-	require.NoError(t, f1.Close())
-	require.NoError(t, f2.Close())
-
-	// f1 contains the keyword; f2 is empty
-	path, line := GetStrByKeywordFiles([]string{f1.Name(), f2.Name()}, "match")
-	assert.Equal(t, f1.Name(), path)
-	assert.Equal(t, "match line", line)
-
-	// f2 is checked second; keyword is not in either
-	path2, line2 := GetStrByKeywordFiles([]string{f1.Name(), f2.Name()}, "nonexistent")
-	assert.Equal(t, "", path2)
-	assert.Equal(t, "", line2)
-
-	// Empty file list
-	path3, line3 := GetStrByKeywordFiles([]string{}, "match")
-	assert.Equal(t, "", path3)
-	assert.Equal(t, "", line3)
 }
 
 func TestMin(t *testing.T) {

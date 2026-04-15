@@ -56,10 +56,6 @@ var (
 	// make sure the host observer starts only once
 	startOnce sync.Once
 
-	// the cache for initDistro information and its lock
-	distro     string
-	distroOnce sync.Once
-
 	// the cache for pid, it's only modified/initialized when this package is
 	// imported.
 	pid = getPid()
@@ -72,14 +68,6 @@ var (
 // CurrentID returns a copyID of the current ID
 func CurrentID() *ID {
 	hostId.waitForReady()
-	return hostId.copyID()
-}
-
-// BestEffortCurrentID returns the current host ID with the best effort. It
-// doesn't wait until the ID is ready. This function is used mainly by getSettings
-// where the ID may not be fully initialized immediately after starting up but
-// it's acceptable.
-func BestEffortCurrentID() *ID {
 	return hostId.copyID()
 }
 
@@ -171,12 +159,4 @@ func FilteredIfaces() ([]net.Interface, error) {
 		filtered = append(filtered, iface)
 	}
 	return filtered, nil
-}
-
-// Distro returns the distro information
-func Distro() string {
-	distroOnce.Do(func() {
-		distro = initDistro()
-	})
-	return distro
 }

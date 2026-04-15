@@ -17,7 +17,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -135,28 +134,4 @@ func TestStopHostIDObserver(t *testing.T) {
 
 func TestCurrentID(t *testing.T) {
 	assert.Equal(t, os.Getpid(), CurrentID().Pid())
-}
-
-func TestDistro(t *testing.T) {
-	distro := strings.ToLower(initDistro())
-
-	assert.NotEmpty(t, distro)
-
-	if runtime.GOOS == "linux" {
-		assert.NotContains(t, distro, "unknown")
-	} else {
-		assert.Contains(t, distro, "unknown")
-	}
-}
-
-func TestBestEffortCurrentID(t *testing.T) {
-	id := BestEffortCurrentID()
-	assert.NotNil(t, id)
-	assert.NotEmpty(t, id.Hostname())
-	assert.Equal(t, os.Getpid(), id.Pid())
-}
-
-func TestDistroFunc(t *testing.T) {
-	d := Distro()
-	assert.NotEmpty(t, d)
 }

@@ -15,10 +15,8 @@
 package utils
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -35,49 +33,6 @@ func SPrintBson(message []byte) string {
 	}
 	b, _ := json.MarshalIndent(m, "", "  ")
 	return string(b)
-}
-
-// GetLineByKeyword reads a file, searches for the keyword and returns the matched line.
-// It returns empty string "" if no match found or failed to open the path.
-// Pass an empty string "" if you just need to get the first line.
-func GetLineByKeyword(path string, keyword string) string {
-	if path == "" {
-		return ""
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer func() {
-		_ = file.Close()
-	}()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if line := scanner.Text(); strings.Contains(line, keyword) {
-			return line
-		}
-	}
-	// ignore any scanner.Err(), just return an empty string.
-	return ""
-}
-
-// GetStrByKeyword read a file, searches for the keyword and returns the matched line
-// with trailing line-feed character trimmed.
-func GetStrByKeyword(path string, keyword string) string {
-	return strings.Trim(GetLineByKeyword(path, keyword), "\n")
-}
-
-// GetStrByKeywordFiles does the same thing as GetStrByKeyword but searches for a list
-// of files and returns the first matched files and line
-func GetStrByKeywordFiles(pathes []string, keyword string) (path string, line string) {
-	for _, path = range pathes {
-		line = GetStrByKeyword(path, keyword)
-		if line != "" {
-			return path, line
-		}
-	}
-	return "", ""
 }
 
 // Min returns the lower value
