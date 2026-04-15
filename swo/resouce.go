@@ -59,9 +59,29 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
 		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),
 	)
-	resource, mergedError := resource.Merge(resource.Default(), customResource)
-
-	return resource, errors.Join(customResourceErrors, mergedError)
+	r, mergedError := resource.Merge(resource.Default(), customResource)
+	combined := errors.Join(customResourceErrors, mergedError)
+	if errors.Is(combined, resource.ErrSchemaURLConflict) {
+		// ErrSchemaURLConflict is non-fatal: it signals a semconv version mismatch
+		// between detector libraries. The resource attributes are still detected
+		// correctly. Log it as a warning and strip it from the returned error.
+		// The OTel SDK's own ExampleNew() treats this error as non-fatal by only
+		// logging it: go.opentelemetry.io/otel/sdk@v1/resource/example_test.go
+		log.Warningf("resource schema URL conflict (possible detector library version mismatch): %v", combined)
+		type multiErr interface{ Unwrap() []error }
+		if u, ok := combined.(multiErr); ok {
+			var remaining []error
+			for _, e := range u.Unwrap() {
+				if !errors.Is(e, resource.ErrSchemaURLConflict) {
+					remaining = append(remaining, e)
+				}
+			}
+			combined = errors.Join(remaining...)
+		} else {
+			combined = nil
+		}
+	}
+	return r, combined
 }
 
 func getOptionalDetectors() []resource.Detector {
