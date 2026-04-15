@@ -60,25 +60,25 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),
 	)
 	r, mergedError := resource.Merge(resource.Default(), customResource)
-	combined := errors.Join(customResourceErrors, mergedError)
-	if errors.Is(combined, resource.ErrSchemaURLConflict) {
+	combinedError := errors.Join(customResourceErrors, mergedError)
+	if errors.Is(combinedError, resource.ErrSchemaURLConflict) {
 		// ErrSchemaURLConflict is non-fatal: it signals a semconv version mismatch
 		// between detector libraries. The resource attributes are still detected
 		// correctly. Log it as a warning and strip it from the returned error.
 		// The OTel SDK's own ExampleNew() treats this error as non-fatal by only
 		// logging it:
 		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/resource/example_test.go
-		log.Warningf("resource schema URL conflict (possible detector library version mismatch): %v", combined)
-		combined = filterSchemaURLConflict(combined)
+		log.Warningf("resource schema URL conflict (possible detector library version mismatch): %v", combinedError)
+		combinedError = filterSchemaURLConflict(combinedError)
 	}
-	return r, combined
+	return r, combinedError
 }
 
 // filterSchemaURLConflict removes ErrSchemaURLConflict from a joined error,
 // returning nil when the conflict was the only error present.
-func filterSchemaURLConflict(combined error) error {
+func filterSchemaURLConflict(combinedError error) error {
 	type multiErr interface{ Unwrap() []error }
-	if u, ok := combined.(multiErr); ok {
+	if u, ok := combinedError.(multiErr); ok {
 		var remaining []error
 		for _, e := range u.Unwrap() {
 			if !errors.Is(e, resource.ErrSchemaURLConflict) {
@@ -91,19 +91,19 @@ func filterSchemaURLConflict(combined error) error {
 }
 
 func getOptionalDetectors() []resource.Detector {
-	disabledResouceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
+	disabledResourceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
 
 	optionalDetectors := []resource.Detector{}
-	if !strings.Contains(disabledResouceDetectors, "uams") {
+	if !strings.Contains(disabledResourceDetectors, "uams") {
 		optionalDetectors = append(optionalDetectors, uams.New())
 	}
-	if !strings.Contains(disabledResouceDetectors, "ec2") {
+	if !strings.Contains(disabledResourceDetectors, "ec2") {
 		optionalDetectors = append(optionalDetectors, ec2.NewResourceDetector())
 	}
-	if !strings.Contains(disabledResouceDetectors, "azurevm") {
+	if !strings.Contains(disabledResourceDetectors, "azurevm") {
 		optionalDetectors = append(optionalDetectors, azurevm.New())
 	}
-	if !strings.Contains(disabledResouceDetectors, "k8s") {
+	if !strings.Contains(disabledResourceDetectors, "k8s") {
 		optionalDetectors = append(optionalDetectors, k8s.NewResourceDetector())
 	}
 
