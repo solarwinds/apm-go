@@ -66,22 +66,28 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// between detector libraries. The resource attributes are still detected
 		// correctly. Log it as a warning and strip it from the returned error.
 		// The OTel SDK's own ExampleNew() treats this error as non-fatal by only
-		// logging it: go.opentelemetry.io/otel/sdk@v1/resource/example_test.go
+		// logging it:
+		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/resource/example_test.go
 		log.Warningf("resource schema URL conflict (possible detector library version mismatch): %v", combined)
-		type multiErr interface{ Unwrap() []error }
-		if u, ok := combined.(multiErr); ok {
-			var remaining []error
-			for _, e := range u.Unwrap() {
-				if !errors.Is(e, resource.ErrSchemaURLConflict) {
-					remaining = append(remaining, e)
-				}
-			}
-			combined = errors.Join(remaining...)
-		} else {
-			combined = nil
-		}
+		combined = filterSchemaURLConflict(combined)
 	}
 	return r, combined
+}
+
+// filterSchemaURLConflict removes ErrSchemaURLConflict from a joined error,
+// returning nil when the conflict was the only error present.
+func filterSchemaURLConflict(combined error) error {
+	type multiErr interface{ Unwrap() []error }
+	if u, ok := combined.(multiErr); ok {
+		var remaining []error
+		for _, e := range u.Unwrap() {
+			if !errors.Is(e, resource.ErrSchemaURLConflict) {
+				remaining = append(remaining, e)
+			}
+		}
+		return errors.Join(remaining...)
+	}
+	return nil
 }
 
 func getOptionalDetectors() []resource.Detector {
