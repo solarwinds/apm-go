@@ -1,4 +1,4 @@
-// © 2023 SolarWinds Worldwide, LLC. All rights reserved.
+// © 2025 SolarWinds Worldwide, LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+package reporter
 
-// RateCountSummary is used to merge RateCounts from multiple token buckets
-type RateCountSummary struct {
-	Requested, Traced, Limited, TtTraced, Sampled, Through int64
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestNewMetricsPublisher(t *testing.T) {
+	p := NewMetricsPublisher()
+
+	require.NotNil(t, p)
+}
+
+func TestMetricsPublisherGetMetricsRegistryBeforeStart(t *testing.T) {
+	p := NewMetricsPublisher()
+
+	require.Nil(t, p.GetMetricsRegistry())
+}
+
+func TestMetricsPublisherShutdownWhenNotConfigured(t *testing.T) {
+	p := NewMetricsPublisher()
+
+	require.NoError(t, p.Shutdown())
 }

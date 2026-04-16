@@ -15,98 +15,24 @@
 package uams
 
 import (
-	"sync"
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/solarwinds/apm-go/internal/log"
 )
 
-var exit = make(chan bool, 1)
-
-var currState = &state{}
-
-type state struct {
-	m sync.Mutex
-
-	// Only valid when an update occurred
-	clientId uuid.UUID
-	// Time of last update
-	updated time.Time
-	// Updated via "file", "http" or ""
-	via string
-}
-
-func Start() {
-	go clientIdCheck()
-	// Poll for UAMS client update once per hour
-	ticker := time.NewTicker(time.Hour)
-	go func() {
-		defer ticker.Stop()
-		for {
-			select {
-			case <-exit:
-				return
-			case <-ticker.C:
-				log.Debug("Checking for UAMS client update")
-				clientIdCheck()
-			}
-		}
-	}()
-}
-
-func clientIdCheck() {
-	f := determineFileForOS()
-	i, err := ReadFromFile(f)
-	if err != nil {
-		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(clientUrl)
-		if err != nil {
-			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
-		} else {
-			updateClientId(i, "http")
-		}
-	} else {
-		updateClientId(i, "file")
-	}
-}
-
-func updateClientId(uid uuid.UUID, via string) {
-	currState.m.Lock()
-	defer currState.m.Unlock()
-
-	if uid == currState.clientId {
-		log.Debug("Found the same UAMS client ID that we had before, skipping")
-		return
-	}
-
-	log.Debugf("UAMS client ID (%s) successfully loaded via %s", uid, via)
-	currState.clientId = uid
-	currState.via = via
-	currState.updated = time.Now()
-}
+var (
+	uamsFilePath  = determineFileForOS()
+	uamsClientURL = clientUrl
+)
 
 func readUamsClientId() (uuid.UUID, error) {
-	f := determineFileForOS()
-	i, err := ReadFromFile(f)
+	i, err := ReadFromFile(uamsFilePath)
 
 	if err != nil {
 		log.Debugf("Could not retrieve UAMS client ID from file (reason: %s), falling back to HTTP", err)
-		i, err = ReadFromHttp(clientUrl)
+		i, err = ReadFromHttp(uamsClientURL)
 		if err != nil {
 			log.Debugf("Could not retrieve UAMS client ID from HTTP (reason: %s), setting to nil default", err)
 		}
 	}
 	return i, err
-}
-
-func GetCurrentClientId() uuid.UUID {
-	currState.m.Lock()
-	defer currState.m.Unlock()
-	return currState.clientId
-}
-
-func Stop() {
-	log.Debug("Stopping UAMS client ID poller")
-	exit <- true
 }

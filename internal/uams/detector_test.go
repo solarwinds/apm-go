@@ -15,33 +15,26 @@
 package uams
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-const nonexistentFile = "/tmp/nonexistent-uams-test-file"
-
-// overrideUamsFile temporarily replaces uamsFilePath for the duration of the test.
-func overrideUamsFile(t *testing.T, path string) {
-	t.Helper()
-	orig := uamsFilePath
-	uamsFilePath = path
-	t.Cleanup(func() { uamsFilePath = orig })
+func resourceAttrs(r *resource.Resource) map[string]string {
+	attrs := make(map[string]string)
+	for _, kv := range r.Attributes() {
+		attrs[string(kv.Key)] = kv.Value.AsString()
+	}
+	return attrs
 }
 
-// overrideUamsURL temporarily replaces uamsClientURL for the duration of the test.
-func overrideUamsURL(t *testing.T, url string) {
-	t.Helper()
-	orig := uamsClientURL
-	uamsClientURL = url
-	t.Cleanup(func() { uamsClientURL = orig })
-}
-
-func TestReadUamsClientIdFileExistsHttpOK(t *testing.T) {
+func TestDetectFileExistsHttpOK(t *testing.T) {
 	fileUUID, err := uuid.NewRandom()
 	require.NoError(t, err)
 	httpUUID, err := uuid.NewRandom()
@@ -53,12 +46,15 @@ func TestReadUamsClientIdFileExistsHttpOK(t *testing.T) {
 	overrideUamsFile(t, filePath)
 	overrideUamsURL(t, svr.URL)
 
-	id, err := readUamsClientId()
+	res, err := New().Detect(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, fileUUID, id)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, fileUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, fileUUID.String(), attrs["host.id"])
 }
 
-func TestReadUamsClientIdFileMissingHttpOK(t *testing.T) {
+func TestDetectFileMissingHttpOK(t *testing.T) {
 	httpUUID, err := uuid.NewRandom()
 	require.NoError(t, err)
 
@@ -67,12 +63,15 @@ func TestReadUamsClientIdFileMissingHttpOK(t *testing.T) {
 	overrideUamsFile(t, nonexistentFile)
 	overrideUamsURL(t, svr.URL)
 
-	id, err := readUamsClientId()
+	res, err := New().Detect(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, httpUUID, id)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, httpUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, httpUUID.String(), attrs["host.id"])
 }
 
-func TestReadUamsClientIdFileExistsHttpError(t *testing.T) {
+func TestDetectFileExistsHttpError(t *testing.T) {
 	fileUUID, err := uuid.NewRandom()
 	require.NoError(t, err)
 
@@ -82,18 +81,21 @@ func TestReadUamsClientIdFileExistsHttpError(t *testing.T) {
 	overrideUamsFile(t, filePath)
 	overrideUamsURL(t, svr.URL)
 
-	id, err := readUamsClientId()
+	res, err := New().Detect(context.Background())
 	require.NoError(t, err)
-	require.Equal(t, fileUUID, id)
+	require.NotNil(t, res)
+	attrs := resourceAttrs(res)
+	require.Equal(t, fileUUID.String(), attrs[constants.UamsClientIdAttribute])
+	require.Equal(t, fileUUID.String(), attrs["host.id"])
 }
 
-func TestReadUamsClientIdFileMissingHttpError(t *testing.T) {
+func TestDetectFileMissingHttpError(t *testing.T) {
 	svr := testutils.Srv(t, "", http.StatusInternalServerError)
 	defer svr.Close()
 	overrideUamsFile(t, nonexistentFile)
 	overrideUamsURL(t, svr.URL)
 
-	id, err := readUamsClientId()
-	require.Equal(t, uuid.Nil, id)
-	require.Error(t, err)
+	res, err := New().Detect(context.Background())
+	require.NoError(t, err)
+	require.Nil(t, res)
 }
