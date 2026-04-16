@@ -15,7 +15,6 @@ package host
 
 import (
 	"github.com/solarwinds/apm-go/internal/log"
-	"github.com/solarwinds/apm-go/internal/utils"
 	"os"
 	"path/filepath"
 	"strings"
