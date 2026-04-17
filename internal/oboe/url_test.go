@@ -14,8 +14,9 @@
 package oboe
 
 import (
-	"github.com/solarwinds/apm-go/internal/config"
 	"testing"
+
+	"github.com/solarwinds/apm-go/internal/config"
 
 	"github.com/coocood/freecache"
 	"github.com/stretchr/testify/assert"
@@ -70,4 +71,46 @@ func TestUrlFilter(t *testing.T) {
 
 	assert.Equal(t, TraceDisabled, filter.GetTracingMode("http://user.com/eric/avatar.png"))
 	assert.Equal(t, int64(4), filter.cache.EntryCount())
+}
+
+func TestReloadURLsConfig(t *testing.T) {
+	// Capture the original config so we can restore it after the test, regardless
+	// of which ReloadURLsConfig call is last. Without this, the package-level urls
+	// state leaks into other tests that rely on the default transaction filtering.
+	orig := config.GetTransactionFiltering()
+	t.Cleanup(func() { ReloadURLsConfig(orig) })
+
+	// Load a config with one disabled extension filter
+	ReloadURLsConfig([]config.TransactionFilter{
+		{Type: "url", Extensions: []string{"gif"}, Tracing: config.DisabledTracingMode},
+	})
+	assert.Equal(t, TraceDisabled, urls.GetTracingMode("image.gif"))
+	assert.Equal(t, TraceUnknown, urls.GetTracingMode("image.png"))
+	assert.Equal(t, int64(2), urls.cache.EntryCount())
+	assert.Equal(t, int64(0), urls.cache.HitCount())
+
+	// Reload with a different config; cache must also be cleared
+	ReloadURLsConfig([]config.TransactionFilter{
+		{Type: "url", Extensions: []string{"png"}, Tracing: config.DisabledTracingMode},
+	})
+	assert.Equal(t, TraceUnknown, urls.GetTracingMode("image.gif"))
+	assert.Equal(t, TraceDisabled, urls.GetTracingMode("image.png"))
+	assert.Equal(t, int64(2), urls.cache.EntryCount())
+	assert.Equal(t, int64(0), urls.cache.HitCount())
+
+	// Reload with a different config; cache must also be cleared
+	ReloadURLsConfig([]config.TransactionFilter{
+		{Type: "url", Extensions: []string{"jpeg"}, Tracing: config.EnabledTracingMode},
+	})
+	assert.Equal(t, TraceEnabled, urls.GetTracingMode("image.jpeg"))
+	assert.Equal(t, TraceEnabled, urls.GetTracingMode("image.jpeg"))
+	assert.Equal(t, TraceUnknown, urls.GetTracingMode("image.gif"))
+	assert.Equal(t, TraceUnknown, urls.GetTracingMode("image.png"))
+	assert.Equal(t, int64(3), urls.cache.EntryCount())
+	assert.Equal(t, int64(1), urls.cache.HitCount())
+
+	// Reload to empty; cache must be cleared (restoration to original is via t.Cleanup)
+	ReloadURLsConfig(nil)
+	assert.Equal(t, int64(0), urls.cache.EntryCount())
+	assert.Equal(t, int64(0), urls.cache.HitCount())
 }

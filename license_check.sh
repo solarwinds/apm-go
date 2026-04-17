@@ -36,6 +36,7 @@ find . -type f \
     -not -path './\.codecov.yaml' \
     -not -path './\.golangci.yaml' \
     -not -path './\.idea/*' \
+    -not -path '*/.DS_Store' \
     -exec bash -c 'check_file "$0"' {} \; | tee $TMPFILE
 
 EXITCODE=0

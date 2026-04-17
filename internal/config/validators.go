@@ -31,11 +31,6 @@ func InvalidEnv(env string, val string) string {
 	return fmt.Sprintf("invalid env, discarded - %s: \"%s\"", env, val)
 }
 
-// MissingEnv returns a string indicating missing environment variables
-func MissingEnv(env string) string {
-	return fmt.Sprintf("missing env - %s", env)
-}
-
 const (
 	validServiceKeyPattern = `^([a-zA-Z0-9]{64}|[a-zA-Z0-9-_]{71}):.{1,255}$`
 
