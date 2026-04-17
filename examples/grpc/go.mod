@@ -17,7 +17,7 @@ module github.com/solarwinds/apm-go/examples/grpc
 go 1.26
 
 require (
-	github.com/solarwinds/apm-go v1.3.1
+	github.com/solarwinds/apm-go v1.3.2
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
 	go.opentelemetry.io/otel v1.43.0
 	google.golang.org/grpc v1.80.0
