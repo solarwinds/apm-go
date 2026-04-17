@@ -275,3 +275,16 @@ func TestAllOptionsHandleMissingValuesAndSemicolons(t *testing.T) {
 	assert.Equal(t, []string{"1", "2", "3", "4", "5"}, xto.IgnoredKeys())
 	assert.Equal(t, NoSignature, xto.SignatureState())
 }
+
+func TestIncludeResponseReturnTrueWithOpts(t *testing.T) {
+	optsStr := "trigger-trace;sw-keys=check-id:check-1013"
+	xto := parseXTraceOptions(o, optsStr, "")
+	assert.Equal(t, optsStr, xto.Opts())
+	assert.True(t, xto.IncludeResponse())
+}
+
+func TestIncludeResponseReturnFalseWithEmptyOpts(t *testing.T) {
+	xto := parseXTraceOptions(o, "", "")
+	assert.Equal(t, "", xto.Opts())
+	assert.False(t, xto.IncludeResponse())
+}
