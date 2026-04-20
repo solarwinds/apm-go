@@ -17,6 +17,7 @@ swolambda is a separate module and should be versioned independently.
 Release checklist:
 
  - Tag the release with the module path: `git tag instrumentation/github.com/aws/aws-lambda-go/swolambda/vX.X.X && git push --tags`
+ - The swolambda version should align with the APM version.
 
 # Notes on major version bump
 
