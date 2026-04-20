@@ -1,6 +1,6 @@
 # Releasing the library
 
-Release checklist
+Release checklist:
 
  - Update `internal/utils/version.go` with new version. Create and merge PR.
  - Tag the release `git tag vX.X.X && git push --tags`
@@ -9,6 +9,14 @@ Release checklist
 Future consideration: add another step, after the release is complete, to update
 `version.go` with a prerelease name. If you released `v1.0.0`, perhaps the next
 prerelease version would be `v1.0.1-beta`.
+
+# Releasing swolambda
+
+swolambda is a separate module and should be versioned independently.
+
+Release checklist:
+
+ - Tag the release with the module path: `git tag instrumentation/github.com/aws/aws-lambda-go/swolambda/vX.X.X && git push --tags`
 
 # Notes on major version bump
 
