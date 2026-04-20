@@ -3,7 +3,7 @@
 Release checklist:
 
  - Update `internal/utils/version.go` with new version. Create and merge PR.
- - Tag the release `git tag vX.X.X && git push --tags`
+ - Tag the release `git tag vX.X.X && git push origin vX.X.X`
  - Create a [Github Release](https://github.com/solarwinds/apm-go/releases/new)
 
 Future consideration: add another step, after the release is complete, to update
@@ -12,12 +12,13 @@ prerelease version would be `v1.0.1-beta`.
 
 # Releasing swolambda
 
-swolambda is a separate module and should be versioned independently.
+swolambda is a separate module and should be tagged and released independently.
+Its module tag should use the same version number as the APM release.
 
 Release checklist:
 
- - Tag the release with the module path: `git tag instrumentation/github.com/aws/aws-lambda-go/swolambda/vX.X.X && git push --tags`
- - The swolambda version should align with the APM version.
+ - Tag the release with the module path: `git tag instrumentation/github.com/aws/aws-lambda-go/swolambda/vX.X.X && git push origin vX.X.X`
+ - Keep the swolambda version number aligned with the APM version.
 
 # Notes on major version bump
 
