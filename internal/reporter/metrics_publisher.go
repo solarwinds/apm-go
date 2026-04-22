@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/metrics"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/otelsetup"
@@ -50,8 +51,10 @@ func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, o oboe.Oboe, r
 		return err
 	}
 	// Register OpenTelemetry contrib runtime metrics
-	if err = runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
-		return err
+	if config.GetRuntimeMetrics() {
+		if err = runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
+			return err
+		}
 	}
 	otel.SetMeterProvider(meterProvider)
 
