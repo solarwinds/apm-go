@@ -26,6 +26,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -131,4 +133,31 @@ func WriteUUIDFile(t *testing.T, id uuid.UUID) string {
 // endpoint format with the given UUID as the uamsclient_id.
 func UamsClientResponse(id uuid.UUID) string {
 	return fmt.Sprintf(`{"is_registered":true,"otel_endpoint_access":false,"usc_connectivity":true,"uamsclient_id":"%s"}`, id.String())
+}
+
+// NewTestMetricExporter returns a no-op OpenTelemetry metric exporter for tests.
+func NewTestMetricExporter() metric.Exporter {
+	return testMetricExporter{}
+}
+
+type testMetricExporter struct{}
+
+func (testMetricExporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return metric.DefaultTemporalitySelector(k)
+}
+
+func (testMetricExporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
+	return metric.DefaultAggregationSelector(k)
+}
+
+func (testMetricExporter) Export(context.Context, *metricdata.ResourceMetrics) error {
+	return nil
+}
+
+func (testMetricExporter) ForceFlush(context.Context) error {
+	return nil
+}
+
+func (testMetricExporter) Shutdown(context.Context) error {
+	return nil
 }
