@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/testutils"
@@ -103,4 +104,16 @@ func TestSetTransactionName(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "this should work", entryspans.GetTransactionName(s.SpanContext().TraceID()))
 
+}
+
+func TestStartDisabled(t *testing.T) {
+	t.Setenv("SW_APM_ENABLED", "false")
+	config.Load()
+
+	cb, err := Start()
+	require.NoError(t, err)
+	require.NotNil(t, cb)
+
+	// The returned shutdown func must be a no-op (not nil) and must not panic.
+	cb()
 }
