@@ -36,6 +36,11 @@ import (
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	if !config.GetEnabled(){
+		log.Info("APM agent is disabled, not starting the agent")
+		return func() {}, nil
+	}
+
 	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
 		return func() {

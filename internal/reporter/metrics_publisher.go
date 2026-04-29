@@ -16,7 +16,6 @@ package reporter
 
 import (
 	"context"
-	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/metrics"
@@ -38,13 +37,12 @@ func NewMetricsPublisher() *MetricsPublisher {
 }
 
 func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, o oboe.Oboe, resource *sdkresource.Resource) error {
-	otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
+	otelMetricReader, err := otelsetup.CreateAndSetupOtelMetricsReader(ctx)
 	if err != nil {
 		return err
 	}
 	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
-			metric.WithInterval(1*time.Minute))),
+		metric.WithReader(otelMetricReader),
 		metric.WithResource(resource),
 	)
 	if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
