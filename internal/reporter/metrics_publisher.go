@@ -37,21 +37,32 @@ func NewMetricsPublisher() *MetricsPublisher {
 	return &MetricsPublisher{}
 }
 
+func newMeterProvider(otelMetricExporter metric.Exporter, resource *sdkresource.Resource, runtimeMetrics bool) *metric.MeterProvider {
+	readerOpts := []metric.PeriodicReaderOption{metric.WithInterval(1 * time.Minute)}
+	if runtimeMetrics {
+		readerOpts = append(readerOpts, metric.WithProducer(runtime.NewProducer()))
+	}
+
+	return metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(otelMetricExporter, readerOpts...)),
+		metric.WithResource(resource),
+	)
+}
+
 func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, o oboe.Oboe, resource *sdkresource.Resource) error {
 	otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
 	if err != nil {
 		return err
 	}
-	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(otelMetricExporter,
-			metric.WithInterval(1*time.Minute))),
-		metric.WithResource(resource),
-	)
+
+	runtimeMetricsEnabled := config.GetRuntimeMetrics()
+	meterProvider := newMeterProvider(otelMetricExporter, resource, runtimeMetricsEnabled)
+
 	if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
 		return err
 	}
 	// Register OpenTelemetry contrib runtime metrics
-	if config.GetRuntimeMetrics() {
+	if runtimeMetricsEnabled {
 		if err = runtime.Start(runtime.WithMeterProvider(meterProvider)); err != nil {
 			return err
 		}

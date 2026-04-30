@@ -15,9 +15,12 @@
 package reporter
 
 import (
+	"context"
 	"testing"
 
+	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/stretchr/testify/require"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestNewMetricsPublisher(t *testing.T) {
@@ -36,4 +39,24 @@ func TestMetricsPublisherShutdownWhenNotConfigured(t *testing.T) {
 	p := NewMetricsPublisher()
 
 	require.NoError(t, p.Shutdown())
+}
+
+func TestNewMeterProvider(t *testing.T) {
+	exporter := testutils.NewTestMetricExporter()
+
+	testCases := []struct {
+		name           string
+		runtimeMetrics bool
+	}{
+		{name: "runtime metrics disabled", runtimeMetrics: false},
+		{name: "runtime metrics enabled", runtimeMetrics: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			meterProvider := newMeterProvider(exporter, sdkresource.Empty(), tc.runtimeMetrics)
+			require.NotNil(t, meterProvider)
+			require.NoError(t, meterProvider.Shutdown(context.Background()))
+		})
+	}
 }
