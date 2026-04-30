@@ -64,14 +64,14 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	)
 }
 
-func CreateAndSetupOtelMetricsReader(ctx context.Context) (metric.Reader, error) {
+func CreateAndSetupOtelMetricsReader(ctx context.Context, readerOpts ...metric.PeriodicReaderOption) (metric.Reader, error) {
 	return autoexport.NewMetricReader(ctx,
 		autoexport.WithFallbackMetricReader(func(ctx context.Context) (metric.Reader, error) {
 			exporter, err := CreateAndSetupOtelMetricsExporter(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(exporter), nil
+			return metric.NewPeriodicReader(exporter, readerOpts...), nil
 		}),
 	)
 }
