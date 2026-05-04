@@ -60,14 +60,14 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 	exprtr, err := otelsetup.NewSpanExporter(ctx)
 	if err != nil {
-		log.Error("Failed to configure span exporter", err)
+		log.Error("Failed to configure span exporter, ", err)
 		return func() { stopSettingsUpdater() }, err
 	}
 
 	metricsPublisher := reporter.NewMetricsPublisher()
 	err = metricsPublisher.ConfigureAndStart(ctx, o, resrc)
 	if err != nil {
-		log.Error("Failed to configure and start metrics publisher", err)
+		log.Error("Failed to configure and start metrics publisher, ", err)
 		return func() { stopSettingsUpdater() }, err
 	}
 
