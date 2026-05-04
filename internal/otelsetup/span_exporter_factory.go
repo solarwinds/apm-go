@@ -17,15 +17,9 @@ package otelsetup
 import (
 	"context"
 
-	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/log"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func NewSpanExporter(ctx context.Context) (trace.SpanExporter, error) {
-	if !config.GetEnabled() {
-		log.Warning("SolarWinds Observability exporter is disabled.")
-		return &noopExporter{}, nil
-	}
 	return CreateAndSetupOtelExporter(ctx)
 }
