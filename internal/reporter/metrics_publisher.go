@@ -42,8 +42,11 @@ func newMeterProvider(ctx context.Context, resource *sdkresource.Resource, runti
 		readerOpts = append(readerOpts, metric.WithProducer(runtime.NewProducer()))
 	}
 
-	// CreateAndSetupOtelMetricsReader use autoexport.NewMetricReader but with fallback
-	// to CreateAndSetupOtelMetricsExporter if OTEL_METRICS_EXPORTER is unset/empty.
+	// CreateAndSetupOtelMetricsReader uses autoexport.NewMetricReader with a fallback
+	// to CreateAndSetupOtelMetricsExporter when OTEL_METRICS_EXPORTER is unset/empty.
+	// Note: readerOpts (including the runtime producer) only apply on the fallback path.
+	// When OTEL_METRICS_EXPORTER is set, the user must configure runtime metrics producers
+	// via OTEL_METRICS_PRODUCERS or their own SDK setup.
 	otelMetricReader, err := otelsetup.CreateAndSetupOtelMetricsReader(ctx, readerOpts...)
 	if err != nil {
 		return nil, err

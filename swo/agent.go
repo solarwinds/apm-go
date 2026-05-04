@@ -37,7 +37,7 @@ import (
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if !config.GetEnabled() {
-		log.Info("APM agent is disabled, not starting the agent")
+		log.Info("SolarWinds Observability APM agent is disabled, skipping startup.")
 		return func() {}, nil
 	}
 
