@@ -335,14 +335,14 @@ func NewConfig(opts ...Option) *Config {
 
 const (
 	fullTextInvalidServiceKey = `
-	    **No valid service key (defined as token:service_name) is found.** 
-	
-	Please check SolarWinds Observability dashboard for your token and use a valid service name.
-	A valid service name should be shorter than 256 characters and contain only 
-	valid characters: [a-z0-9.:_-]. 
+	    **No valid service key (defined as token:service_name) is found.**
 
-	Also note that the agent may convert the service name by removing invalid 
-	characters and replacing spaces with hyphens, so the finalized service key 
+	Please check SolarWinds Observability dashboard for your token and use a valid service name.
+	A valid service name should be shorter than 256 characters and contain only
+	valid characters: [a-z0-9.:_-].
+
+	Also note that the agent may convert the service name by removing invalid
+	characters and replacing spaces with hyphens, so the finalized service key
 	may be different from your setting.`
 )
 
@@ -659,7 +659,7 @@ func (c *Config) loadEnvs() {
 // getValPtr returns the pointer value of the input argument if it's not a Ptr
 // The val must be addressable, otherwise it will panic.
 func getValPtr(val reflect.Value) reflect.Value {
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		return val
 	}
 	return val.Addr()
