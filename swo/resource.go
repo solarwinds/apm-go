@@ -22,7 +22,6 @@ import (
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/host/k8s"
-	"github.com/solarwinds/apm-go/internal/instance"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
@@ -46,6 +45,10 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 	}
 
 	customResource, customResourceErrors := resource.New(context.Background(),
+		// WithService sets service.instance.id (random UUID) and a service.name fallback.
+		// It must precede WithFromEnv so that the OTEL_SERVICE_NAME env var (set above) wins.
+		resource.WithService(),
+		resource.WithHost(),
 		resource.WithContainer(),
 		resource.WithOS(),
 		resource.WithProcess(),
@@ -53,8 +56,10 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// Example value: go version go1.20.4 linux/arm64
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
+		// Allow environment variables to override resource attributes from above detectors, and
+		// to set additional attributes like service.name.
+		resource.WithFromEnv(),
 		resource.WithDetectors(getOptionalDetectors()...),
-		instance.WithInstanceDetector(),
 		resource.WithAttributes(resourceAttrs...),
 		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
 		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),
