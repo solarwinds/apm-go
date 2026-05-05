@@ -5,6 +5,6 @@ This is a custom distribution built on OTel [Go](https://github.com/open-telemet
 
 See [README.md](README.md) for more details.
 
-## Dev tips
+## Dev Tips
 - See [CONTRIBUTING.md](CONTRIBUTING.md)
 - Follow instructions under the [.github/instructions](.github/instructions) directory.

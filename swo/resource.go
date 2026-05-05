@@ -56,10 +56,10 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// Example value: go version go1.20.4 linux/arm64
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
+		resource.WithDetectors(getOptionalDetectors()...),
 		// Allow environment variables to override resource attributes from above detectors, and
 		// to set additional attributes like service.name.
 		resource.WithFromEnv(),
-		resource.WithDetectors(getOptionalDetectors()...),
 		resource.WithAttributes(resourceAttrs...),
 		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
 		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),

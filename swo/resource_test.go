@@ -72,7 +72,8 @@ func TestCreateResourceContainsHostName(t *testing.T) {
 	require.NotNil(t, r)
 	val, ok := r.Set().Value(otelconv.HostNameKey)
 	require.True(t, ok, "resource must contain host.name attribute")
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
 	require.Equal(t, hostname, val.AsString())
 }
 
@@ -83,11 +84,11 @@ func TestCreateResourceServiceName(t *testing.T) {
 	const validKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:my-service-name"
 
 	t.Run("sets OTEL_SERVICE_NAME from service key when unset", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
 		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
 		t.Setenv("SW_APM_SERVICE_KEY", validKey)
 		t.Setenv("OTEL_SERVICE_NAME", "")
 		config.Load()
-		t.Cleanup(func() { config.Load() })
 		r, err := createResource()
 		require.NoError(t, err)
 		require.NotNil(t, r)
@@ -98,11 +99,11 @@ func TestCreateResourceServiceName(t *testing.T) {
 	})
 
 	t.Run("does not override OTEL_SERVICE_NAME when already set", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
 		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
 		t.Setenv("SW_APM_SERVICE_KEY", validKey)
 		t.Setenv("OTEL_SERVICE_NAME", "envvar-service-name")
 		config.Load()
-		t.Cleanup(func() { config.Load() })
 		r, err := createResource()
 		require.NoError(t, err)
 		require.NotNil(t, r)
@@ -113,11 +114,11 @@ func TestCreateResourceServiceName(t *testing.T) {
 	})
 
 	t.Run("leaves OTEL_SERVICE_NAME unset when no valid service key", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
 		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
 		t.Setenv("SW_APM_SERVICE_KEY", "")
 		t.Setenv("OTEL_SERVICE_NAME", "")
 		config.Load()
-		t.Cleanup(func() { config.Load() })
 		r, err := createResource()
 		require.NoError(t, err)
 		require.NotNil(t, r)
