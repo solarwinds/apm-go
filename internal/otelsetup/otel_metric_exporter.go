@@ -21,6 +21,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/proxy"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -51,12 +52,6 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 		exporterOptions = append(exporterOptions, otlpmetricgrpc.WithDialOption(gprcDialOptions...))
 	}
 
-	if os.Getenv("OTEL_METRIC_EXPORT_INTERVAL") == "" {
-		if err := os.Setenv("OTEL_METRIC_EXPORT_INTERVAL", "60000"); err != nil {
-			log.Warningf("could not override unset OTEL_METRIC_EXPORT_INTERVAL %s", err)
-		}
-	}
-
 	if os.Getenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION") == "" {
 		if err := os.Setenv("OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION", "base2_exponential_bucket_histogram"); err != nil {
 			log.Warningf("could not override unset OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION %s", err)
@@ -66,6 +61,18 @@ func CreateAndSetupOtelMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exp
 	return otlpmetricgrpc.New(
 		ctx,
 		exporterOptions...,
+	)
+}
+
+func CreateAndSetupOtelMetricsReader(ctx context.Context, readerOpts ...metric.PeriodicReaderOption) (metric.Reader, error) {
+	return autoexport.NewMetricReader(ctx,
+		autoexport.WithFallbackMetricReader(func(ctx context.Context) (metric.Reader, error) {
+			exporter, err := CreateAndSetupOtelMetricsExporter(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return metric.NewPeriodicReader(exporter, readerOpts...), nil
+		}),
 	)
 }
 

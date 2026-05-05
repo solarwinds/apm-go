@@ -38,7 +38,7 @@ const (
 var xtraceRegexp = regexp.MustCompile(`\A00-[[:xdigit:]]{32}-[[:xdigit:]]{16}-00\z`)
 
 func setupTest(t *testing.T) func() {
-	require.NoError(t, os.Setenv("SW_APM_SERVICE_KEY", "token:service-name"))
+	require.NoError(t, os.Setenv("SW_APM_SERVICE_KEY", "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:service-name"))
 	require.NoError(t, os.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams,k8s"))
 
 	config.Load()

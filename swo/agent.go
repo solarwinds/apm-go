@@ -36,6 +36,11 @@ import (
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	if !config.GetEnabled() {
+		log.Info("SolarWinds Observability APM agent is disabled, skipping startup.")
+		return func() {}, nil
+	}
+
 	resrc, err := createResource(resourceAttrs...)
 	if err != nil {
 		return func() {
@@ -55,14 +60,14 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 	exprtr, err := otelsetup.NewSpanExporter(ctx)
 	if err != nil {
-		log.Error("Failed to configure span exporter", err)
+		log.Error("Failed to configure span exporter, ", err)
 		return func() { stopSettingsUpdater() }, err
 	}
 
 	metricsPublisher := reporter.NewMetricsPublisher()
 	err = metricsPublisher.ConfigureAndStart(ctx, o, resrc)
 	if err != nil {
-		log.Error("Failed to configure and start metrics publisher", err)
+		log.Error("Failed to configure and start metrics publisher, ", err)
 		return func() { stopSettingsUpdater() }, err
 	}
 
@@ -70,7 +75,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if err != nil {
 		return func() { stopSettingsUpdater() }, err
 	}
-	config.Load()
+
 	proc := processor.NewInboundMetricsSpanProcessor(metricsPublisher.GetMetricsRegistry())
 	prop := propagation.NewCompositeTextMapPropagator(
 		&propagation.TraceContext{},

@@ -16,7 +16,6 @@ package reporter
 
 import (
 	"context"
-	"time"
 
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/metrics"
@@ -37,26 +36,34 @@ func NewMetricsPublisher() *MetricsPublisher {
 	return &MetricsPublisher{}
 }
 
-func newMeterProvider(otelMetricExporter metric.Exporter, resource *sdkresource.Resource, runtimeMetrics bool) *metric.MeterProvider {
-	readerOpts := []metric.PeriodicReaderOption{metric.WithInterval(1 * time.Minute)}
+func newMeterProvider(ctx context.Context, resource *sdkresource.Resource, runtimeMetrics bool) (*metric.MeterProvider, error) {
+	readerOpts := []metric.PeriodicReaderOption{}
 	if runtimeMetrics {
 		readerOpts = append(readerOpts, metric.WithProducer(runtime.NewProducer()))
 	}
 
+	// CreateAndSetupOtelMetricsReader uses autoexport.NewMetricReader with a fallback
+	// to CreateAndSetupOtelMetricsExporter when OTEL_METRICS_EXPORTER is unset/empty.
+	// Note: readerOpts (including the runtime producer) only apply on the fallback path.
+	// When OTEL_METRICS_EXPORTER is set, the user must configure runtime metrics producers
+	// via OTEL_METRICS_PRODUCERS or their own SDK setup.
+	otelMetricReader, err := otelsetup.CreateAndSetupOtelMetricsReader(ctx, readerOpts...)
+	if err != nil {
+		return nil, err
+	}
+
 	return metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(otelMetricExporter, readerOpts...)),
+		metric.WithReader(otelMetricReader),
 		metric.WithResource(resource),
-	)
+	), nil
 }
 
 func (c *MetricsPublisher) ConfigureAndStart(ctx context.Context, o oboe.Oboe, resource *sdkresource.Resource) error {
-	otelMetricExporter, err := otelsetup.CreateAndSetupOtelMetricsExporter(ctx)
+	runtimeMetricsEnabled := config.GetRuntimeMetrics()
+	meterProvider, err := newMeterProvider(ctx, resource, runtimeMetricsEnabled)
 	if err != nil {
 		return err
 	}
-
-	runtimeMetricsEnabled := config.GetRuntimeMetrics()
-	meterProvider := newMeterProvider(otelMetricExporter, resource, runtimeMetricsEnabled)
 
 	if err = o.RegisterOtelSampleRateMetrics(meterProvider); err != nil {
 		return err
