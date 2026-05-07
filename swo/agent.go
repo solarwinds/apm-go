@@ -16,7 +16,6 @@ package swo
 
 import (
 	"context"
-
 	stdlog "log"
 
 	"github.com/solarwinds/apm-go/internal/config"
@@ -36,6 +35,14 @@ import (
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
 // `resource.Resource` that is supplied to the otel `TracerProvider`
 func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		log.Error("OpenTelemetry error: ", err)
+	}))
+
+	return startWithOtelConf(resourceAttrs...)
+}
+
+func startLegacy(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	if !config.GetEnabled() {
 		log.Info("SolarWinds Observability APM agent is disabled, skipping startup.")
 		return func() {}, nil
@@ -89,6 +96,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		sdktrace.WithSampler(smplr),
 		sdktrace.WithSpanProcessor(proc),
 	)
+	maybeRegisterDebugSpanProcessor(tp)
 	otel.SetTracerProvider(tp)
 
 	return func() {
