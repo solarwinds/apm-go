@@ -160,9 +160,10 @@ func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTra
 
 	// Choose an appropriate bucket
 	bucket := setting.bucket
-	if triggerTrace == ModeRelaxedTriggerTrace {
+	switch triggerTrace {
+	case ModeRelaxedTriggerTrace:
 		bucket = setting.triggerTraceRelaxedBucket
-	} else if triggerTrace == ModeStrictTriggerTrace {
+	case ModeStrictTriggerTrace:
 		bucket = setting.triggerTraceStrictBucket
 	}
 

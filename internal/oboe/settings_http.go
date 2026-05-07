@@ -32,6 +32,7 @@ type httpSettingArguments struct {
 	TriggerRelaxedBucketRate     float64 `json:"TriggerRelaxedBucketRate"`
 	TriggerStrictBucketCapacity  float64 `json:"TriggerStrictBucketCapacity"`
 	TriggerStrictBucketRate      float64 `json:"TriggerStrictBucketRate"`
+	TriggerToken                 []byte  `json:"SignatureKey"`
 }
 
 func (s *httpSettings) ToSettingsUpdateArgs() SettingsUpdateArgs {
@@ -46,5 +47,6 @@ func (s *httpSettings) ToSettingsUpdateArgs() SettingsUpdateArgs {
 		TriggerRelaxedBucketRate:     s.Arguments.TriggerRelaxedBucketRate,
 		TriggerStrictBucketCapacity:  s.Arguments.TriggerStrictBucketCapacity,
 		TriggerStrictBucketRate:      s.Arguments.TriggerStrictBucketRate,
+		TriggerToken:                 s.Arguments.TriggerToken,
 	}
 }
