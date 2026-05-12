@@ -16,10 +16,14 @@ package swo
 
 import (
 	"errors"
+	"os"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/resource"
+	otelconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestFilterSchemaURLConflict(t *testing.T) {
@@ -60,8 +64,85 @@ func TestFilterSchemaURLConflict(t *testing.T) {
 	})
 }
 
+func TestCreateResourceContainsHostName(t *testing.T) {
+	// Disable irrelevant expensive detectors to speed up the test.
+	t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams")
+	r, err := createResource()
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	val, ok := r.Set().Value(otelconv.HostNameKey)
+	require.True(t, ok, "resource must contain host.name attribute")
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+	require.Equal(t, hostname, val.AsString())
+}
+
+// TestCreateResourceServiceName tests the service.name detection logic in createResource.
+func TestCreateResourceServiceName(t *testing.T) {
+	// Disable irrelevant expensive detectors to speed up the tests.
+	const disableDetectors = "ec2,azurevm,uams"
+	const validKey = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:my-service-name"
+
+	t.Run("sets OTEL_SERVICE_NAME from service key when unset", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
+		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
+		t.Setenv("SW_APM_SERVICE_KEY", validKey)
+		t.Setenv("OTEL_SERVICE_NAME", "")
+		config.Load()
+		r, err := createResource()
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		require.Equal(t, "my-service-name", os.Getenv(config.EnvOtelServiceNameKey))
+		val, ok := r.Set().Value(otelconv.ServiceNameKey)
+		require.True(t, ok, "resource must contain service.name attribute")
+		require.Equal(t, "my-service-name", val.AsString())
+	})
+
+	t.Run("does not override OTEL_SERVICE_NAME when already set", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
+		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
+		t.Setenv("SW_APM_SERVICE_KEY", validKey)
+		t.Setenv("OTEL_SERVICE_NAME", "envvar-service-name")
+		config.Load()
+		r, err := createResource()
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		require.Equal(t, "envvar-service-name", os.Getenv(config.EnvOtelServiceNameKey))
+		val, ok := r.Set().Value(otelconv.ServiceNameKey)
+		require.True(t, ok, "resource must contain service.name attribute")
+		require.Equal(t, "envvar-service-name", val.AsString())
+	})
+
+	t.Run("leaves OTEL_SERVICE_NAME unset when no valid service key", func(t *testing.T) {
+		t.Cleanup(func() { config.Load() })
+		t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
+		t.Setenv("SW_APM_SERVICE_KEY", "")
+		t.Setenv("OTEL_SERVICE_NAME", "")
+		config.Load()
+		r, err := createResource()
+		require.NoError(t, err)
+		require.NotNil(t, r)
+		require.Equal(t, "", os.Getenv(config.EnvOtelServiceNameKey))
+		val, ok := r.Set().Value(otelconv.ServiceNameKey)
+		require.True(t, ok, "resource must contain service.name attribute")
+		require.Contains(t, val.AsString(), "unknown_service")
+	})
+}
+
+func TestCreateResourceContainsServiceInstanceID(t *testing.T) {
+	// Disable irrelevant expensive detectors to speed up the test.
+	t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams")
+	r, err := createResource()
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	val, ok := r.Set().Value(otelconv.ServiceInstanceIDKey)
+	require.True(t, ok, "resource must contain service.instance.id attribute")
+	_, err = uuid.Parse(val.AsString())
+	require.NoError(t, err, "service.instance.id must be a valid UUID")
+}
+
 func TestCreateResourceErrSchemaURLConflictNotReturned(t *testing.T) {
-	// Disable network-dependent detectors to keep the test fast and hermetic.
+	// Disable irrelevant expensive detectors to speed up the test.
 	t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams")
 	// ErrSchemaURLConflict is non-fatal and must never be propagated to the caller.
 	r, err := createResource()

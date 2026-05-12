@@ -56,11 +56,6 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		return func() {}, fmt.Errorf("failed to parse OpenTelemetry configuration in %s %q: %w", constants.OtelConfigFileEnv, otelConfigFile, err)
 	}
 
-	if otelCfg.Disabled != nil && *otelCfg.Disabled {
-		log.Warning("OTEL config file sets disabled=true; otelconf will use noop providers")
-		return func() {}, nil
-	}
-
 	// Parse the SolarWinds-specific configuration from the same YAML file, so that we can apply it before creating the SDK.
 	// This allows users to specify all configuration in a single file if they choose to.
 	solarwindsCfg, err := extractSolarwindsConfigFromOtelYAML(configBytes)
@@ -68,9 +63,7 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		return func() {}, fmt.Errorf("failed to parse SolarWinds configuration in %s %q: %w", constants.OtelConfigFileEnv, otelConfigFile, err)
 	}
 
-	log.Debug("config.Load from otelconf")
 	config.Load(buildSolarwindsConfigOptions(solarwindsCfg)...)
-	log.Debug("config.Load from otelconf end")
 	if !config.GetEnabled() {
 		log.Info("SolarWinds Observability APM agent is disabled, skipping startup.")
 		return func() {}, nil
