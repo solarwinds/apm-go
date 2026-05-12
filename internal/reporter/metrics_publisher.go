@@ -47,6 +47,7 @@ func newMeterProvider(ctx context.Context, resource *sdkresource.Resource, runti
 	// Note: readerOpts (including the runtime producer) only apply on the fallback path.
 	// When OTEL_METRICS_EXPORTER is set, the user must configure runtime metrics producers
 	// via OTEL_METRICS_PRODUCERS or their own SDK setup.
+	// Default NewProducer produce metrics `go.schedule.duration`
 	otelMetricReader, err := otelsetup.CreateAndSetupOtelMetricsReader(ctx, readerOpts...)
 	if err != nil {
 		return nil, err

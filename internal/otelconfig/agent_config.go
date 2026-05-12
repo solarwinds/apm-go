@@ -101,7 +101,8 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		grpcHeaders = map[string]string{"Authorization": fmt.Sprintf("Bearer %s", token)}
 	}
 
-	sdkOpts, err := buildSDKOptions(ctx, otelCfg, grpcEndpoint, grpcHeaders)
+	runtimeMetrics := config.GetRuntimeMetrics()
+	sdkOpts, err := buildSDKOptions(ctx, otelCfg, grpcEndpoint, grpcHeaders, runtimeMetrics)
 	if err != nil {
 		stopSettingsUpdater()
 		return func() {}, err
@@ -159,7 +160,10 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		return func() {}, fmt.Errorf("failed to register sample rate metrics: %w", err)
 	}
 
-	if config.GetRuntimeMetrics() {
+	// runtime.Start is only needed when the user declared their own readers;
+	// when SWO injects the PeriodicReader, runtime.NewProducer() is already
+	// attached to that reader via buildSDKOptions.
+	if runtimeMetrics && otelCfg.MeterProvider != nil && len(otelCfg.MeterProvider.Readers) > 0 {
 		if err = runtime.Start(runtime.WithMeterProvider(sdk.MeterProvider())); err != nil {
 			stopSettingsUpdater()
 			if shutdownErr := sdk.Shutdown(ctx); shutdownErr != nil {

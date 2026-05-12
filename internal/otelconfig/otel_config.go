@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"unsafe"
 
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/contrib/otelconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -33,7 +34,9 @@ import (
 // buildSDKOptions constructs the otelconf ConfigurationOptions for each signal
 // provider declared in cfg, injecting SWO-managed gRPC exporters when the user
 // has not defined their own processors/readers.
-func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfiguration, grpcEndpoint string, grpcHeaders map[string]string) ([]otelconf.ConfigurationOption, error) {
+// When runtimeMetrics is true and SWO injects the PeriodicReader, a runtime
+// producer is attached so that Go runtime metrics are collected on that reader.
+func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfiguration, grpcEndpoint string, grpcHeaders map[string]string, runtimeMetrics bool) ([]otelconf.ConfigurationOption, error) {
 	opts := []otelconf.ConfigurationOption{
 		otelconf.WithContext(ctx),
 	}
@@ -57,7 +60,11 @@ func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfigurati
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OTLP gRPC metric exporter: %w", err)
 		}
-		opts = append(opts, otelconf.WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp))))
+		readerOpts := []sdkmetric.PeriodicReaderOption{}
+		if runtimeMetrics {
+			readerOpts = append(readerOpts, sdkmetric.WithProducer(runtime.NewProducer()))
+		}
+		opts = append(opts, otelconf.WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExp, readerOpts...))))
 	}
 
 	if cfg.LoggerProvider != nil && len(cfg.LoggerProvider.Processors) == 0 {
