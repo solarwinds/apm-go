@@ -17,10 +17,14 @@ package swo
 import (
 	"context"
 	stdlog "log"
+	"os"
+	"strings"
 
 	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/constants"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/otelconfig"
 	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
@@ -39,7 +43,11 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		log.Error("OpenTelemetry error: ", err)
 	}))
 
-	return startWithOtelConf(resourceAttrs...)
+	if strings.TrimSpace(os.Getenv(constants.OtelConfigFileEnv)) == "" {
+		log.Debug("OTEL_CONFIG_FILE not set, falling back to legacy startup")
+		return startLegacy(resourceAttrs...)
+	}
+	return otelconfig.StartWithOtelConf(resourceAttrs...)
 }
 
 func startLegacy(resourceAttrs ...attribute.KeyValue) (func(), error) {
@@ -96,7 +104,6 @@ func startLegacy(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		sdktrace.WithSampler(smplr),
 		sdktrace.WithSpanProcessor(proc),
 	)
-	maybeRegisterDebugSpanProcessor(tp)
 	otel.SetTracerProvider(tp)
 
 	return func() {
