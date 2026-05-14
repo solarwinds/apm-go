@@ -20,6 +20,10 @@ import (
 	"reflect"
 	"unsafe"
 
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/otelsetup"
+	"github.com/solarwinds/apm-go/internal/proxy"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/contrib/otelconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -29,6 +33,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // buildSDKOptions constructs the otelconf ConfigurationOptions for each signal
@@ -36,16 +42,37 @@ import (
 // has not defined their own processors/readers.
 // When runtimeMetrics is true and SWO injects the PeriodicReader, a runtime
 // producer is attached so that Go runtime metrics are collected on that reader.
-func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfiguration, grpcEndpoint string, grpcHeaders map[string]string, runtimeMetrics bool) ([]otelconf.ConfigurationOption, error) {
+func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfiguration, grpcEndpoint string, grpcInsecure bool, grpcHeaders map[string]string, runtimeMetrics bool) ([]otelconf.ConfigurationOption, error) {
 	opts := []otelconf.ConfigurationOption{
 		otelconf.WithContext(ctx),
 	}
 
+	// Compute proxy-aware endpoint and dial options once; all three exporters
+	// connect to the same grpcEndpoint and share the same proxy configuration.
+	effectiveEndpoint := grpcEndpoint
+	var grpcDialOpts []grpc.DialOption
+	if proxyURL := config.GetProxy(); proxyURL != "" {
+		effectiveEndpoint = proxy.ReplaceSchemeWithPassthrough(grpcEndpoint)
+		grpcDialOpts = []grpc.DialOption{
+			grpc.WithContextDialer(proxy.NewGRPCProxyDialer(proxy.ProxyOptions{
+				Proxy:         proxyURL,
+				ProxyCertPath: config.GetProxyCertPath(),
+			})),
+		}
+	}
+	if grpcInsecure {
+		grpcDialOpts = append(grpcDialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	}
+
 	if cfg.TracerProvider != nil && len(cfg.TracerProvider.Processors) == 0 {
-		spanExp, err := otlptracegrpc.New(ctx,
-			otlptracegrpc.WithEndpoint(grpcEndpoint),
+		spanOpts := []otlptracegrpc.Option{
+			otlptracegrpc.WithEndpoint(effectiveEndpoint),
 			otlptracegrpc.WithHeaders(grpcHeaders),
-		)
+		}
+		if len(grpcDialOpts) > 0 {
+			spanOpts = append(spanOpts, otlptracegrpc.WithDialOption(grpcDialOpts...))
+		}
+		spanExp, err := otlptracegrpc.New(ctx, spanOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OTLP gRPC span exporter: %w", err)
 		}
@@ -53,10 +80,22 @@ func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfigurati
 	}
 
 	if cfg.MeterProvider != nil && len(cfg.MeterProvider.Readers) == 0 {
-		metricExp, err := otlpmetricgrpc.New(ctx,
-			otlpmetricgrpc.WithEndpoint(grpcEndpoint),
+		metricOpts := []otlpmetricgrpc.Option{
+			otlpmetricgrpc.WithEndpoint(effectiveEndpoint),
 			otlpmetricgrpc.WithHeaders(grpcHeaders),
-		)
+			otlpmetricgrpc.WithTemporalitySelector(otelsetup.MetricTemporalitySelector),
+			otlpmetricgrpc.WithCompressor("gzip"),
+			otlpmetricgrpc.WithAggregationSelector(func(kind sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+				if kind == sdkmetric.InstrumentKindHistogram {
+					return sdkmetric.AggregationBase2ExponentialHistogram{MaxSize: 160, MaxScale: 20}
+				}
+				return sdkmetric.DefaultAggregationSelector(kind)
+			}),
+		}
+		if len(grpcDialOpts) > 0 {
+			metricOpts = append(metricOpts, otlpmetricgrpc.WithDialOption(grpcDialOpts...))
+		}
+		metricExp, err := otlpmetricgrpc.New(ctx, metricOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OTLP gRPC metric exporter: %w", err)
 		}
@@ -68,10 +107,14 @@ func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfigurati
 	}
 
 	if cfg.LoggerProvider != nil && len(cfg.LoggerProvider.Processors) == 0 {
-		logExp, err := otlploggrpc.New(ctx,
-			otlploggrpc.WithEndpoint(grpcEndpoint),
+		logOpts := []otlploggrpc.Option{
+			otlploggrpc.WithEndpoint(effectiveEndpoint),
 			otlploggrpc.WithHeaders(grpcHeaders),
-		)
+		}
+		if len(grpcDialOpts) > 0 {
+			logOpts = append(logOpts, otlploggrpc.WithDialOption(grpcDialOpts...))
+		}
+		logExp, err := otlploggrpc.New(ctx, logOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OTLP gRPC log exporter: %w", err)
 		}
@@ -120,7 +163,7 @@ func mergeResourceOnProvider(tp *sdktrace.TracerProvider, additional *sdkresourc
 	// while additional (SWO attrs) fills in keys absent from current.
 	merged, err := sdkresource.Merge(additional, current)
 	if err != nil {
-		fmt.Errorf("failed to merge resources for trace_provider: %w", err)
+		log.Errorf("failed to merge resources for trace_provider: %w", err)
 		return
 	}
 	ptr.Elem().Set(reflect.ValueOf(merged))
@@ -144,7 +187,7 @@ func mergeResourceOnLoggerProvider(lp *sdklog.LoggerProvider, additional *sdkres
 	// Merge(additional, current): current (YAML-derived) wins for conflicting keys.
 	merged, err := sdkresource.Merge(additional, current)
 	if err != nil {
-		fmt.Errorf("failed to merge resources for logger_provider: %w", err)
+		log.Errorf("failed to merge resources for logger_provider: %w", err)
 		return
 	}
 	ptr.Elem().Set(reflect.ValueOf(merged))
@@ -179,7 +222,7 @@ func mergeResourceOnMeterProvider(mp *sdkmetric.MeterProvider, additional *sdkre
 		// Merge(additional, current): current (YAML-derived) wins for conflicting keys.
 		merged, err := sdkresource.Merge(additional, current)
 		if err != nil {
-			fmt.Errorf("failed to merge resources for meter_provider: %w", err)
+			log.Errorf("failed to merge resources for meter_provider: %w", err)
 			continue
 		}
 		resPtr.Elem().Set(reflect.ValueOf(merged))

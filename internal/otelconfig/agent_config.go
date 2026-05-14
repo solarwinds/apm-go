@@ -92,8 +92,11 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 	// Parse gRPC endpoint: strip the URL scheme so gRPC gets host:port with default TLS,
 	// matching how otelconf handles OTLPGrpc endpoint fields internally.
+	// Preserve the scheme to detect insecure (http) vs TLS (https) connections.
 	grpcEndpoint := config.GetOtelCollector()
+	var grpcInsecure bool
 	if u, parseErr := url.ParseRequestURI(grpcEndpoint); parseErr == nil && u.Host != "" {
+		grpcInsecure = u.Scheme == "http"
 		grpcEndpoint = u.Host
 	}
 
@@ -103,7 +106,7 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	}
 
 	runtimeMetrics := config.GetRuntimeMetrics()
-	sdkOpts, err := buildSDKOptions(ctx, otelCfg, grpcEndpoint, grpcHeaders, runtimeMetrics)
+	sdkOpts, err := buildSDKOptions(ctx, otelCfg, grpcEndpoint, grpcInsecure, grpcHeaders, runtimeMetrics)
 	if err != nil {
 		stopSettingsUpdater()
 		return func() {}, err
