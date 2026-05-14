@@ -86,6 +86,7 @@ func StartWithOtelConf(resourceAttrs ...attribute.KeyValue) (func(), error) {
 
 	smplr, err := sampler.NewSampler(o)
 	if err != nil {
+		stopSettingsUpdater()
 		return func() {}, fmt.Errorf("failed to create sampler: %w", err)
 	}
 

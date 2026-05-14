@@ -83,9 +83,9 @@ func buildSDKOptions(ctx context.Context, cfg *otelconf.OpenTelemetryConfigurati
 
 // setSamplerOnProvider force-sets the sampler on a *sdktrace.TracerProvider using
 // reflection. This is necessary because otelconf applies a default
-// ParentBased{AlwaysOn} sampler via its YAML-derived options after our
-// WithTracerProviderOptions(WithSampler) option, overriding it. Calling this
-// function after SDK creation ensures the SWO sampler is used.
+// ParentBased{AlwaysOn} sampler when initializing the TracerProvider. Since
+// we cannot pass a sampler option through buildSDKOptions that would take
+// precedence, we force-set the SWO sampler after SDK creation to override it.
 func setSamplerOnProvider(tp *sdktrace.TracerProvider, s sdktrace.Sampler) {
 	if tp == nil || s == nil {
 		return
@@ -100,10 +100,9 @@ func setSamplerOnProvider(tp *sdktrace.TracerProvider, s sdktrace.Sampler) {
 }
 
 // mergeResourceOnProvider merges additional into the resource stored in a
-// *sdktrace.TracerProvider using reflection. sdktrace.WithResource replaces
-// the resource rather than merging, and otelconf re-reads OTEL_CONFIG_FILE after
-// our WithTracerProviderOptions(WithResource) call, so the SWO resource attrs
-// would otherwise be lost. Calling this after SDK creation ensures they are present.
+// *sdktrace.TracerProvider using reflection. otelconf re-reads OTEL_CONFIG_FILE
+// after our options are applied, which resets the resource. We merge via reflection
+// after SDK creation to ensure SWO auto-detected resource attrs are present.
 // The merge order Merge(additional, current) ensures user-defined YAML attributes
 // (current) take precedence over SWO auto-detected values for conflicting keys.
 func mergeResourceOnProvider(tp *sdktrace.TracerProvider, additional *sdkresource.Resource) {
@@ -121,6 +120,7 @@ func mergeResourceOnProvider(tp *sdktrace.TracerProvider, additional *sdkresourc
 	// while additional (SWO attrs) fills in keys absent from current.
 	merged, err := sdkresource.Merge(additional, current)
 	if err != nil {
+		fmt.Errorf("failed to merge resources for trace_provider: %w", err)
 		return
 	}
 	ptr.Elem().Set(reflect.ValueOf(merged))
@@ -128,7 +128,8 @@ func mergeResourceOnProvider(tp *sdktrace.TracerProvider, additional *sdkresourc
 
 // mergeResourceOnLoggerProvider merges additional into the resource stored in a
 // *sdklog.LoggerProvider using reflection. otelconf re-reads OTEL_CONFIG_FILE after
-// our options are applied, so the SWO resource attrs would otherwise be lost.
+// our options are applied, which resets the resource. We merge via reflection
+// after SDK creation to ensure SWO auto-detected resource attrs are present.
 func mergeResourceOnLoggerProvider(lp *sdklog.LoggerProvider, additional *sdkresource.Resource) {
 	if lp == nil || additional == nil {
 		return
@@ -143,6 +144,7 @@ func mergeResourceOnLoggerProvider(lp *sdklog.LoggerProvider, additional *sdkres
 	// Merge(additional, current): current (YAML-derived) wins for conflicting keys.
 	merged, err := sdkresource.Merge(additional, current)
 	if err != nil {
+		fmt.Errorf("failed to merge resources for logger_provider: %w", err)
 		return
 	}
 	ptr.Elem().Set(reflect.ValueOf(merged))
@@ -177,13 +179,14 @@ func mergeResourceOnMeterProvider(mp *sdkmetric.MeterProvider, additional *sdkre
 		// Merge(additional, current): current (YAML-derived) wins for conflicting keys.
 		merged, err := sdkresource.Merge(additional, current)
 		if err != nil {
+			fmt.Errorf("failed to merge resources for meter_provider: %w", err)
 			continue
 		}
 		resPtr.Elem().Set(reflect.ValueOf(merged))
 	}
 }
 
-// resourceFromTracerProvider reads the resource stored inside a
+// For testing only: resourceFromTracerProvider reads the resource stored inside a
 // *sdktrace.TracerProvider directly via reflection, returning the resource
 // attributes as a map. This is the canonical way to verify resource attributes
 // in tests without having to emit a span.

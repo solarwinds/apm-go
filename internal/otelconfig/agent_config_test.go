@@ -202,9 +202,9 @@ instrumentation/development:
 	assert.True(t, isNoopLP)
 }
 
-// TestStartWithOtelConfNoProviders verifies that when no tracer_provider,
-// meter_provider, or logger_provider sections are declared, StartWithOtelConf
-// succeeds and all signal providers are noop (not full SDK providers).
+// TestStartWithOtelConfWithAdditionalResourceAttr verifies that configured
+// resource attributes are preserved and merged with the expected SWO resource
+// attributes when StartWithOtelConf initializes SDK providers.
 func TestStartWithOtelConfWithAdditionalResourceAttr(t *testing.T) {
 	lis := setupLocalListener(t)
 	endpoint := lis.Addr().String()
