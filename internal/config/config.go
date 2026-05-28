@@ -323,6 +323,13 @@ func WithServiceKey(key string) Option {
 	}
 }
 
+// WithRuntimeMetrics defines a Config option for runtime metric collection.
+func WithRuntimeMetrics(enabled bool) Option {
+	return func(c *Config) {
+		c.RuntimeMetrics = enabled
+	}
+}
+
 // NewConfig initializes a Config object and override default values with options
 // provided as arguments. It may print errors if there are invalid values in the
 // configuration file or the environment variables.

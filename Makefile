@@ -29,9 +29,12 @@ clean:
 lint:
 	golangci-lint run ./...
 
+fmt:
+	gofmt -s -w .
+
 license-check:
 	./license_check.sh
 
-sure: clean test vet lint license-check
+sure: clean test vet lint fmt license-check
 
 .PHONY: test vet clean lint license-check
