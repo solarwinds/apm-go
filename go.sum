@@ -85,8 +85,8 @@ go.opentelemetry.io/contrib/bridges/prometheus v0.68.0 h1:w3zlHYETbDwXyWHZlyyR58
 go.opentelemetry.io/contrib/bridges/prometheus v0.68.0/go.mod h1:GR/mClR2nn7vE8RLwxKjoBNg+QtgdDhRzxVa93koy5o=
 go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.0 h1:pC+kRpB9AEbQ70MN6YQwMpLzVNP4NA3Dn6MujZaPaew=
 go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.0/go.mod h1:WN02Ocn6WGtcHJihX6YuINcUS4ACjTE7gttukHK4J8M=
-go.opentelemetry.io/contrib/detectors/azure/azurevm v0.15.0 h1:O+prr7wBPM6QpeTqw+lFyBhJXhCHTmJGNL6vPXhhyOc=
-go.opentelemetry.io/contrib/detectors/azure/azurevm v0.15.0/go.mod h1:V39+CyGLcU0cDa14wXJwAS1WS5+4jZA0ir0PtB89NHA=
+go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0 h1:G6SspyK7SIXI32DfOMBHdmOHMBe/mrcoNizce8Q62TU=
+go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0/go.mod h1:gfgRiRO+N2L9UX9bZoEMrbI/+n81SamHpsWMqYXlqlE=
 go.opentelemetry.io/contrib/exporters/autoexport v0.68.0 h1:0D3GFvELGIwQGfC6agLsbrEYSGWZTRTxIXxcQUqrOuk=
 go.opentelemetry.io/contrib/exporters/autoexport v0.68.0/go.mod h1:DM2NV7Zb8CcGeVPt6glouY0FAiwZQ/iqgcWExhgWeN8=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 h1:CqXxU8VOmDefoh0+ztfGaymYbhdB/tT3zs79QaZTNGY=
