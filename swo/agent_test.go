@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -104,6 +105,66 @@ func TestSetTransactionName(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "this should work", entryspans.GetTransactionName(s.SpanContext().TraceID()))
 
+}
+
+func TestServiceNameFromResource(t *testing.T) {
+	t.Run("returns service.name when present", func(t *testing.T) {
+		r := resource.NewSchemaless(attribute.String("service.name", "resource-service-name"))
+		assert.Equal(t, "resource-service-name", serviceNameFromResource(r))
+	})
+
+	t.Run("returns empty string when service.name absent", func(t *testing.T) {
+		r := resource.NewSchemaless(attribute.String("some.other.attr", "value"))
+		assert.Equal(t, "", serviceNameFromResource(r))
+	})
+}
+
+func TestServiceNamePrecedence(t *testing.T) {
+	const (
+		validKey         = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217:key-service-name"
+		disableDetectors = "ec2,azurevm,uams"
+	)
+
+	tests := []struct {
+		name         string
+		envSvcName   string
+		resourceAttr string
+		want         string
+	}{
+		{
+			name: "service key is baseline",
+			want: "key-service-name",
+		},
+		{
+			name:       "OTEL_SERVICE_NAME overrides service key",
+			envSvcName: "env-service-name",
+			want:       "env-service-name",
+		},
+		{
+			name:         "resourceAttr overrides OTEL_SERVICE_NAME",
+			envSvcName:   "env-service-name",
+			resourceAttr: "api-service-name",
+			want:         "api-service-name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() { config.Load() })
+			t.Setenv("SW_APM_SERVICE_KEY", validKey)
+			t.Setenv("OTEL_SERVICE_NAME", tt.envSvcName)
+			t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", disableDetectors)
+			config.Load()
+
+			var attrs []attribute.KeyValue
+			if tt.resourceAttr != "" {
+				attrs = append(attrs, attribute.String("service.name", tt.resourceAttr))
+			}
+			r, err := createResource(attrs...)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, serviceNameFromResource(r))
+		})
+	}
 }
 
 func TestStartDisabled(t *testing.T) {
