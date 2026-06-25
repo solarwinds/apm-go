@@ -49,15 +49,12 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
-
-	o := oboe.NewOboe()
-	setGlobalOboe(o)
-
 	// createResource determines the final service.name; read it back here so the
 	// settings API call uses the same name that appears on spans.
 	svcName := serviceNameFromResource(resrc)
 
 	o := oboe.NewOboe()
+	setGlobalOboe(o)
 	settingsUpdater, err := oboe.NewSettingsUpdater(o, svcName)
 	if err != nil {
 		log.Error("Failed to create settings updater, ", err)
