@@ -30,7 +30,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // Start bootstraps otel requirements and starts the agent. The given `resourceAttrs` are added to the otel
@@ -47,10 +49,16 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			// return a no-op func so that we don't cause a nil-deref for the end-user
 		}, err
 	}
+
 	o := oboe.NewOboe()
 	setGlobalOboe(o)
 
-	settingsUpdater, err := oboe.NewSettingsUpdater(o)
+	// createResource determines the final service.name; read it back here so the
+	// settings API call uses the same name that appears on spans.
+	svcName := serviceNameFromResource(resrc)
+
+	o := oboe.NewOboe()
+	settingsUpdater, err := oboe.NewSettingsUpdater(o, svcName)
 	if err != nil {
 		log.Error("Failed to create settings updater, ", err)
 		return func() {}, err
@@ -104,4 +112,9 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 			stdlog.Fatal(err)
 		}
 	}, nil
+}
+
+func serviceNameFromResource(resrc *resource.Resource) string {
+	val, _ := resrc.Set().Value(semconv.ServiceNameKey)
+	return val.AsString()
 }

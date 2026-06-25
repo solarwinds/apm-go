@@ -71,7 +71,7 @@ func TestSettingsUpdater_QueriesAndUpdatesSettings(t *testing.T) {
 	)
 
 	o := NewOboe()
-	updater, err := NewSettingsUpdater(o)
+	updater, err := NewSettingsUpdater(o, serviceName)
 	require.NoError(t, err)
 	require.NotNil(t, updater)
 
