@@ -164,6 +164,8 @@ type FilterType string
 const (
 	// URL based filter
 	URL FilterType = "url"
+	// Span based filter
+	Span FilterType = "span"
 )
 
 // TracingMode defines the tracing mode which is either `enabled` or `disabled`
@@ -188,9 +190,10 @@ type TransactionFilter struct {
 
 // TransactionFilter unmarshal errors
 var (
-	ErrTFInvalidType     = errors.New("invalid Type")
-	ErrTFInvalidTracing  = errors.New("invalid Tracing")
-	ErrTFInvalidRegExExt = errors.New("must set either RegEx or Extensions, but not both")
+	ErrTFInvalidType      = errors.New("invalid Type")
+	ErrTFInvalidTracing   = errors.New("invalid Tracing")
+	ErrTFInvalidRegExExt  = errors.New("must set either RegEx or Extensions, but not both")
+	ErrTFSpanNoExtensions = errors.New("span filter must use RegEx, not Extensions")
 )
 
 // UnmarshalYAML is the customized unmarshal method for TransactionFilter
@@ -206,7 +209,7 @@ func (f *TransactionFilter) UnmarshalYAML(unmarshal func(interface{}) error) err
 	if err := unmarshal(&aux); err != nil {
 		return fmt.Errorf("failed to unmarshal TransactionFilter: %w", err)
 	}
-	if aux.Type != URL {
+	if aux.Type != URL && aux.Type != Span {
 		return ErrTFInvalidType
 	}
 	if aux.Tracing != EnabledTracingMode && aux.Tracing != DisabledTracingMode {
@@ -214,6 +217,9 @@ func (f *TransactionFilter) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 	if (aux.RegEx == "") == (aux.Extensions == nil) {
 		return ErrTFInvalidRegExExt
+	}
+	if aux.Type == Span && aux.Extensions != nil {
+		return ErrTFSpanNoExtensions
 	}
 
 	f.Type = aux.Type

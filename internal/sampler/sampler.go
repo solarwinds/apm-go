@@ -16,6 +16,8 @@ package sampler
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/swotel"
@@ -95,11 +97,13 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 	} else {
 		// TODO url
 		url := ""
+		spanMatcher := strings.ToUpper(params.Kind.String()) + ":" + params.Name
+		fmt.Println("spanMatcher: ", spanMatcher)
 		xto := xtrace.GetXTraceOptions(params.ParentContext, s.oboe)
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, ttMode, swState)
+		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, spanMatcher, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
 			decision = sdktrace.Drop
