@@ -17,10 +17,11 @@ package swo
 import (
 	"context"
 	"errors"
-
 	"io"
 	"strings"
+	"time"
 
+	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
 	"go.opentelemetry.io/otel/trace"
@@ -49,6 +50,34 @@ func GetLogLevel() string {
 // SetLogOutput sets the output destination for the internal logger.
 func SetLogOutput(w io.Writer) {
 	log.SetOutput(w)
+}
+
+// WaitForReady checks if the agent is ready. It returns true if the agent is ready,
+// or false if it is not. Default timeout is 10 seconds, but can be overridden
+// by providing a context with a deadline.
+func WaitForReady(ctx context.Context) bool {
+	if !config.GetEnabled() {
+		return true
+	}
+	o := getGlobalOboe()
+	if o == nil {
+		return false
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+	}
+	for {
+		if o.HasDefaultSetting() {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
 }
 
 // SetTransactionName sets the transaction name of the current entry span. If set multiple times, the last is used.

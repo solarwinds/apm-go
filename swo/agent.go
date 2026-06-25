@@ -48,6 +48,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}, err
 	}
 	o := oboe.NewOboe()
+	setGlobalOboe(o)
 
 	settingsUpdater, err := oboe.NewSettingsUpdater(o)
 	if err != nil {
@@ -92,6 +93,7 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 	otel.SetTracerProvider(tp)
 
 	return func() {
+		setGlobalOboe(nil)
 		stopSettingsUpdater()
 
 		err := metricsPublisher.Shutdown()
