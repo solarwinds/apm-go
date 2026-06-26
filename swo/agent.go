@@ -22,6 +22,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
+	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/otelsetup"
 	"github.com/solarwinds/apm-go/internal/processor"
 	"github.com/solarwinds/apm-go/internal/propagator"
@@ -50,8 +51,9 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}, err
 	}
 	// createResource determines the final service.name; read it back here so the
-	// settings API call uses the same name that appears on spans.
+	// settings API call and log correlation both use the same name that appears on spans.
 	svcName := serviceNameFromResource(resrc)
+	state.SetServiceName(svcName)
 
 	o := oboe.NewOboe()
 	settingsUpdater, err := oboe.NewSettingsUpdater(o, svcName)
