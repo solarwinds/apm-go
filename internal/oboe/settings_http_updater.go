@@ -39,7 +39,7 @@ type SettingsUpdater interface {
 	Start(ctx context.Context) func()
 }
 
-func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
+func NewSettingsUpdater(o Oboe, serviceName string) (SettingsUpdater, error) {
 	if !config.GetEnabled() {
 		log.Info("SolarWinds Observability APM agent is disabled. Settings are not polled from the server.")
 		return newNullSettingsUpdater(), nil
@@ -56,7 +56,7 @@ func NewSettingsUpdater(o Oboe) (SettingsUpdater, error) {
 		updateInterval:   defaultSettingsUpdateInterval,
 		ttlCheckInterval: defaultSettingsTTLCheckInterval,
 		oboe:             o,
-		settingsService:  newSettingsService(settingsUrl, parsedServiceKey.ServiceName, "", parsedServiceKey.Token),
+		settingsService:  newSettingsService(settingsUrl, serviceName, "", parsedServiceKey.Token),
 	}, nil
 }
 
