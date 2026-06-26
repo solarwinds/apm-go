@@ -174,8 +174,9 @@ func TestServiceNamePrecedence(t *testing.T) {
 // support was removed, causing state.GetServiceName() to always return "".
 func TestStartSetsStateServiceName(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{"flags":"SAMPLE_START","value":1000000,"ttl":60,"arguments":{"BucketCapacity":1,"BucketRate":1}}`))
 	}))
 	defer server.Close()
 
