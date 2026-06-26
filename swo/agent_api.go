@@ -55,6 +55,7 @@ func SetLogOutput(w io.Writer) {
 // WaitForReady checks if the agent is ready. It returns true if the agent is ready,
 // or false if it is not. Default timeout is 10 seconds, but can be overridden
 // by providing a context with a deadline.
+// WaitForReady is only meaningful when the agent was initialized via Start().
 func WaitForReady(ctx context.Context) bool {
 	if !config.GetEnabled() {
 		return true
@@ -68,6 +69,8 @@ func WaitForReady(ctx context.Context) bool {
 		ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 	}
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		if o.HasDefaultSetting() {
 			return true
@@ -75,7 +78,7 @@ func WaitForReady(ctx context.Context) bool {
 		select {
 		case <-ctx.Done():
 			return false
-		case <-time.After(500 * time.Millisecond):
+		case <-ticker.C:
 		}
 	}
 }
