@@ -165,10 +165,9 @@ func getTtMode(xto xtrace.Options) oboe.TriggerTraceMode {
 // for use with URL-based transaction filtering. Returns "" for non-SERVER spans
 // or when no URL attribute is present.
 //
-// Attribute priority (mirrors txn.deriveTransactionName):
-//  1. url.path      (semconv v1.20+)
-//  2. http.target   (semconv pre-v1.20, deprecated)
-//
+// Attribute priority:
+//  1. url.path    (semconv v1.20+)
+//  2. http.target (semconv pre-v1.20, deprecated)
 // The query string is stripped so that URL filters match against the path only,
 // consistent with how extension filters work.
 func extractURL(kind trace.SpanKind, attrs []attribute.KeyValue) string {
@@ -181,7 +180,7 @@ func extractURL(kind trace.SpanKind, attrs []attribute.KeyValue) string {
 		case semconv.URLPathKey:
 			// Prefer the newer attribute; return immediately.
 			raw := attr.Value.AsString()
-			if idx := strings.IndexByte(raw, '?'); idx != -1 {
+			if idx := strings.IndexAny(raw, "?#"); idx != -1 {
 				return raw[:idx]
 			}
 			return raw
@@ -191,7 +190,7 @@ func extractURL(kind trace.SpanKind, attrs []attribute.KeyValue) string {
 		}
 	}
 	if urlPath != "" {
-		if idx := strings.IndexByte(urlPath, '?'); idx != -1 {
+		if idx := strings.IndexAny(urlPath, "?#"); idx != -1 {
 			return urlPath[:idx]
 		}
 		return urlPath
