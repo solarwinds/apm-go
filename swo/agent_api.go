@@ -52,10 +52,11 @@ func SetLogOutput(w io.Writer) {
 	log.SetOutput(w)
 }
 
-// WaitForReady checks if the agent is ready. It returns true if the agent is ready,
-// or false if it is not. Default timeout is 10 seconds, but can be overridden
-// by providing a context with a deadline.
-// WaitForReady is only meaningful when the agent was initialized via Start().
+// WaitForReady checks if the library is ready to sample requests. It returns
+// true if ready or if the library is disabled, else it returns false.
+// This is a blocking call with default timeout of 10 seconds which can be
+// overridden by providing a context with a deadline.
+// WaitForReady is only meaningful when the library is initialized via Start().
 func WaitForReady(ctx context.Context) bool {
 	if !config.GetEnabled() {
 		return true
