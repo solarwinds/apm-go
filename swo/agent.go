@@ -27,6 +27,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/propagator"
 	"github.com/solarwinds/apm-go/internal/reporter"
 	"github.com/solarwinds/apm-go/internal/sampler"
+	"github.com/solarwinds/apm-go/internal/state"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -50,8 +51,9 @@ func Start(resourceAttrs ...attribute.KeyValue) (func(), error) {
 		}, err
 	}
 	// createResource determines the final service.name; read it back here so the
-	// settings API call uses the same name that appears on spans.
+	// settings API call and log correlation both use the same name that appears on spans.
 	svcName := serviceNameFromResource(resrc)
+	state.SetServiceName(svcName)
 
 	o := oboe.NewOboe()
 	setGlobalOboe(o)

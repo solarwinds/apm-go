@@ -16,6 +16,8 @@ package swo
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -23,6 +25,7 @@ import (
 	"github.com/solarwinds/apm-go/internal/config"
 	"github.com/solarwinds/apm-go/internal/entryspans"
 	"github.com/solarwinds/apm-go/internal/log"
+	"github.com/solarwinds/apm-go/internal/state"
 	"github.com/solarwinds/apm-go/internal/testutils"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -165,6 +168,34 @@ func TestServiceNamePrecedence(t *testing.T) {
 			assert.Equal(t, tt.want, serviceNameFromResource(r))
 		})
 	}
+}
+
+// Regression test for NH-141898: state.SetServiceName lost its call site when AO
+// support was removed, causing state.GetServiceName() to always return "".
+func TestStartSetsStateServiceName(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"flags":"SAMPLE_START","value":1000000,"ttl":60,"arguments":{"BucketCapacity":1,"BucketRate":1}}`))
+	}))
+	defer server.Close()
+
+	const token = "ae38315f6116585d64d82ec2455aa3ec61e02fee25d286f74ace9e4fea189217"
+	t.Cleanup(func() {
+		state.SetServiceName("")
+		config.Load()
+	})
+	t.Setenv("SW_APM_SERVICE_KEY", token+":key-service-name")
+	t.Setenv("OTEL_SERVICE_NAME", "env-service-name")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+	t.Setenv("SW_APM_DISABLED_RESOURCE_DETECTORS", "ec2,azurevm,uams")
+	config.Load(func(c *config.Config) { c.SettingsURL = server.URL })
+
+	shutdown, err := Start()
+	require.NoError(t, err)
+	defer shutdown()
+
+	assert.Equal(t, "env-service-name", state.GetServiceName())
 }
 
 func TestStartDisabled(t *testing.T) {
