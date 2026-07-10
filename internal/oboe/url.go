@@ -16,11 +16,12 @@ package oboe
 
 import (
 	"fmt"
-	"github.com/solarwinds/apm-go/internal/config"
-	"github.com/solarwinds/apm-go/internal/log"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/solarwinds/apm-go/internal/config"
+	"github.com/solarwinds/apm-go/internal/log"
 
 	"github.com/coocood/freecache"
 )
@@ -38,6 +39,7 @@ func init() {
 func ReloadURLsConfig(filters []config.TransactionFilter) {
 	urls.LoadConfig(filters)
 	urls.cache.Clear()
+	urls.spanCache.Clear()
 }
 
 // urlCache is a cache to store the disabled url patterns
@@ -121,13 +123,16 @@ func (f *extensionFilter) tracingMode() TracingMode {
 }
 
 type urlFilters struct {
-	cache   *urlCache
-	filters []urlFilter
+	cache       *urlCache
+	filters     []urlFilter
+	spanCache   *urlCache
+	spanFilters []urlFilter
 }
 
 func newURLFilters() *urlFilters {
 	return &urlFilters{
-		cache: &urlCache{freecache.NewCache(1024 * 1024)},
+		cache:     &urlCache{freecache.NewCache(1024 * 1024)},
+		spanCache: &urlCache{freecache.NewCache(1024 * 1024)},
 	}
 }
 
@@ -138,12 +143,24 @@ func (f *urlFilters) LoadConfig(filters []config.TransactionFilter) {
 
 func (f *urlFilters) loadConfig(filters []config.TransactionFilter) {
 	f.filters = nil
+	f.spanFilters = nil
 
 	for _, filter := range filters {
+		if filter.Type == config.Span {
+			re, err := newRegexFilter(filter.RegEx, NewTracingMode(filter.Tracing))
+			if err != nil {
+				log.Warningf("Ignore bad span filter regex: %s, error=%s", filter.RegEx, err.Error())
+				continue
+			}
+			f.spanFilters = append(f.spanFilters, re)
+			continue
+		}
+
 		if filter.RegEx != "" {
 			re, err := newRegexFilter(filter.RegEx, NewTracingMode(filter.Tracing))
 			if err != nil {
-				log.Warningf("Ignore bad regex: %s, error=", filter.RegEx, err.Error())
+				log.Warningf("Ignore bad regex: %s, error=%s", filter.RegEx, err.Error())
+				continue
 			}
 			f.filters = append(f.filters, re)
 		} else {
@@ -174,6 +191,34 @@ func (f *urlFilters) GetTracingMode(url string) TracingMode {
 func (f *urlFilters) lookupTracingMode(url string) TracingMode {
 	for _, filter := range f.filters {
 		if filter.match(url) {
+			return filter.tracingMode()
+		}
+	}
+	return TraceUnknown
+}
+
+// GetTracingModeForSpan checks whether a span should be traced based on the
+// configured span filters. The matcher is the span kind and name joined by a
+// colon (e.g. "CLIENT:GET"). It returns TraceUnknown if no span filter matches.
+func (f *urlFilters) GetTracingModeForSpan(matcher string) TracingMode {
+	if len(f.spanFilters) == 0 || matcher == "" {
+		return TraceUnknown
+	}
+
+	trace, err := f.spanCache.getURLTrace(matcher)
+	if err == nil {
+		return trace
+	}
+
+	trace = f.lookupSpanTracingMode(matcher)
+	f.spanCache.setURLTrace(matcher, trace)
+
+	return trace
+}
+
+func (f *urlFilters) lookupSpanTracingMode(matcher string) TracingMode {
+	for _, filter := range f.spanFilters {
+		if filter.match(matcher) {
 			return filter.tracingMode()
 		}
 	}
