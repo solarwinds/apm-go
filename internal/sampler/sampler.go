@@ -16,9 +16,12 @@ package sampler
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/oboe"
 	"github.com/solarwinds/apm-go/internal/swotel"
+	"github.com/solarwinds/apm-go/internal/swotel/semconv"
 	"github.com/solarwinds/apm-go/internal/w3cfmt"
 	"github.com/solarwinds/apm-go/internal/xtrace"
 	"go.opentelemetry.io/otel/attribute"
@@ -93,13 +96,13 @@ func (s sampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.Sampl
 			result = neverSampler.ShouldSample(params)
 		}
 	} else {
-		// TODO url
-		url := ""
+		url := extractURL(params.Kind, params.Attributes)
+		spanMatcher := strings.ToUpper(params.Kind.String()) + ":" + params.Name
 		xto := xtrace.GetXTraceOptions(params.ParentContext, s.oboe)
 		ttMode := getTtMode(xto)
 		// If parent context is not valid, swState will also not be valid
 		swState := w3cfmt.GetSwTraceState(psc)
-		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, ttMode, swState)
+		traceDecision := s.oboe.SampleRequest(swState.IsValid(), url, spanMatcher, ttMode, swState)
 		var decision sdktrace.SamplingDecision
 		if !traceDecision.Enabled() {
 			decision = sdktrace.Drop
@@ -156,4 +159,41 @@ func getTtMode(xto xtrace.Options) oboe.TriggerTraceMode {
 	} else {
 		return oboe.ModeTriggerTraceNotPresent
 	}
+}
+
+// extractURL returns the request URL path from span attributes for SERVER spans,
+// for use with URL-based transaction filtering. Returns "" for non-SERVER spans
+// or when no URL attribute is present.
+//
+// Attribute priority:
+//  1. url.path    (semconv v1.20+)
+//  2. http.target (semconv pre-v1.20, deprecated)
+// The query string is stripped so that URL filters match against the path only,
+// consistent with how extension filters work.
+func extractURL(kind trace.SpanKind, attrs []attribute.KeyValue) string {
+	if kind != trace.SpanKindServer {
+		return ""
+	}
+	var urlPath string
+	for _, attr := range attrs {
+		switch attr.Key {
+		case semconv.URLPathKey:
+			// Prefer the newer attribute; return immediately.
+			raw := attr.Value.AsString()
+			if idx := strings.IndexAny(raw, "?#"); idx != -1 {
+				return raw[:idx]
+			}
+			return raw
+		case semconv.HTTPTargetKey:
+			// Keep as fallback; may be overridden by URLPathKey.
+			urlPath = attr.Value.AsString()
+		}
+	}
+	if urlPath != "" {
+		if idx := strings.IndexAny(urlPath, "?#"); idx != -1 {
+			return urlPath[:idx]
+		}
+		return urlPath
+	}
+	return ""
 }

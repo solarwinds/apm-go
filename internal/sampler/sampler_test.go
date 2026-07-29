@@ -493,3 +493,78 @@ func TestHydrateTraceStateValidSignature(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "auth=ok;trigger-trace=ok", fullResp)
 }
+
+func TestExtractURL(t *testing.T) {
+	urlPathKey := attribute.Key("url.path")
+	httpTargetKey := attribute.Key("http.target")
+
+	tests := []struct {
+		name  string
+		kind  trace.SpanKind
+		attrs []attribute.KeyValue
+		want  string
+	}{
+		{
+			name: "SERVER span with url.path",
+			kind: trace.SpanKindServer,
+			attrs: []attribute.KeyValue{
+				urlPathKey.String("/health"),
+			},
+			want: "/health",
+		},
+		{
+			name: "SERVER span with url.path and query string stripped",
+			kind: trace.SpanKindServer,
+			attrs: []attribute.KeyValue{
+				urlPathKey.String("/search?q=foo&page=2"),
+			},
+			want: "/search",
+		},
+		{
+			name: "SERVER span with http.target (deprecated) fallback",
+			kind: trace.SpanKindServer,
+			attrs: []attribute.KeyValue{
+				httpTargetKey.String("/api/users?limit=10"),
+			},
+			want: "/api/users",
+		},
+		{
+			name: "SERVER span: url.path takes precedence over http.target",
+			kind: trace.SpanKindServer,
+			attrs: []attribute.KeyValue{
+				httpTargetKey.String("/old"),
+				urlPathKey.String("/new"),
+			},
+			want: "/new",
+		},
+		{
+			name:  "SERVER span with no URL attributes",
+			kind:  trace.SpanKindServer,
+			attrs: []attribute.KeyValue{},
+			want:  "",
+		},
+		{
+			name: "CLIENT span returns empty even with url.path",
+			kind: trace.SpanKindClient,
+			attrs: []attribute.KeyValue{
+				urlPathKey.String("/api/users"),
+			},
+			want: "",
+		},
+		{
+			name: "INTERNAL span returns empty",
+			kind: trace.SpanKindInternal,
+			attrs: []attribute.KeyValue{
+				urlPathKey.String("/internal"),
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractURL(tt.kind, tt.attrs)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
