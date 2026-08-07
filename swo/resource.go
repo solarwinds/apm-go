@@ -26,6 +26,8 @@ import (
 	"github.com/solarwinds/apm-go/internal/uams"
 	"github.com/solarwinds/apm-go/internal/utils"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
+	"go.opentelemetry.io/contrib/detectors/azure/azureappservice"
+	"go.opentelemetry.io/contrib/detectors/azure/azurefunctions"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -107,6 +109,12 @@ func getOptionalDetectors() []resource.Detector {
 	}
 	if !strings.Contains(disabledResourceDetectors, "azurevm") {
 		optionalDetectors = append(optionalDetectors, azurevm.New())
+	}
+	if !strings.Contains(disabledResourceDetectors, "azurefunctions") {
+		optionalDetectors = append(optionalDetectors, azurefunctions.NewResourceDetector())
+	}
+	if !strings.Contains(disabledResourceDetectors, "azureappservice") {
+		optionalDetectors = append(optionalDetectors, azureappservice.NewResourceDetector())
 	}
 	if !strings.Contains(disabledResourceDetectors, "k8s") {
 		optionalDetectors = append(optionalDetectors, k8s.NewResourceDetector())
