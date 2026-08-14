@@ -89,8 +89,8 @@ go.opentelemetry.io/contrib/detectors/azure/azureappservice v0.17.0 h1:sSDJeWCxp
 go.opentelemetry.io/contrib/detectors/azure/azureappservice v0.17.0/go.mod h1:gjTLF6FGtedGD3c70yX5h+RLztW2aa+XbvpiGhvfK9g=
 go.opentelemetry.io/contrib/detectors/azure/azurefunctions v0.17.0 h1:OvSZYQ90HTKyuWa1jCrMgB8FdHbdNgIJUBwzeJEjmTk=
 go.opentelemetry.io/contrib/detectors/azure/azurefunctions v0.17.0/go.mod h1:LI1ldqOhq8cABV3H4xFa0Ct5LA0zRvsxYoOM+qfe1Pw=
-go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0 h1:G6SspyK7SIXI32DfOMBHdmOHMBe/mrcoNizce8Q62TU=
-go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0/go.mod h1:gfgRiRO+N2L9UX9bZoEMrbI/+n81SamHpsWMqYXlqlE=
+go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0 h1:ySRed/MgKSYjGWkrlR1KiSRUBpe3RovCbhk+w/RM8as=
+go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0/go.mod h1:UUY5lMDJ3KcIuj/9GY2zLx8JUYx+Yrjh8t2igQJFh8E=
 go.opentelemetry.io/contrib/exporters/autoexport v0.69.0 h1:R3jsCoTIzv0BiYNhW0axyswn/6SMJ8xL1OuGxvni1Kw=
 go.opentelemetry.io/contrib/exporters/autoexport v0.69.0/go.mod h1:m07gqyr2QhQxKOKb5vqKCCBtLH3uqlNYR7PU/FISXVU=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 h1:8tvICD4vSTOOsNrsI4Ljf6C+6UKvpTEH5XY3JMoyPoo=

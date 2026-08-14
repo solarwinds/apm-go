@@ -23,7 +23,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.1
 	go.opentelemetry.io/contrib/detectors/azure/azureappservice v0.17.0
 	go.opentelemetry.io/contrib/detectors/azure/azurefunctions v0.17.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.69.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.69.0
