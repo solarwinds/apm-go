@@ -3,8 +3,17 @@ updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: daily
-  
+      interval: weekly
+    groups:
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/*"
+      go-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "go.opentelemetry.io/*"
+    
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
