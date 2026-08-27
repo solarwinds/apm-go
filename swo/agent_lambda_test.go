@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -76,4 +78,32 @@ func TestStartLambdaAndFlush(t *testing.T) {
 	}
 	require.Equal(t, "apm", attrs["sw.data.module"])
 	require.Equal(t, "test-log-stream", attrs["faas.instance"])
+}
+
+// TestLambdaServiceNameFallback covers the AWS Lambda service.name precedence special case:
+// OTEL_SERVICE_NAME > OTEL_RESOURCE_ATTRIBUTES > AWS_LAMBDA_FUNCTION_NAME > SDK default.
+func TestLambdaServiceNameFallback(t *testing.T) {
+	t.Run("falls back to AWS_LAMBDA_FUNCTION_NAME when base has SDK default", func(t *testing.T) {
+		t.Setenv("AWS_LAMBDA_FUNCTION_NAME", "name-from-lambda-env-var")
+		base := resource.NewSchemaless(attribute.String("service.name", "unknown_service:go"))
+		r := lambdaServiceNameFallback(base)
+		val, ok := r.Set().Value(attribute.Key("service.name"))
+		require.True(t, ok)
+		require.Equal(t, "name-from-lambda-env-var", val.AsString())
+	})
+
+	t.Run("does not override an explicit OTEL_SERVICE_NAME/OTEL_RESOURCE_ATTRIBUTES value", func(t *testing.T) {
+		t.Setenv("AWS_LAMBDA_FUNCTION_NAME", "name-from-lambda-env-var")
+		base := resource.NewSchemaless(attribute.String("service.name", "name-from-env-var"))
+		r := lambdaServiceNameFallback(base)
+		_, ok := r.Set().Value(attribute.Key("service.name"))
+		require.False(t, ok, "must not set service.name when base already has an explicit value")
+	})
+
+	t.Run("leaves SDK default in place when AWS_LAMBDA_FUNCTION_NAME unset", func(t *testing.T) {
+		base := resource.NewSchemaless(attribute.String("service.name", "unknown_service:go"))
+		r := lambdaServiceNameFallback(base)
+		_, ok := r.Set().Value(attribute.Key("service.name"))
+		require.False(t, ok)
+	})
 }

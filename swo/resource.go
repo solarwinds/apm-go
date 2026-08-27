@@ -33,13 +33,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+// createResource builds the OTel Resource, resolving service.name with the following
+// precedence from low to high (later options win ties, see resource.New):
+//  1. SDK default fallback `unknown_service:<executable_name>` (resource.WithService)
+//  2. Other resource detectors: container, host, process, cloud (ec2, azurevm, azurefunctions), k8s, uams
+//  3. SW APM service key, service name portion
+//  4. Resource detector for Azure App Service
+//  5. OTEL_SERVICE_NAME / OTEL_RESOURCE_ATTRIBUTES env vars (resource.WithFromEnv)
+//  6. Programmatic resourceAttrs passed to swo.Start
+//
+// Declarative configuration is intentionally not handled here.
 func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, error) {
-	if serviceKey, ok := config.ParsedServiceKey(); ok && os.Getenv(config.EnvOtelServiceNameKey) == "" {
-		if err := os.Setenv(config.EnvOtelServiceNameKey, serviceKey.ServiceName); err != nil {
-			log.Warningf("could not override unset environment variable %s based on service key, err: %s", config.EnvOtelServiceNameKey, err)
-		}
-	}
-
 	if os.Getenv(config.EnvEnableExperimentalDetector) == "" {
 		if err := os.Setenv(config.EnvEnableExperimentalDetector, "false"); err != nil {
 			log.Warningf("could not override unset environment variable %s, err: %s", config.EnvEnableExperimentalDetector, err)
@@ -48,7 +52,6 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 
 	customResource, customResourceErrors := resource.New(context.Background(),
 		// WithService sets service.instance.id (random UUID) and a service.name fallback.
-		// It must precede WithFromEnv so that the OTEL_SERVICE_NAME env var (set above) wins.
 		resource.WithService(),
 		resource.WithHost(),
 		resource.WithContainer(),
@@ -58,10 +61,15 @@ func createResource(resourceAttrs ...attribute.KeyValue) (*resource.Resource, er
 		// Example value: go version go1.20.4 linux/arm64
 		// [1]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/process.md#go-runtimes
 		resource.WithProcessRuntimeDescription(),
-		resource.WithDetectors(getOptionalDetectors()...),
-		// Allow environment variables to override resource attributes from above detectors, and
-		// to set additional attributes like service.name.
+		// Get service name from resource detectors (container, host, process, cloud detectors, etc.)
+		resource.WithDetectors(getOtherDetectors()...),
+		// The SW APM service key's service name is always present (its token is required for auth), so it
+		// must yield to more specific automatic sources like the Azure App Service detector below.
+		resource.WithAttributes(serviceKeyServiceNameAttrs()...),
+		resource.WithDetectors(getAzureAppServiceDetector()...),
+		// OTEL_SERVICE_NAME / OTEL_RESOURCE_ATTRIBUTES take precedence over all automatic sources above.
 		resource.WithFromEnv(),
+		// Programmatic resourceAttrs passed to swo.Start take precedence over everything else.
 		resource.WithAttributes(resourceAttrs...),
 		resource.WithAttributes(attribute.String("sw.data.module", "apm")),
 		resource.WithAttributes(attribute.String("sw.apm.version", utils.Version())),
@@ -97,7 +105,29 @@ func filterSchemaURLConflict(combinedError error) error {
 	return nil
 }
 
-func getOptionalDetectors() []resource.Detector {
+// serviceKeyServiceNameAttrs returns the service.name attribute derived from the SW APM
+// service key, when a valid one is configured.
+func serviceKeyServiceNameAttrs() []attribute.KeyValue {
+	if serviceKey, ok := config.ParsedServiceKey(); ok {
+		return []attribute.KeyValue{attribute.String("service.name", serviceKey.ServiceName)}
+	}
+	return nil
+}
+
+// getAzureAppServiceDetector returns the Azure App Service resource detector on its own so it
+// can be applied with higher precedence than the SW APM service key.
+// It use WEBSITE_SITE_NAME as the service name.
+func getAzureAppServiceDetector() []resource.Detector {
+	disabledResourceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
+	if strings.Contains(disabledResourceDetectors, "azureappservice") {
+		return nil
+	}
+	return []resource.Detector{azureappservice.NewResourceDetector()}
+}
+
+// getOtherDetectors returns the remaining optional resource detectors (container/host/process
+// info aside), all of which rank below the SW APM service key.
+func getOtherDetectors() []resource.Detector {
 	disabledResourceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
 
 	optionalDetectors := []resource.Detector{}
@@ -112,9 +142,6 @@ func getOptionalDetectors() []resource.Detector {
 	}
 	if !strings.Contains(disabledResourceDetectors, "azurefunctions") {
 		optionalDetectors = append(optionalDetectors, azurefunctions.NewResourceDetector())
-	}
-	if !strings.Contains(disabledResourceDetectors, "azureappservice") {
-		optionalDetectors = append(optionalDetectors, azureappservice.NewResourceDetector())
 	}
 	if !strings.Contains(disabledResourceDetectors, "k8s") {
 		optionalDetectors = append(optionalDetectors, k8s.NewResourceDetector())
