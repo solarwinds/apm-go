@@ -116,7 +116,7 @@ func serviceKeyServiceNameAttrs() []attribute.KeyValue {
 
 // getAzureAppServiceDetector returns the Azure App Service resource detector on its own so it
 // can be applied with higher precedence than the SW APM service key.
-// It use WEBSITE_SITE_NAME as the service name.
+// It uses WEBSITE_SITE_NAME as the service name.
 func getAzureAppServiceDetector() []resource.Detector {
 	disabledResourceDetectors := os.Getenv(config.EnvSolarwindsDisabledResourceDetectors)
 	if strings.Contains(disabledResourceDetectors, "azureappservice") {

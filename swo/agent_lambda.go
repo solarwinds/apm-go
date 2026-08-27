@@ -140,10 +140,21 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 }
 
 // lambdaServiceNameFallback returns a resource with service.name set from AWS_LAMBDA_FUNCTION_NAME
-// when base's service.name is still the SDK's "unknown_service:" default, i.e. neither
+// when base's service.name is still the SDK's "unknown_service" default, i.e. neither
 // OTEL_SERVICE_NAME nor OTEL_RESOURCE_ATTRIBUTES supplied an explicit value.
 func lambdaServiceNameFallback(base *resource.Resource) *resource.Resource {
-	if val, ok := base.Set().Value(attribute.Key("service.name")); ok && !strings.HasPrefix(val.AsString(), "unknown_service:") {
+	// If env vars explicitly configure service.name, they must win even if the value happens
+	// to look like the SDK default (e.g. "unknown_service:...").
+	if os.Getenv("OTEL_SERVICE_NAME") != "" {
+		return resource.Empty()
+	}
+	for _, kv := range strings.Split(os.Getenv("OTEL_RESOURCE_ATTRIBUTES"), ",") {
+		kv = strings.TrimSpace(kv)
+		if strings.HasPrefix(kv, "service.name=") {
+			return resource.Empty()
+		}
+	}
+	if val, ok := base.Set().Value(attribute.Key("service.name")); ok && !strings.HasPrefix(val.AsString(), "unknown_service") {
 		return resource.Empty()
 	}
 	if fnName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME"); fnName != "" {
