@@ -19,7 +19,7 @@ go 1.25.0
 require (
 	github.com/coocood/freecache v1.2.7
 	github.com/google/uuid v1.6.0
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.2
 	go.opentelemetry.io/contrib/detectors/azure/azureappservice v0.17.0
 	go.opentelemetry.io/contrib/detectors/azure/azurefunctions v0.17.0
@@ -31,7 +31,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
 	go.opentelemetry.io/otel/metric v1.45.0
 	go.opentelemetry.io/otel/sdk/metric v1.45.0
-	google.golang.org/grpc v1.83.0
+	google.golang.org/grpc v1.83.1
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -78,6 +78,7 @@ require (
 	go.opentelemetry.io/otel/log v0.21.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.21.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
@@ -90,5 +91,4 @@ require (
 	go.opentelemetry.io/otel/sdk v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0
 	golang.org/x/sys v0.47.0
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
