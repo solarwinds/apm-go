@@ -17,6 +17,7 @@ package swo
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/solarwinds/apm-go/internal/log"
 	"github.com/solarwinds/apm-go/internal/metrics"
@@ -107,10 +108,18 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 		return nil, err
 	}
 	otel.SetTextMapPropagator(prop)
-	// Default resource detection plus our required attributes
+	// Default resource detection plus our required attributes. service.name follows
+	// OTEL_SERVICE_NAME > OTEL_RESOURCE_ATTRIBUTES > AWS_LAMBDA_FUNCTION_NAME > SDK default,
+	// so this layer and the OTelCol extension (which lacks AWS_LAMBDA_FUNCTION_NAME visibility
+	// into any programmatic value) derive the same service.name.
+	defaultRes := resource.Default()
 	var resrc *resource.Resource
+	resrc, err = resource.Merge(defaultRes, lambdaServiceNameFallback(defaultRes))
+	if err != nil {
+		return nil, err
+	}
 	resrc, err = resource.Merge(
-		resource.Default(),
+		resrc,
 		resource.NewSchemaless(
 			attribute.String("sw.data.module", "apm"),
 			attribute.String("sw.apm.version", utils.Version()),
@@ -128,4 +137,28 @@ func StartLambda(lambdaLogStreamName string) (Flusher, error) {
 	)
 	otel.SetTracerProvider(sdktrace.NewTracerProvider(tpOpts...))
 	return flusher, nil
+}
+
+// lambdaServiceNameFallback returns a resource with service.name set from AWS_LAMBDA_FUNCTION_NAME
+// when base's service.name is still the SDK's "unknown_service" default, i.e. neither
+// OTEL_SERVICE_NAME nor OTEL_RESOURCE_ATTRIBUTES supplied an explicit value.
+func lambdaServiceNameFallback(base *resource.Resource) *resource.Resource {
+	// If env vars explicitly configure service.name, they must win even if the value happens
+	// to look like the SDK default (e.g. "unknown_service:...").
+	if os.Getenv("OTEL_SERVICE_NAME") != "" {
+		return resource.Empty()
+	}
+	for _, kv := range strings.Split(os.Getenv("OTEL_RESOURCE_ATTRIBUTES"), ",") {
+		kv = strings.TrimSpace(kv)
+		if strings.HasPrefix(kv, "service.name=") {
+			return resource.Empty()
+		}
+	}
+	if val, ok := base.Set().Value(attribute.Key("service.name")); ok && !strings.HasPrefix(val.AsString(), "unknown_service") {
+		return resource.Empty()
+	}
+	if fnName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME"); fnName != "" {
+		return resource.NewSchemaless(attribute.String("service.name", fnName))
+	}
+	return resource.Empty()
 }
