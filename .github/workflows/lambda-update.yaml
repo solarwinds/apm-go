@@ -1,0 +1,107 @@
+name: Lambda Update 
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'apm-go version to update'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Update lambda with latest apm-go version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+
+      - name: Resolve target version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION:-$RELEASE_TAG}"
+          # Submodule release tags are prefixed with the module path; only the root module tag applies here.
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Skipping: '$version' is not a root module release tag"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for module to be available on the Go proxy
+        if: steps.version.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if go list -m "github.com/solarwinds/apm-go@${VERSION}" >/dev/null 2>&1; then
+              echo "github.com/solarwinds/apm-go@${VERSION} is available"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: not yet available, retrying in 20s..."
+            sleep 20
+          done
+          echo "::error::github.com/solarwinds/apm-go@${VERSION} was not published to the Go proxy in time"
+          exit 1
+
+      - name: Update go.mod and go.sum
+        if: steps.version.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          modules=(
+            "examples/grpc"
+            "examples/http"
+            "instrumentation/github.com/aws/aws-lambda-go/swolambda"
+          )
+          for module in "${modules[@]}"; do
+            echo "::group::${module}"
+            (
+              cd "$module"
+              go mod edit -require="github.com/solarwinds/apm-go@${VERSION}"
+              go mod tidy
+            )
+            echo "::endgroup::"
+          done
+
+      - name: Create pull request
+        if: steps.version.outputs.skip == 'false'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: chore/update-apm-go-${{ steps.version.outputs.version }}
+          delete-branch: true
+          commit-message: "chore: update apm-go to ${{ steps.version.outputs.version }}"
+          title: "chore: update apm-go to ${{ steps.version.outputs.version }}"
+          body: |
+            Updates `github.com/solarwinds/apm-go` to `${{ steps.version.outputs.version }}` in:
+
+            - `examples/grpc`
+            - `examples/http`
+            - `instrumentation/github.com/aws/aws-lambda-go/swolambda`
+
+            `go.sum` files were regenerated with `go mod tidy`.
+
+            Opened automatically by the `update module versions` workflow.
+          add-paths: |
+            examples/grpc/go.mod
+            examples/grpc/go.sum
+            examples/http/go.mod
+            examples/http/go.sum
+            instrumentation/github.com/aws/aws-lambda-go/swolambda/go.mod
+            instrumentation/github.com/aws/aws-lambda-go/swolambda/go.sum
