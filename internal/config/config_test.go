@@ -588,6 +588,9 @@ func TestTransactionFilter_UnmarshalYAML(t *testing.T) {
 		{TransactionFilter{"url", `\s+\d+\s+`, []string{".jpg"}, "disabled"}, ErrTFInvalidRegExExt},
 		{TransactionFilter{"url", `\s+\d+\s+`, nil, "disabled"}, nil},
 		{TransactionFilter{"url", `\s+\d+\s+`, nil, "invalid"}, ErrTFInvalidTracing},
+		{TransactionFilter{"span", `^CLIENT:`, nil, "disabled"}, nil},
+		{TransactionFilter{"span", `^CLIENT:`, nil, "enabled"}, nil},
+		{TransactionFilter{"span", "", []string{".jpg"}, "disabled"}, ErrTFSpanNoExtensions},
 	}
 
 	for idx, testCase := range testCases {
