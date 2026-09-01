@@ -1,4 +1,4 @@
-name: Lambda Update 
+name: Lambda Update
 
 on:
   workflow_dispatch:
@@ -97,7 +97,7 @@ jobs:
 
             `go.sum` files were regenerated with `go mod tidy`.
 
-            Opened automatically by the `update module versions` workflow.
+            Opened automatically by the `Lambda Update` workflow.
           add-paths: |
             examples/grpc/go.mod
             examples/grpc/go.sum
