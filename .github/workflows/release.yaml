@@ -1,0 +1,134 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (must match internal/utils/version.go). Leave empty to skip the main release.'
+        required: false
+        type: string
+      swolambda_version:
+        description: 'Version to tag instrumentation/github.com/aws/aws-lambda-go/swolambda (e.g. v1.2.3). Only tags and pushes; no release is created.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check-inputs:
+    name: Check inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require at least one version input
+        env:
+          VERSION: ${{ inputs.version }}
+          SWOLAMBDA_VERSION: ${{ inputs.swolambda_version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$VERSION" ] && [ -z "$SWOLAMBDA_VERSION" ]; then
+            echo "::error::Provide at least one of 'version' or 'swolambda_version'"
+            exit 1
+          fi
+
+  release:
+    name: Tag and create draft release
+    needs: check-inputs
+    if: ${{ inputs.version != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Validate version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="$INPUT_VERSION"
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3"
+            exit 1
+          fi
+          base_version="$(grep -oE 'baseVersion = "[^"]+"' internal/utils/version.go | cut -d'"' -f2)"
+          if [ "$version" != "v${base_version}" ]; then
+            echo "::error::internal/utils/version.go declares v${base_version}, which does not match '$version'"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            echo "::error::Tag ${version} already exists"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --draft \
+            --generate-notes
+
+  tag-swolambda:
+    name: Tag instrumentation/github.com/aws/aws-lambda-go/swolambda (no release)
+    needs: check-inputs
+    if: ${{ inputs.swolambda_version != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Validate version and compute tag
+        id: tag
+        env:
+          INPUT_VERSION: ${{ inputs.swolambda_version }}
+        run: |
+          set -euo pipefail
+          version="$INPUT_VERSION"
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3"
+            exit 1
+          fi
+          module_dir="instrumentation/github.com/aws/aws-lambda-go/swolambda"
+          if [ ! -f "${module_dir}/go.mod" ]; then
+            echo "::error::${module_dir}/go.mod not found"
+            exit 1
+          fi
+          tag="${module_dir}/${version}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "::error::Tag ${tag} already exists"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
