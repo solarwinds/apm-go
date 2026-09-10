@@ -14,7 +14,7 @@
 
 module github.com/solarwinds/apm-go
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/coocood/freecache v1.2.7
@@ -91,5 +91,5 @@ require (
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 )
