@@ -81,32 +81,12 @@ jobs:
 
       - name: Create pull request
         if: steps.version.outputs.skip == 'false'
-<<<<<<< HEAD
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           paths=(
-=======
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          branch: chore/update-apm-go-${{ steps.version.outputs.version }}
-          delete-branch: true
-          commit-message: "chore: update apm-go to ${{ steps.version.outputs.version }}"
-          title: "chore: update apm-go to ${{ steps.version.outputs.version }}"
-          body: |
-            Updates `github.com/solarwinds/apm-go` to `${{ steps.version.outputs.version }}` in:
-
-            - `examples/grpc`
-            - `examples/http`
-            - `instrumentation/github.com/aws/aws-lambda-go/swolambda`
-
-            `go.sum` files were regenerated with `go mod tidy`.
-
-            Opened automatically by the `Lambda Update` workflow.
-          add-paths: |
->>>>>>> 659a9b99a195b745102cf60a9a72a6cd37a5df29
             examples/grpc/go.mod
             examples/grpc/go.sum
             examples/http/go.mod
