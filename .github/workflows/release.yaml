@@ -110,12 +110,21 @@ jobs:
             exit 1
           fi
           if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
-            echo "::error::Tag ${version} already exists"
-            exit 1
+            existing_commit="$(git rev-parse "refs/tags/${version}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [ "$existing_commit" != "$current_commit" ]; then
+              echo "::error::Tag ${version} already exists and points to a different commit"
+              exit 1
+            fi
+            echo "Tag ${version} already points to the current commit; skipping tag push"
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Push tag
+        if: steps.version.outputs.tag_exists != 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -131,6 +140,10 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; skipping"
+            exit 0
+          fi
           gh release create "$VERSION" \
             --title "$VERSION" \
             --draft \
@@ -167,12 +180,21 @@ jobs:
           fi
           tag="${module_dir}/${version}"
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            echo "::error::Tag ${tag} already exists"
-            exit 1
+            existing_commit="$(git rev-parse "refs/tags/${tag}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [ "$existing_commit" != "$current_commit" ]; then
+              echo "::error::Tag ${tag} already exists and points to a different commit"
+              exit 1
+            fi
+            echo "Tag ${tag} already points to the current commit; skipping tag push"
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Push tag
+        if: steps.tag.outputs.tag_exists != 'true'
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
