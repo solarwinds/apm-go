@@ -52,12 +52,20 @@ jobs:
             version="$INPUT_VERSION"
           elif [ "${{ github.event_name }}" = "push" ]; then
             # version.go changed directly on main; derive the release version from it
-            base_version="$(grep -oE 'baseVersion = "[^"]+"' internal/utils/version.go | cut -d'"' -f2)"
+            base_version="$(grep -oE 'baseVersion[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+            prerelease="$(grep -oE 'prerelease[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+            build="$(grep -oE '^[[:space:]]*build[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
             if [ -z "$base_version" ]; then
               echo "::error::Could not determine baseVersion from internal/utils/version.go"
               exit 1
             fi
             version="v${base_version}"
+            if [ -n "$prerelease" ]; then
+              version="${version}-${prerelease}"
+            fi
+            if [ -n "$build" ]; then
+              version="${version}+${build}"
+            fi
           else
             version=""
           fi
@@ -74,7 +82,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.repository.default_branch }}
 
       - name: Validate version
         id: version
@@ -83,13 +91,22 @@ jobs:
         run: |
           set -euo pipefail
           version="$INPUT_VERSION"
-          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo "::error::Invalid semver version '$version'; expected something like v1.2.3"
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3, v1.2.3-beta, or v1.2.3-beta+001"
             exit 1
           fi
-          base_version="$(grep -oE 'baseVersion = "[^"]+"' internal/utils/version.go | cut -d'"' -f2)"
-          if [ "$version" != "v${base_version}" ]; then
-            echo "::error::internal/utils/version.go declares v${base_version}, which does not match '$version'"
+          base_version="$(grep -oE 'baseVersion[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          prerelease="$(grep -oE 'prerelease[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          build="$(grep -oE '^[[:space:]]*build[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          expected_version="v${base_version}"
+          if [ -n "$prerelease" ]; then
+            expected_version="${expected_version}-${prerelease}"
+          fi
+          if [ -n "$build" ]; then
+            expected_version="${expected_version}+${build}"
+          fi
+          if [ "$version" != "$expected_version" ]; then
+            echo "::error::internal/utils/version.go declares ${expected_version}, which does not match '$version'"
             exit 1
           fi
           if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
