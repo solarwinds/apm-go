@@ -1,6 +1,11 @@
 name: release
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/utils/version.go'
   workflow_dispatch:
     inputs:
       version:
@@ -19,8 +24,11 @@ jobs:
   check-inputs:
     name: Check inputs
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
     steps:
       - name: Require at least one version input
+        if: github.event_name == 'workflow_dispatch'
         env:
           VERSION: ${{ inputs.version }}
           SWOLAMBDA_VERSION: ${{ inputs.swolambda_version }}
@@ -31,10 +39,34 @@ jobs:
             exit 1
           fi
 
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'push'
+
+      - name: Resolve version
+        id: resolve
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # version.go changed directly on main; derive the release version from it
+            base_version="$(grep -oE 'baseVersion = "[^"]+"' internal/utils/version.go | cut -d'"' -f2)"
+            if [ -z "$base_version" ]; then
+              echo "::error::Could not determine baseVersion from internal/utils/version.go"
+              exit 1
+            fi
+            version="v${base_version}"
+          else
+            version=""
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   release:
     name: Tag and create draft release
     needs: check-inputs
-    if: ${{ inputs.version != '' }}
+    if: ${{ needs.check-inputs.outputs.version != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -46,7 +78,7 @@ jobs:
       - name: Validate version
         id: version
         env:
-          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_VERSION: ${{ needs.check-inputs.outputs.version }}
         run: |
           set -euo pipefail
           version="$INPUT_VERSION"
