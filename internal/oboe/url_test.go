@@ -114,3 +114,37 @@ func TestReloadURLsConfig(t *testing.T) {
 	assert.Equal(t, int64(0), urls.cache.EntryCount())
 	assert.Equal(t, int64(0), urls.cache.HitCount())
 }
+
+func TestSpanFilter(t *testing.T) {
+	filter := newURLFilters()
+	filter.loadConfig([]config.TransactionFilter{
+		{Type: "span", RegEx: `^CLIENT:`, Tracing: config.DisabledTracingMode},
+		{Type: "span", RegEx: `^INTERNAL:healthcheck$`, Tracing: config.DisabledTracingMode},
+		// URL filters must not be consulted for span matchers.
+		{Type: "url", RegEx: `^CLIENT:`, Tracing: config.EnabledTracingMode},
+	})
+
+	// Matches the first span filter.
+	assert.Equal(t, TraceDisabled, filter.GetTracingModeForSpan("CLIENT:GET"))
+	assert.Equal(t, int64(1), filter.spanCache.EntryCount())
+
+	// Matches the second span filter exactly.
+	assert.Equal(t, TraceDisabled, filter.GetTracingModeForSpan("INTERNAL:healthcheck"))
+
+	// No span filter matches a SERVER span.
+	assert.Equal(t, TraceUnknown, filter.GetTracingModeForSpan("SERVER:GET /users"))
+
+	// Cached lookups are served from the span cache.
+	assert.Equal(t, TraceDisabled, filter.GetTracingModeForSpan("CLIENT:GET"))
+	assert.Equal(t, int64(1), filter.spanCache.HitCount())
+
+	// Span and URL filters are independent lists. The span filter classifies
+	// "CLIENT:GET" as disabled (above), while the URL filter list classifies the
+	// same string as enabled, proving the two are matched separately.
+	assert.Equal(t, TraceEnabled, filter.GetTracingMode("CLIENT:GET"))
+
+	// Empty matcher and no-filter cases return TraceUnknown.
+	assert.Equal(t, TraceUnknown, filter.GetTracingModeForSpan(""))
+	empty := newURLFilters()
+	assert.Equal(t, TraceUnknown, empty.GetTracingModeForSpan("CLIENT:GET"))
+}

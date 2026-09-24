@@ -80,19 +80,22 @@ func (s *settings) MergeLocalSetting() {
 	}
 }
 
-// mergeURLSetting merges the service level setting (merged from remote and local
-// settings) and the per-URL sampling flags, if any.
-func (s *settings) mergeURLSetting(url string) (int, settingFlag, SampleSource) {
-	if url == "" {
+// mergeFilterSetting merges the service level setting (merged from remote and
+// local settings) with the per-URL and per-span transaction filtering, if any.
+// URL filters take precedence over span filters.
+func (s *settings) mergeFilterSetting(url, spanMatcher string) (int, settingFlag, SampleSource) {
+	tracingMode := TraceUnknown
+	if url != "" {
+		tracingMode = urls.GetTracingMode(url)
+	}
+	if tracingMode.isUnknown() {
+		tracingMode = urls.GetTracingModeForSpan(spanMatcher)
+	}
+	if tracingMode.isUnknown() {
 		return s.value, s.flags, s.source
 	}
 
-	urlTracingMode := urls.GetTracingMode(url)
-	if urlTracingMode.isUnknown() {
-		return s.value, s.flags, s.source
-	}
-
-	flags := urlTracingMode.toFlags()
+	flags := tracingMode.toFlags()
 	source := SampleSourceFile
 
 	if s.hasOverrideFlag() {

@@ -65,7 +65,7 @@ type Oboe interface {
 	GetSetting() *settings
 	RemoveSetting()
 	HasDefaultSetting() bool
-	SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
+	SampleRequest(continued bool, url string, spanMatcher string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision
 	FlushRateCounts() *metrics.RateCountSummary
 	GetTriggerTraceToken() ([]byte, error)
 	RegisterOtelSampleRateMetrics(mp metric.MeterProvider) error
@@ -149,14 +149,14 @@ func (o *oboe) FlushRateCounts() *metrics.RateCountSummary {
 }
 
 // SampleRequest returns a SampleDecision based on inputs and state of various token buckets
-func (o *oboe) SampleRequest(continued bool, url string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
+func (o *oboe) SampleRequest(continued bool, url string, spanMatcher string, triggerTrace TriggerTraceMode, swState w3cfmt.SwTraceState) SampleDecision {
 	setting := o.GetSetting()
 	if setting == nil {
 		return SampleDecision{false, 0, SampleSourceNone, false, TtSettingsNotAvailable, 0, 0, false}
 	}
 
 	var diceRolled, retval, doRateLimiting bool
-	sampleRate, flags, source := setting.mergeURLSetting(url)
+	sampleRate, flags, source := setting.mergeFilterSetting(url, spanMatcher)
 
 	// Choose an appropriate bucket
 	bucket := setting.bucket
