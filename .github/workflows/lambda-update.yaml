@@ -1,0 +1,125 @@
+name: Lambda Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'apm-go version to update'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Update lambda with latest apm-go version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+
+      - name: Resolve target version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="$INPUT_VERSION"
+          # Submodule release tags are prefixed with the module path; only the root module tag applies here.
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for module to be available on the Go proxy
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if go list -m "github.com/solarwinds/apm-go@${VERSION}" >/dev/null 2>&1; then
+              echo "github.com/solarwinds/apm-go@${VERSION} is available"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: not yet available, retrying in 20s..."
+            sleep 20
+          done
+          echo "::error::github.com/solarwinds/apm-go@${VERSION} was not published to the Go proxy in time"
+          exit 1
+
+      - name: Update go.mod and go.sum
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          modules=(
+            "examples/grpc"
+            "examples/http"
+            "instrumentation/github.com/aws/aws-lambda-go/swolambda"
+          )
+          for module in "${modules[@]}"; do
+            echo "::group::${module}"
+            (
+              cd "$module"
+              go mod edit -require="github.com/solarwinds/apm-go@${VERSION}"
+              go mod tidy
+            )
+            echo "::endgroup::"
+          done
+
+      - name: Create pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          paths=(
+            examples/grpc/go.mod
+            examples/grpc/go.sum
+            examples/http/go.mod
+            examples/http/go.sum
+            instrumentation/github.com/aws/aws-lambda-go/swolambda/go.mod
+            instrumentation/github.com/aws/aws-lambda-go/swolambda/go.sum
+          )
+
+          if git diff --quiet -- "${paths[@]}"; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          branch="chore/update-lambda-apm-go-${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add "${paths[@]}"
+          git commit -m "chore: update lambda layer apm-go to ${VERSION}"
+          git push --force origin "$branch"
+
+          body="$(cat <<BODY
+          Updates \`github.com/solarwinds/apm-go\` to \`${VERSION}\` in:
+
+          - \`examples/grpc\`
+          - \`examples/http\`
+          - \`instrumentation/github.com/aws/aws-lambda-go/swolambda\`
+
+          \`go.sum\` files were regenerated with \`go mod tidy\`.
+
+          Opened automatically by the \`update module versions\` workflow.
+          BODY
+          )"
+
+          if gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr edit "$branch" --title "chore: update apm-go to ${VERSION}" --body "$body"
+          else
+            gh pr create --base main --head "$branch" \
+              --title "chore: update apm-go to ${VERSION}" \
+              --body "$body"
+          fi

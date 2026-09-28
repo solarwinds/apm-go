@@ -1,0 +1,205 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/utils/version.go'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (must match internal/utils/version.go). Leave empty to skip the main release.'
+        required: false
+        type: string
+      swolambda_version:
+        description: 'Version to tag instrumentation/github.com/aws/aws-lambda-go/swolambda (e.g. v1.2.3). Only tags and pushes; no release is created.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  check-inputs:
+    name: Check inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Require at least one version input
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ inputs.version }}
+          SWOLAMBDA_VERSION: ${{ inputs.swolambda_version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$VERSION" ] && [ -z "$SWOLAMBDA_VERSION" ]; then
+            echo "::error::Provide at least one of 'version' or 'swolambda_version'"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'push'
+
+      - name: Resolve version
+        id: resolve
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_VERSION" ]; then
+            version="$INPUT_VERSION"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # version.go changed directly on main; derive the release version from it
+            base_version="$(grep -oE 'baseVersion[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+            prerelease="$(grep -oE 'prerelease[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+            build="$(grep -oE '^[[:space:]]*build[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+            if [ -z "$base_version" ]; then
+              echo "::error::Could not determine baseVersion from internal/utils/version.go"
+              exit 1
+            fi
+            version="v${base_version}"
+            if [ -n "$prerelease" ]; then
+              version="${version}-${prerelease}"
+            fi
+            if [ -n "$build" ]; then
+              version="${version}+${build}"
+            fi
+          else
+            version=""
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Tag and create draft release
+    needs: check-inputs
+    if: ${{ needs.check-inputs.outputs.version != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.repository.default_branch }}
+
+      - name: Validate version
+        id: version
+        env:
+          INPUT_VERSION: ${{ needs.check-inputs.outputs.version }}
+        run: |
+          set -euo pipefail
+          version="$INPUT_VERSION"
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3, v1.2.3-beta, or v1.2.3-beta+001"
+            exit 1
+          fi
+          base_version="$(grep -oE 'baseVersion[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          prerelease="$(grep -oE 'prerelease[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          build="$(grep -oE '^[[:space:]]*build[[:space:]]*=[[:space:]]*"[^"]*"' internal/utils/version.go | cut -d'"' -f2)"
+          expected_version="v${base_version}"
+          if [ -n "$prerelease" ]; then
+            expected_version="${expected_version}-${prerelease}"
+          fi
+          if [ -n "$build" ]; then
+            expected_version="${expected_version}+${build}"
+          fi
+          if [ "$version" != "$expected_version" ]; then
+            echo "::error::internal/utils/version.go declares ${expected_version}, which does not match '$version'"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/${version}" >/dev/null; then
+            existing_commit="$(git rev-parse "refs/tags/${version}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [ "$existing_commit" != "$current_commit" ]; then
+              echo "::error::Tag ${version} already exists and points to a different commit"
+              exit 1
+            fi
+            echo "Tag ${version} already points to the current commit; skipping tag push"
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        if: steps.version.outputs.tag_exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists; skipping"
+            exit 0
+          fi
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --draft \
+            --generate-notes
+
+  tag-swolambda:
+    name: Tag instrumentation/github.com/aws/aws-lambda-go/swolambda (no release)
+    needs: check-inputs
+    if: ${{ inputs.swolambda_version != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Validate version and compute tag
+        id: tag
+        env:
+          INPUT_VERSION: ${{ inputs.swolambda_version }}
+        run: |
+          set -euo pipefail
+          version="$INPUT_VERSION"
+          if ! echo "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid semver version '$version'; expected something like v1.2.3"
+            exit 1
+          fi
+          module_dir="instrumentation/github.com/aws/aws-lambda-go/swolambda"
+          if [ ! -f "${module_dir}/go.mod" ]; then
+            echo "::error::${module_dir}/go.mod not found"
+            exit 1
+          fi
+          tag="${module_dir}/${version}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            existing_commit="$(git rev-parse "refs/tags/${tag}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [ "$existing_commit" != "$current_commit" ]; then
+              echo "::error::Tag ${tag} already exists and points to a different commit"
+              exit 1
+            fi
+            echo "Tag ${tag} already points to the current commit; skipping tag push"
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        if: steps.tag.outputs.tag_exists != 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
